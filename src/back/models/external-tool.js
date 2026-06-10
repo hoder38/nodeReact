@@ -63,20 +63,19 @@ export default {
                 const dom = Htmlparser.parseDOM(raw_data);
                 const $ = cheerio.load(dom);
                 if (dom.some(n => n.type === 'tag' && n.name === 'html')) {
-                    $('body').children('section[class="box container pb40 overflow-Show"]').first()
-                        .children('div[class="box-body"]').first()
-                        .children('ul[class="mh-list col7"]').first()
+                    $('div[class="box-body"]').first()
+                        .children('ul[id="mh-list col7"]').first()
                         .children('li').each((_, l) => {
                         const $l = $(l);
-                        const a = $l.children('div[class="mh-item"]').first()
-                            .children('div[class="mh-tip-wrap"]').first()
-                            .children('div[class="mh-item-tip"]').first()
+                        const a = $l.children('div[id="mh-item"]').first()
+                            .children('div[id="mh-tip-wrap"]').first()
+                            .children('div[id="mh-item-tip"]').first()
                             .children('a').first().get(0);
                         list.push({
                             id: a.attribs.href.match(/\/([^\/]+)/)[1],
                             name: a.attribs.title,
-                            thumb: $l.children('div[class="mh-item"]').first()
-                                .children('p[class="mh-cover"]').first().attr('style').match(/url\(([^\)]+)/)[1],
+                            thumb: $l.children('div[id="mh-item"]').first()
+                                .children('p[id="mh-cover"]').first().attr('style').match(/url\(([^\)]+)/)[1],
                             tags: ['漫畫', 'comic'],
                         });
                     });
@@ -110,6 +109,7 @@ export default {
             case 'imdb':
             return Api('url', url).then(raw_data => {
                 taglist.add('歐美');
+                console.log(raw_data);
                 const $ = cheerio.load(Htmlparser.parseDOM(raw_data));
                 let title = $('title').text().trim();
                 console.log(title);
@@ -164,15 +164,7 @@ export default {
             return Api('url', url, {cookie: 'birthtime=536425201; lastagecheckage=1-January-1987'}).then(raw_data => {
                 taglist.add('歐美').add('遊戲').add('game');
                 const $ = cheerio.load(Htmlparser.parseDOM(raw_data));
-                const info = $('body')
-                    .children('div[class="responsive_page_frame with_header"]').first()
-                    .children('div[class="responsive_page_content"]').first()
-                    .children('div[class="responsive_page_template_content"]').first()
-                    .children('div[class="game_page_background game"]').first()
-                    .children('div[class="page_content_ctn"]').first()
-                    .children('div[class="page_content"]').first()
-                    .children('div[class="rightcol game_meta_data"]').first()
-                    .children('div[class="block responsive_apppage_details_left game_details underlined_links"]').first()
+                const info = $('div[id="appDetailsUnderlinedLinks"]')
                     .children('div').first()
                     .children('div').first()
                     .children('div').first();
@@ -203,29 +195,29 @@ export default {
                 const overflow = $('body').children('div').eq(1);
                 const overflowClass = overflow.attr('class');
                 if (overflowClass === 'overflow-container album') {
-                    const container = overflow.children('div[class="cmn_wrap"]').first().children('div[class="content-container"]').first();
-                    const content = container.children('div[class="content"]').first().children('header').first().children('hgroup').first();
-                    const basic = container.children('div[class="sidebar"]').first().children('section[class="basic-info"]').first();
+                    const container = overflow.children('div[id="cmn_wrap"]').first().children('div[id="content-container"]').first();
+                    const content = container.children('div[id="content"]').first().children('header').first().children('hgroup').first();
+                    const basic = container.children('div[id="sidebar"]').first().children('section[id="basic-info"]').first();
                     taglist
-                        .add(content.children('h2[class="album-artist"]').first().children('span').first().children('a').first().text().trim())
-                        .add(content.children('h1[class="album-title"]').first().text().trim())
-                        .add(basic.children('div[class="release-date"]').first().children('span').first().text().trim().match(/\d+$/)[0]);
-                    basic.children('div[class="genre"]').first().children('div').first().children('a').each((_, a) => {
+                        .add(content.children('h2[id="album-artist"]').first().children('span').first().children('a').first().text().trim())
+                        .add(content.children('h1[id="album-title"]').first().text().trim())
+                        .add(basic.children('div[id="release-date"]').first().children('span').first().text().trim().match(/\d+$/)[0]);
+                    basic.children('div[id="genre"]').first().children('div').first().children('a').each((_, a) => {
                         const genre = $(a).text().trim().toLowerCase();
                         const index = MUSIC_LIST_WEB.indexOf(genre);
                         taglist.add(index !== -1 ? MUSIC_LIST[index] : genre);
                     });
                 } else if (overflowClass === 'overflow-container song') {
-                    const overview = overflow.children('div[class="cmn_wrap"]').first().children('div[class="content-container"]').first().children('div[class="content overview"]').first();
+                    const overview = overflow.children('div[id="cmn_wrap"]').first().children('div[id="content-container"]').first().children('div[id="content overview"]').first();
                     const content = overview.children('header').first().children('hgroup').first();
                     taglist
-                        .add(content.children('h2[class="song-artist"]').first().children('span').first().children('a').first().text().trim())
-                        .add(content.children('h1[class="song-title"]').first().text().trim())
-                        .add(overview.children('section[class="appearances"]').first().children('table').first().children('tbody').first().children('tr').first().children('td[class="year"]').first().text().trim());
+                        .add(content.children('h2[id="song-artist"]').first().children('span').first().children('a').first().text().trim())
+                        .add(content.children('h1[id="song-title"]').first().text().trim())
+                        .add(overview.children('section[id="appearances"]').first().children('table').first().children('tbody').first().children('tr').first().children('td[id="year"]').first().text().trim());
                 } else if (overflowClass === 'overflow-container artist') {
-                    const container = overflow.children('div[class="cmn_wrap"]').first().children('div[class="content-container"]').first();
-                    taglist.add(container.children('div[class="content"]').first().children('header').first().children('div[class="artist-bio-container"]').first().children('hgroup').first().children('h1[class="artist-name"]').first().text().trim());
-                    container.children('div[class="sidebar"]').first().children('section[class="basic-info"]').first().children('div[class="genre"]').first().children('div').first().children('a').each((_, a) => {
+                    const container = overflow.children('div[id="cmn_wrap"]').first().children('div[id="content-container"]').first();
+                    taglist.add(container.children('div[id="content"]').first().children('header').first().children('div[id="artist-bio-container"]').first().children('hgroup').first().children('h1[id="artist-name"]').first().text().trim());
+                    container.children('div[id="sidebar"]').first().children('section[id="basic-info"]').first().children('div[id="genre"]').first().children('div').first().children('a').each((_, a) => {
                         const genre = $(a).text().trim().toLowerCase();
                         const index = MUSIC_LIST_WEB.indexOf(genre);
                         taglist.add(index !== -1 ? MUSIC_LIST[index] : genre);
@@ -241,13 +233,13 @@ export default {
                 const textOf = el => $(el).contents().filter((_, n) => n.type === 'text').toArray()
                     .map(n => n.data.toString().trim()).filter(Boolean);
                 const mwContentDivs = $('body')
-                    .children('div[class="WikiaSiteWrapper"]').first()
-                    .children('section[class="WikiaPage"]').first()
-                    .children('div[class="WikiaPageContentWrapper"]').first()
-                    .children('article[class="WikiaMainContent"]').first()
-                    .children('div[class="WikiaMainContentContainer"]').first()
-                    .children('div[class="WikiaArticle"]').first()
-                    .children('div[class="mw-content-text"]').first()
+                    .children('div[id="WikiaSiteWrapper"]').first()
+                    .children('section[id="WikiaPage"]').first()
+                    .children('div[id="WikiaPageContentWrapper"]').first()
+                    .children('article[id="WikiaMainContent"]').first()
+                    .children('div[id="WikiaMainContentContainer"]').first()
+                    .children('div[id="WikiaArticle"]').first()
+                    .children('div[id="mw-content-text"]').first()
                     .children('div');
                 for (const div of mwContentDivs.toArray()) {
                     if ($(div).attr('class') !== 'center') {
@@ -306,9 +298,9 @@ export default {
             return Api('url', url).then(raw_data => {
                 taglist.add('歐美').add('電視劇').add('tv show');
                 const $ = cheerio.load(Htmlparser.parseDOM(raw_data));
-                const fanart = $('body').children('table').first().children('tr').eq(2).children('td[class="maincontent"]').first().children('div[class="fanart"]').first();
-                taglist.add(fanart.children('table').first().children('tr').first().children('td').eq(2).children('div[class="content"]').first().children('h1').first().text().trim());
-                fanart.children('div[class="content"]').each((i, c) => {
+                const fanart = $('body').children('table').first().children('tr').eq(2).children('td[id="maincontent"]').first().children('div[id="fanart"]').first();
+                taglist.add(fanart.children('table').first().children('tr').first().children('td').eq(2).children('div[id="content"]').first().children('h1').first().text().trim());
+                fanart.children('div[id="content"]').each((i, c) => {
                     if (i === 0) {
                         $(c).children('table').first().children('tr').first().children('td').first().children('table').first().children('tr').each((_, t) => {
                             const label = $(t).children('td').first().text().trim();
@@ -442,6 +434,7 @@ export default {
             }).then(raw_data => {
                 const list = [];
                 const $ = cheerio.load(Htmlparser.parseDOM(raw_data));
+                console.log(raw_data);
                 let is_end = false;
                 for (const d of $('body').children('div').toArray()) {
                     if ($(d).children('section[class="banner_detail"]').length > 0) {
@@ -457,11 +450,7 @@ export default {
                         break;
                     }
                 }
-                $('body').children('div[class="view-comment"]').first()
-                    .children('div[class="container"]').first()
-                    .children('div[class="left-bar"]').first()
-                    .children('div[class="tempc"]').first()
-                    .children('div[class="chapterlistload"]').first()
+                $('div[id="chapterlistload"]')
                     .children('ul').each((_, u) => {
                         let liArr = $(u).children('li').toArray();
                         const more = $(u).children('ul').toArray();
@@ -513,10 +502,10 @@ export default {
             case 'yify':
             const getMid = () => isNaN(id) ? Api('url', `https://yts.ag/movie/${id}`, {referer: 'https://yts.ag/'}).then(raw_data => {
                 const $ = cheerio.load(Htmlparser.parseDOM(raw_data));
-                return $('body').children('div[class="main-content"]').first()
-                    .children('div[class="movie-content"]').first()
-                    .children('div[class="row"]').first()
-                    .children('div[class="movie-info"]').first()
+                return $('body').children('div[id="main-content"]').first()
+                    .children('div[id="movie-content"]').first()
+                    .children('div[id="row"]').first()
+                    .children('div[id="movie-info"]').first()
                     .attr('data-movie-id');
             }) : Promise.resolve(id);
             return getMid().then(mid => {

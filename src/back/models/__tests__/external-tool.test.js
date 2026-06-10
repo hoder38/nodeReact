@@ -239,14 +239,14 @@ describe('getSingleList', () => {
   describe('dm5', () => {
     test('dm5 — HTML format (has <html>)', async () => {
       const a = mkNode('a', null, [], { href: '/manga-abc/', title: 'TestManga' });
-      const tipWrap = mkNode('div', 'mh-tip-wrap', [mkNode('div', 'mh-item-tip', [a])]);
-      const cover = mkNode('p', 'mh-cover', [], { style: 'url(http://cover.jpg)' });
-      const item = mkNode('div', 'mh-item', [tipWrap, cover]);
+      const tipWrap = mkNode('div', null, [mkNode('div', null, [a], {id: 'mh-item-tip'})], {id: 'mh-tip-wrap'});
+      const cover = mkNode('p', null, [], { id: 'mh-cover', style: 'url(http://cover.jpg)' });
+      const item = mkNode('div', null, [tipWrap, cover], {id: 'mh-item'});
       const li = mkNode('li', null, [item]);
       const body = mkNode('body', null, [
         mkNode('section', 'box container pb40 overflow-Show', [
           mkNode('div', 'box-body', [
-            mkNode('ul', 'mh-list col7', [li]),
+            mkNode('ul', null, [li], {id: 'mh-list col7'}),
           ]),
         ]),
       ]);
@@ -316,15 +316,8 @@ describe('parseTagUrl', () => {
     ]);
     const div2 = mkNode('div', null, [innerDiv]);
     const div1 = mkNode('div', null, [div2]);
-    const block = mkNode('div', 'block responsive_apppage_details_left game_details underlined_links', [div1]);
-    const rightcol = mkNode('div', 'rightcol game_meta_data', [block]);
-    const pageContent = mkNode('div', 'page_content', [rightcol]);
-    const pageContentCtn = mkNode('div', 'page_content_ctn', [pageContent]);
-    const gameBg = mkNode('div', 'game_page_background game', [pageContentCtn]);
-    const respTemp = mkNode('div', 'responsive_page_template_content', [gameBg]);
-    const respContent = mkNode('div', 'responsive_page_content', [respTemp]);
-    const respFrame = mkNode('div', 'responsive_page_frame with_header', [respContent]);
-    const body = mkNode('body', null, [respFrame]);
+    const block = mkNode('div', null, [div1], {id: 'appDetailsUnderlinedLinks'});
+    const body = mkNode('body', null, [block]);
     const html = mkNode('html', null, [body]);
     mockParseDOM.mockReturnValue([html]);
     mockApi.mockResolvedValue('');
@@ -656,20 +649,20 @@ describe('edge cases', () => {
   test('parseTagUrl allmusic — album', async () => {
     const artistLink = mkNode('a', null, [mkText('Artist1')]);
     const artistSpan = mkNode('span', null, [artistLink]);
-    const albumArtist = mkNode('h2', 'album-artist', [artistSpan]);
-    const albumTitle = mkNode('h1', 'album-title', [mkText(' Album Title ')]);
+    const albumArtist = mkNode('h2', null, [artistSpan], {id: 'album-artist'});
+    const albumTitle = mkNode('h1', null, [mkText(' Album Title ')], {id: 'album-title'});
     const hgroup = mkNode('hgroup', null, [albumArtist, albumTitle]);
     const header = mkNode('header', null, [hgroup]);
-    const contentDiv = mkNode('div', 'content', [header]);
+    const contentDiv = mkNode('div', null, [header], {id: 'content'});
     const releaseDateSpan = mkNode('span', null, [mkText('September 15, 2020')]);
-    const releaseDateDiv = mkNode('div', 'release-date', [releaseDateSpan]);
+    const releaseDateDiv = mkNode('div', null, [releaseDateSpan], {id: 'release-date'});
     const genreLink = mkNode('a', null, [mkText('Rock')]);
     const genreInnerDiv = mkNode('div', null, [genreLink]);
-    const genreDiv = mkNode('div', 'genre', [genreInnerDiv]);
-    const basicInfo = mkNode('section', 'basic-info', [releaseDateDiv, genreDiv]);
-    const sidebar = mkNode('div', 'sidebar', [basicInfo]);
-    const container = mkNode('div', 'content-container', [contentDiv, sidebar]);
-    const cmnWrap = mkNode('div', 'cmn_wrap', [container]);
+    const genreDiv = mkNode('div', null, [genreInnerDiv], {id: 'genre'});
+    const basicInfo = mkNode('section', null, [releaseDateDiv, genreDiv], {id: 'basic-info'});
+    const sidebar = mkNode('div', null, [basicInfo], {id: 'sidebar'});
+    const container = mkNode('div', null, [contentDiv, sidebar], {id: 'content-container'});
+    const cmnWrap = mkNode('div', null, [container], {id: 'cmn_wrap'});
     const overflow = mkNode('div', 'overflow-container album', [cmnWrap]);
     // allmusic: findTag(body, 'div')[1] — need TWO divs in body
     const dummyDiv = mkNode('div', 'other', []);
@@ -708,18 +701,18 @@ describe('edge cases', () => {
   });
 
   test('parseTagUrl allmusic — artist', async () => {
-    const artistName = mkNode('h1', 'artist-name', [mkText(' ArtistName ')]);
+    const artistName = mkNode('h1', null, [mkText(' ArtistName ')], {id: 'artist-name'});
     const hgroup = mkNode('hgroup', null, [artistName]);
-    const bioContainer = mkNode('div', 'artist-bio-container', [hgroup]);
+    const bioContainer = mkNode('div', null, [hgroup], {id: 'artist-bio-container'});
     const header = mkNode('header', null, [bioContainer]);
-    const contentDiv = mkNode('div', 'content', [header]);
+    const contentDiv = mkNode('div', null, [header], {id: 'content'});
     const genreLink = mkNode('a', null, [mkText('Rock')]);
     const genreInnerDiv = mkNode('div', null, [genreLink]);
-    const genreDiv = mkNode('div', 'genre', [genreInnerDiv]);
-    const basicInfo = mkNode('section', 'basic-info', [genreDiv]);
-    const sidebar = mkNode('div', 'sidebar', [basicInfo]);
-    const container = mkNode('div', 'content-container', [contentDiv, sidebar]);
-    const cmnWrap = mkNode('div', 'cmn_wrap', [container]);
+    const genreDiv = mkNode('div', null, [genreInnerDiv], {id: 'genre'});
+    const basicInfo = mkNode('section', null, [genreDiv], {id: 'basic-info'});
+    const sidebar = mkNode('div', null, [basicInfo], {id: 'sidebar'});
+    const container = mkNode('div', null, [contentDiv, sidebar], {id: 'content-container'});
+    const cmnWrap = mkNode('div', null, [container], {id: 'cmn_wrap'});
     const overflow = mkNode('div', 'overflow-container artist', [cmnWrap]);
     const dummyDiv = mkNode('div', 'other', []);
     const body = mkNode('body', null, [dummyDiv, overflow]);
@@ -743,25 +736,25 @@ describe('edge cases', () => {
     const tr1 = mkNode('tr', null, [networkTd0, networkTd1]);
     const tr2 = mkNode('tr', null, [genreTd0, genreTd1]);
     const table0 = mkNode('table', null, [mkNode('tr', null, [mkNode('td', null, [mkNode('table', null, [tr0, tr1, tr2])])])]);
-    const content0 = mkNode('div', 'content', [h1title, table0]);
+    const content0 = mkNode('div', null, [h1title, table0], {id: 'content'});
     const actorH1 = mkNode('h1', null, [mkText('Actors')]);
     const actorName = mkNode('a', null, [mkText('Actor1')]);
     const actorH2 = mkNode('h2', null, [actorName]);
     const actorTd = mkNode('td', null, [mkNode('table', null, [mkNode('tr', null, [mkNode('td', null, [actorH2])])])]);
     const actorTr = mkNode('tr', null, [actorTd]);
     const actorTable = mkNode('table', null, [actorTr]);
-    const content1 = mkNode('div', 'content', [actorH1, actorTable]);
-    const fanart = mkNode('div', 'fanart', [
+    const content1 = mkNode('div', null, [actorH1, actorTable], {id: 'content'});
+    const fanart = mkNode('div', null, [
       mkNode('table', null, [
         mkNode('tr', null, [
           mkNode('td', null, []),
           mkNode('td', null, []),
-          mkNode('td', null, [mkNode('div', 'content', [h1title])]),
+          mkNode('td', null, [mkNode('div', null, [h1title], {id: 'content'})]),
         ]),
       ]),
       content0, content1,
-    ]);
-    const maincontent = mkNode('td', 'maincontent', [fanart]);
+    ], {id: 'fanart'});
+    const maincontent = mkNode('td', null, [fanart], {id: 'maincontent'});
     const tr2_ = mkNode('tr', null, []);
     const tr3 = mkNode('tr', null, []);
     const tr4 = mkNode('tr', null, [mkNode('td', null, []), mkNode('td', null, []), maincontent]);
@@ -865,11 +858,7 @@ describe('edge cases', () => {
     const chapterA = mkNode('a', null, [mkText('Chapter 1')], { href: '/m12345/' });
     const chapterLi = mkNode('li', null, [chapterA]);
     const chapterUl = mkNode('ul', null, [chapterLi]);
-    const chapterLoad = mkNode('div', 'chapterlistload', [chapterUl]);
-    const tempc = mkNode('div', 'tempc', [chapterLoad]);
-    const leftBar = mkNode('div', 'left-bar', [tempc]);
-    const container = mkNode('div', 'container', [leftBar]);
-    const viewComment = mkNode('div', 'view-comment', [container]);
+    const chapterLoad = mkNode('div', null, [chapterUl], {id: 'chapterlistload'});
     // banner_detail to check completion
     const statusSpan = mkNode('span', null, [mkText('連載中')]);
     const blockSpan = mkNode('span', 'block', [statusSpan]);
@@ -878,7 +867,7 @@ describe('edge cases', () => {
     const form = mkNode('div', 'banner_detail_form', [info]);
     const bannerSection = mkNode('section', 'banner_detail', [form]);
     const bannerDiv = mkNode('div', null, [bannerSection]);
-    const body = mkNode('body', null, [bannerDiv, viewComment]);
+    const body = mkNode('body', null, [bannerDiv, chapterLoad]);
     mockParseDOM.mockReturnValue([mkNode('html', null, [body])]);
     mockApi.mockResolvedValue('<html>');
     mockMongo.mockResolvedValue([]);
@@ -908,13 +897,13 @@ describe('edge cases', () => {
     const creatorDiv = mkNode('div', null, [creatorLabelDiv, mkNode('div', null, [creatorLink])]);
     // The non-center div containing all info
     const infoDiv = mkNode('div', null, [nameDiv, firstAppBlock, creatorDiv]);
-    const mwContent = mkNode('div', 'mw-content-text', [infoDiv]);
-    const wikiArticle = mkNode('div', 'WikiaArticle', [mwContent]);
-    const mainContent = mkNode('div', 'WikiaMainContentContainer', [wikiArticle]);
-    const article = mkNode('article', 'WikiaMainContent', [mainContent]);
-    const pageWrapper = mkNode('div', 'WikiaPageContentWrapper', [article]);
-    const wikiPage = mkNode('section', 'WikiaPage', [pageWrapper]);
-    const siteWrapper = mkNode('div', 'WikiaSiteWrapper', [wikiPage]);
+    const mwContent = mkNode('div', null, [infoDiv], {id: 'mw-content-text'});
+    const wikiArticle = mkNode('div', null, [mwContent], {id: 'WikiaArticle'});
+    const mainContent = mkNode('div', null, [wikiArticle], {id: 'WikiaMainContentContainer'});
+    const article = mkNode('article', null, [mainContent], {id: 'WikiaMainContent'});
+    const pageWrapper = mkNode('div', null, [article], {id: 'WikiaPageContentWrapper'});
+    const wikiPage = mkNode('section', null, [pageWrapper], {id: 'WikiaPage'});
+    const siteWrapper = mkNode('div', null, [wikiPage], {id: 'WikiaSiteWrapper'});
     const body = mkNode('body', null, [siteWrapper]);
     mockParseDOM.mockReturnValue([mkNode('html', null, [body])]);
     mockApi.mockResolvedValue('');
@@ -930,13 +919,13 @@ describe('edge cases', () => {
     const nameSpan = mkNode('span', null, [mkText('Nested Name')]);
     const nameDiv = mkNode('div', null, [nameSpan]); // no text children, only tag children
     const infoDiv = mkNode('div', null, [nameDiv]);
-    const mwContent = mkNode('div', 'mw-content-text', [infoDiv]);
-    const wikiArticle = mkNode('div', 'WikiaArticle', [mwContent]);
-    const mainContent = mkNode('div', 'WikiaMainContentContainer', [wikiArticle]);
-    const article = mkNode('article', 'WikiaMainContent', [mainContent]);
-    const pageWrapper = mkNode('div', 'WikiaPageContentWrapper', [article]);
-    const wikiPage = mkNode('section', 'WikiaPage', [pageWrapper]);
-    const siteWrapper = mkNode('div', 'WikiaSiteWrapper', [wikiPage]);
+    const mwContent = mkNode('div', null, [infoDiv], {id: 'mw-content-text'});
+    const wikiArticle = mkNode('div', null, [mwContent], {id: 'WikiaArticle'});
+    const mainContent = mkNode('div', null, [wikiArticle], {id: 'WikiaMainContentContainer'});
+    const article = mkNode('article', null, [mainContent], {id: 'WikiaMainContent'});
+    const pageWrapper = mkNode('div', null, [article], {id: 'WikiaPageContentWrapper'});
+    const wikiPage = mkNode('section', null, [pageWrapper], {id: 'WikiaPage'});
+    const siteWrapper = mkNode('div', null, [wikiPage], {id: 'WikiaSiteWrapper'});
     const body = mkNode('body', null, [siteWrapper]);
     mockParseDOM.mockReturnValue([mkNode('html', null, [body])]);
     mockApi.mockResolvedValue('');
@@ -955,13 +944,13 @@ describe('edge cases', () => {
     const creatorValDiv = mkNode('div', null, [creatorLink]);
     const infoBlock = mkNode('div', null, [labelDiv, creatorValDiv]);
     const infoDiv = mkNode('div', null, [nameDiv, infoBlock]);
-    const mwContent = mkNode('div', 'mw-content-text', [infoDiv]);
-    const wikiArticle = mkNode('div', 'WikiaArticle', [mwContent]);
-    const mainContent = mkNode('div', 'WikiaMainContentContainer', [wikiArticle]);
-    const article = mkNode('article', 'WikiaMainContent', [mainContent]);
-    const pageWrapper = mkNode('div', 'WikiaPageContentWrapper', [article]);
-    const wikiPage = mkNode('section', 'WikiaPage', [pageWrapper]);
-    const siteWrapper = mkNode('div', 'WikiaSiteWrapper', [wikiPage]);
+    const mwContent = mkNode('div', null, [infoDiv], {id: 'mw-content-text'});
+    const wikiArticle = mkNode('div', null, [mwContent], {id: 'WikiaArticle'});
+    const mainContent = mkNode('div', null, [wikiArticle], {id: 'WikiaMainContentContainer'});
+    const article = mkNode('article', null, [mainContent], {id: 'WikiaMainContent'});
+    const pageWrapper = mkNode('div', null, [article], {id: 'WikiaPageContentWrapper'});
+    const wikiPage = mkNode('section', null, [pageWrapper], {id: 'WikiaPage'});
+    const siteWrapper = mkNode('div', null, [wikiPage], {id: 'WikiaSiteWrapper'});
     const body = mkNode('body', null, [siteWrapper]);
     mockParseDOM.mockReturnValue([mkNode('html', null, [body])]);
     mockApi.mockResolvedValue('');
@@ -979,15 +968,8 @@ describe('edge cases', () => {
     ]);
     const div2 = mkNode('div', null, [innerDiv]);
     const div1 = mkNode('div', null, [div2]);
-    const block = mkNode('div', 'block responsive_apppage_details_left game_details underlined_links', [div1]);
-    const rightcol = mkNode('div', 'rightcol game_meta_data', [block]);
-    const pageContent = mkNode('div', 'page_content', [rightcol]);
-    const pageContentCtn = mkNode('div', 'page_content_ctn', [pageContent]);
-    const gameBg = mkNode('div', 'game_page_background game', [pageContentCtn]);
-    const respTemp = mkNode('div', 'responsive_page_template_content', [gameBg]);
-    const respContent = mkNode('div', 'responsive_page_content', [respTemp]);
-    const respFrame = mkNode('div', 'responsive_page_frame with_header', [respContent]);
-    const body = mkNode('body', null, [respFrame]);
+    const block = mkNode('div', null, [div1], {id: 'appDetailsUnderlinedLinks'});
+    const body = mkNode('body', null, [block]);
     mockParseDOM.mockReturnValue([mkNode('html', null, [body])]);
     mockApi.mockResolvedValue('');
     const result = await ExternalTool.parseTagUrl('steam', 'http://store.steampowered.com/app/456');
@@ -999,7 +981,7 @@ describe('edge cases', () => {
   // parseTagUrl tvdb — science-fiction → sci-fi (L1943)
   test('parseTagUrl tvdb — science-fiction normalized to sci-fi', async () => {
     const nameH1 = mkNode('h1', null, [mkText('ShowName')]);
-    const nameDiv = mkNode('div', 'content', [nameH1]);
+    const nameDiv = mkNode('div', null, [nameH1], {id: 'content'});
     const nameTd = mkNode('td', null, [nameDiv]);
     const skip = mkNode('td', null, []);
     const skip2 = mkNode('td', null, []);
@@ -1019,10 +1001,10 @@ describe('edge cases', () => {
     const innerTd = mkNode('td', null, [innerTable]);
     const innerRow = mkNode('tr', null, [innerTd]);
     const mainTable = mkNode('table', null, [innerRow]);
-    const contentDiv1 = mkNode('div', 'content', [mainTable]);
-    const contentDiv2 = mkNode('div', 'content', []);
-    const fanart = mkNode('div', 'fanart', [nameTable, contentDiv1, contentDiv2]);
-    const maincontent = mkNode('td', 'maincontent', [fanart]);
+    const contentDiv1 = mkNode('div', null, [mainTable], {id: 'content'});
+    const contentDiv2 = mkNode('div', null, [], {id: 'content'});
+    const fanart = mkNode('div', null, [nameTable, contentDiv1, contentDiv2], {id: 'fanart'});
+    const maincontent = mkNode('td', null, [fanart], {id: 'maincontent'});
     const skipTr1 = mkNode('tr', null, []);
     const skipTr2 = mkNode('tr', null, []);
     const mainTr = mkNode('tr', null, [maincontent]);
@@ -1093,11 +1075,7 @@ describe('edge cases', () => {
     const mainA = mkNode('a', null, [mkText('Chapter 1')], { href: '/m888/' });
     const mainLi = mkNode('li', null, [mainA]);
     const chapterUl = mkNode('ul', null, [mainLi, nestedUl]);
-    const chapterLoad = mkNode('div', 'chapterlistload', [chapterUl]);
-    const tempc = mkNode('div', 'tempc', [chapterLoad]);
-    const leftBar = mkNode('div', 'left-bar', [tempc]);
-    const container = mkNode('div', 'container', [leftBar]);
-    const viewComment = mkNode('div', 'view-comment', [container]);
+    const chapterLoad = mkNode('div', null, [chapterUl], {id: 'chapterlistload'});
     const statusSpan = mkNode('span', null, [mkText('已完结')]);
     const blockSpan = mkNode('span', 'block', [statusSpan]);
     const tipP = mkNode('p', 'tip', [blockSpan]);
@@ -1105,7 +1083,7 @@ describe('edge cases', () => {
     const form = mkNode('div', 'banner_detail_form', [info]);
     const bannerSection = mkNode('section', 'banner_detail', [form]);
     const bannerDiv = mkNode('div', null, [bannerSection]);
-    const body = mkNode('body', null, [bannerDiv, viewComment]);
+    const body = mkNode('body', null, [bannerDiv, chapterLoad]);
     mockParseDOM.mockReturnValue([mkNode('html', null, [body])]);
     mockApi.mockResolvedValue('<html>');
     mockMongo.mockResolvedValue([]);

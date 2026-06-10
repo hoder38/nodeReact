@@ -39,49 +39,17 @@ export const getStockPrice = (type='twse', index, previous = false) => {
         const real = () => Api('url', `https://tw.stock.yahoo.com/quote/${index}`).then(raw_data => {
             // Yahoo Taiwan sometimes serves the legacy center/table markup and sometimes the newer app layout.
             const $ = cheerio.load(Htmlparser.parseDOM(raw_data));
-            const center = $('body').children('center').first();
-            if (center.length === 0) {
-                let $tabs = $('body').children('div[class="app"], div[id="app"]').first()
-                    .children('div').first()
-                    .children('div').first()
-                    .children('div').first()
-                    .children('div').first()
-                    .children('div').eq(3)
-                    .children('div').first()
-                    .children('div').first()
-                    .children('div').first();
-                if ($tabs.attr('id') === 'myLightboxContainer') {
-                    $tabs = $('body').children('div[class="app"], div[id="app"]').first()
-                        .children('div').first()
-                        .children('div').first()
-                        .children('div').first()
-                        .children('div').first()
-                        .children('div').eq(2)
-                        .children('div').first()
-                        .children('div').first()
-                        .children('div').first();
-                }
-                let $div;
-                if ($tabs.children('div[class="main-0-QuoteHeader-Proxy"]').length > 0) {
-                    $div = $tabs.children('div[class="main-0-QuoteHeader-Proxy"]').first()
+            const $div = $('div[id="main-0-QuoteHeader-Proxy"]')
                         .children('div').first()
                         .children('div').eq(1)
                         .children('div').first()
                         .children('div').first();
-                } else {
-                    $div = $tabs.children('div').first()
-                        .children('div[class="main-0-QuoteHeader-Proxy"]').first()
-                        .children('div').first()
-                        .children('div').eq(1)
-                        .children('div').first()
-                        .children('div').first();
-                }
-                let price = $div.children('span').first().text().trim();
-                price = price === '-' ? 0 : Number(price.replace(/,/g, ''));
-                if (previous) {
-                    let previousPrice = 0;
-                    // The overview widget can move when Yahoo injects an extra lightbox wrapper.
-                    const getOverviewLi = ($base) => $base.children('div[class="main-2-QuoteOverview-Proxy"]').first()
+            let price = $div.children('span').first().text().trim();
+            price = price === '-' ? 0 : Number(price.replace(/,/g, ''));
+            if (previous) {
+                let previousPrice = 0;
+                // The overview widget can move when Yahoo injects an extra lightbox wrapper.
+                const $lis = $('div[id="main-2-QuoteOverview-Proxy"]')
                         .children('div').first()
                         .children('section').first()
                         .children('div').eq(1)
@@ -89,55 +57,18 @@ export const getStockPrice = (type='twse', index, previous = false) => {
                         .children('div').first()
                         .children('ul').first()
                         .children('li');
-                    let $lis = getOverviewLi($tabs);
-                    if ($lis.length === 0) {
-                        $lis = getOverviewLi($tabs.children('div').first());
+                $lis.each((_, l) => {
+                    if ($(l).children('span').first().text().trim() === '昨收') {
+                        const raw = $(l).children('span').eq(1).text().trim();
+                        previousPrice = raw === '-' ? 0 : Number(raw.replace(/,/g, ''));
                     }
-                    $lis.each((_, l) => {
-                        if ($(l).children('span').first().text().trim() === '昨收') {
-                            const raw = $(l).children('span').eq(1).text().trim();
-                            previousPrice = raw === '-' ? 0 : Number(raw.replace(/,/g, ''));
-                        }
-                    });
-
-                    log.debug({ price, previousPrice }, 'getStockPrice result');
-                    return [price, previousPrice];
-                } else {
-                    log.debug({ price }, 'getStockPrice single');
-                    return price;
-                }
+                });
+                log.debug({ price, previousPrice }, 'getStockPrice result');
+                return [price, previousPrice];
+            } else {
+                log.debug({ price }, 'getStockPrice single');
+                return price;
             }
-            const table1 = center.children('table').eq(1);
-            if (table1.length === 0) {
-                return handleError(new HoError(`stock ${index} price get fail`));
-            }
-            const $tr = table1.children('tr').first();
-            if ($tr.length === 0) {
-                return handleError(new HoError(`stock ${index} price get fail`));
-            }
-            const $table = $tr.children('td').first().children('table').first();
-            if ($table.length === 0) {
-                return handleError(new HoError(`stock ${index} price get fail`));
-            }
-            const price = $table.children('tr').eq(1).children('td').eq(2).children('b').first().text().trim().match(/^(\d+(\.\d+)?|\-)/);
-            if (!price || !price[0]) {
-                log.debug({ raw_data }, 'yahoo raw response');
-                return handleError(new HoError(`stock ${index} price get fail`));
-            }
-            if (price[0] === '-') {
-                // Legacy Yahoo pages sometimes leave the quote cell empty and only expose the last traded price.
-                const last_price = $table.children('tr').eq(1).children('td').eq(5).children('font').first().children('td').eq(1).text().trim().match(/^(\d+(\.\d+)?|\-)/);
-                if (!last_price || !last_price[0]) {
-                    return handleError(new HoError(`stock ${index} price get fail`));
-                }
-                if (price[0] === '-') {
-                    last_price[0] = 0;
-                }
-                price[0] = last_price[0];
-            }
-            price[0] = +price[0];
-            log.debug({ price: price[0] }, 'parsed price');
-            return price[0];
         }).catch(err => {
             log.debug({ count }, 'retry count');
             return (++count > _maxRetry) ? handleError(err) : new Promise((resolve, reject) => setTimeout(() => resolve(real()), count * 1000));
@@ -174,8 +105,8 @@ export const getBasicStockData = (type, index) => {
             let result = {stock_location: ['tw', '台灣', '臺灣']};
             const $ = cheerio.load(Htmlparser.parseDOM(raw_data));
             const $form = $('body').children('form').first();
-            let $table = $form.children('table[class="zoom"]').first();
-            if ($table.length === 0) $table = $form.children('table').first().children('table[class="zoom"]').first();
+            let $table = $form.children('table[id="zoom"]').first();
+            if ($table.length === 0) $table = $form.children('table').first().children('table[id="zoom"]').first();
             // MOPS uses a fixed column order here, so each populated anchor cell maps by position.
             $table.children('tr').eq(1).children('td').each((i, d) => {
                 const $as = $(d).children('a');
@@ -3409,14 +3340,7 @@ export const getStockListV2 = (type, year, month) => {
             } else {
                 return Api('url', `https://en.wikipedia.org/wiki/${list[index]}`).then(raw_data => {
                     const $ = cheerio.load(Htmlparser.parseDOM(raw_data));
-                    $('body').children('div[class="mw-page-container"]').first()
-                        .children('div[class="mw-page-container-inner"]').first()
-                        .children('div[class="mw-content-container"]').first()
-                        .children('main[id="content"]').first()
-                        .children('div[id="bodyContent"]').first()
-                        .children('div[id="mw-content-text"]').first()
-                        .children('div[class="mw-content-ltr mw-parser-output"]').first()
-                        .children('table[class="constituents"]').first()
+                    $('table[id="constituents"]')
                         .children('tbody').first()
                         .children('tr').each((_, t) => {
                         let name = null;
@@ -4660,9 +4584,7 @@ const twseTicker = (price, large = true) => {
 // Parse Macrotrends market-cap text and normalize K/M/B/T suffixes into raw dollar values.
 export const parseMacrotrendsMarketCap = raw_data => {
     const $ = cheerio.load(Htmlparser.parseDOM(raw_data));
-    const $cap = $('body').children('div[class="main_content_container"]').first()
-        .children('div[class="sub_main_content_container"]').first()
-        .children('div[class="main_content"]').first()
+    const $cap = $('div[id="main_content"]')
         .children('div').eq(1).children('span').first();
     let m;
     if ($cap.children('p').length > 0) {
@@ -4687,9 +4609,7 @@ export const parseMacrotrendsMarketCap = raw_data => {
 // Parse a single Macrotrends ratio card and return its numeric value.
 export const parseMacrotrendsRatio = raw_data => {
     const $ = cheerio.load(Htmlparser.parseDOM(raw_data));
-    const $r = $('body').children('div[class="main_content_container"]').first()
-        .children('div[class="sub_main_content_container"]').first()
-        .children('div[class="main_content"]').first()
+    const $r = $('div[id="main_content"]')
         .children('div').eq(1).children('span').first();
     let m;
     if ($r.children('p').length > 0) {
