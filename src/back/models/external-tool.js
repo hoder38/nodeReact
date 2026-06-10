@@ -1,6 +1,7 @@
 import { GENRE_LIST, GENRE_LIST_CH, DM5_ORI_LIST, DM5_CH_LIST, GAME_LIST, GAME_LIST_CH, MUSIC_LIST, MUSIC_LIST_WEB, CACHE_EXPIRE, STORAGEDB } from '../constants.js'
 import OpenCC from 'node-opencc'
 import Htmlparser from 'htmlparser2'
+import * as cheerio from 'cheerio/slim'
 import pathModule from 'path'
 const { dirname: PathDirname, extname: PathExtname, join: PathJoin } = pathModule;
 import Mkdirp from 'mkdirp'
@@ -11,7 +12,7 @@ import Redis from '../models/redis-tool.js'
 import GoogleApi from '../models/api-tool-google.js'
 import { normalize } from '../models/tag-tool.js'
 import Mongo, { objectID } from '../models/mongo-tool.js'
-import { handleError, HoError, toValidName, isValidString, getJson, completeZero, getFileLocation, findTag, addPre, torrent2Magnet } from '../util/utility.js'
+import { handleError, HoError, toValidName, isValidString, getJson, completeZero, getFileLocation, addPre, torrent2Magnet } from '../util/utility.js'
 import Api from './api-tool.js'
 
 
@@ -59,31 +60,38 @@ export default {
                 is_dm5: true,
             }).then(raw_data => {
                 let list = [];
-                const data = Htmlparser.parseDOM(raw_data);
-                if (findTag(data, 'html').length > 0) {
-                    findTag(findTag(findTag(findTag(findTag(findTag(data, 'html')[0], 'body')[0], 'section', 'box container pb40 overflow-Show')[0], 'div', 'box-body')[0], 'ul', 'mh-list col7')[0], 'li').forEach(l => {
-                        const a = findTag(findTag(findTag(findTag(l, 'div', 'mh-item')[0], 'div', 'mh-tip-wrap')[0], 'div', 'mh-item-tip')[0], 'a')[0];
+                const dom = Htmlparser.parseDOM(raw_data);
+                const $ = cheerio.load(dom);
+                if (dom.some(n => n.type === 'tag' && n.name === 'html')) {
+                    $('body').children('section[class="box container pb40 overflow-Show"]').first()
+                        .children('div[class="box-body"]').first()
+                        .children('ul[class="mh-list col7"]').first()
+                        .children('li').each((_, l) => {
+                        const $l = $(l);
+                        const a = $l.children('div[class="mh-item"]').first()
+                            .children('div[class="mh-tip-wrap"]').first()
+                            .children('div[class="mh-item-tip"]').first()
+                            .children('a').first().get(0);
                         list.push({
                             id: a.attribs.href.match(/\/([^\/]+)/)[1],
-                            //name: OpenCC.simplifiedToTraditional(a.attribs.title),
                             name: a.attribs.title,
-                            thumb: findTag(findTag(l, 'div', 'mh-item')[0], 'p', 'mh-cover')[0].attribs.style.match(/url\(([^\)]+)/)[1],
+                            thumb: $l.children('div[class="mh-item"]').first()
+                                .children('p[class="mh-cover"]').first().attr('style').match(/url\(([^\)]+)/)[1],
                             tags: ['漫畫', 'comic'],
                         });
                     });
                 } else {
-                    data.forEach(l => {
+                    $.root().children().each((_, l) => {
                         let name = '';
-                        findTag(findTag(l, 'p')[0], 'span')[0].children.forEach(s => {
-                            if (s.name === 'span') {
-                                name = `${name}${findTag(s)[0]}`;
+                        $(l).children('p').first().children('span').first().contents().each((_, s) => {
+                            if (s.type === 'tag' && s.name === 'span') {
+                                name = `${name}${$(s).text()}`;
                             } else if (s.type === 'text') {
                                 name = `${name}${s.data}`;
                             }
-                        })
+                        });
                         list.push({
                             id: l.attribs.href.match(/\/([^\/]+)/)[1],
-                            //name: OpenCC.simplifiedToTraditional(findTag(findTag(findTag(l, 'p')[0], 'span')[0])[0]),
                             name,
                             thumb: 'dm5.png',
                             tags: ['漫畫', 'comic'],
@@ -102,47 +110,81 @@ export default {
             case 'imdb':
             return Api('url', url).then(raw_data => {
                 taglist.add('歐美');
-                const html = findTag(Htmlparser.parseDOM(raw_data), 'html')[0];
-                let title = findTag(findTag(findTag(html, 'head')[0], 'title')[0])[0];
+                const $ = cheerio.load(Htmlparser.parseDOM(raw_data));
+                let title = $('title').text().trim();
                 console.log(title);
                 title = title.match(/^(.*?) \([^\d]*(\d\d\d\d)[^\)]*\) - IMDb$/);
                 taglist.add(title[1]).add(title[2]);
-                findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(html, 'body')[0], 'div', '__next')[0], 'main')[0], 'div')[0], 'section')[0], 'div')[0], 'section')[0], 'div')[0], 'div')[0], 'section').forEach(sec => {
-                    if (sec.attribs['data-testid'] === 'title-cast') {
-                        findTag(findTag(findTag(sec, 'div')[1], 'div')[1], 'div').forEach(cast => taglist.add(findTag(findTag(findTag(cast, 'div')[1], 'a')[0])[0]));
-                        findTag(findTag(sec, 'ul')[0], 'li').forEach(cast => {
-                            if (findTag(cast, 'div')[0]) {
-                                findTag(findTag(findTag(cast, 'div')[0], 'ul')[0], 'li').forEach(c => taglist.add(findTag(findTag(c, 'a')[0])[0]));
-                            }
-                        });
-                    } else if (sec.attribs['data-testid'] === 'Storyline') {
-                        findTag(findTag(findTag(findTag(findTag(findTag(sec, 'div')[1], 'ul')[1], 'li')[1], 'div')[0], 'ul')[0], 'li').forEach(genre => taglist.add(findTag(findTag(genre, 'a')[0])[0]));
-                    } else if (sec.attribs['data-testid'] === 'Details') {
-                        findTag(findTag(findTag(sec, 'div')[1], 'ul')[0], 'li').forEach(de => {
-                            const detype = findTag(de, 'a')[0] ? findTag(findTag(de, 'a')[0])[0] : findTag(findTag(de, 'span')[0])[0];
-                            if (detype === 'Countries of origin') {
-                                findTag(findTag(findTag(de, 'div')[0], 'ul')[0], 'li').forEach(country => taglist.add(findTag(findTag(country, 'a')[0])[0]));
-                            } else if (detype === 'Languages') {
-                                findTag(findTag(findTag(de, 'div')[0], 'ul')[0], 'li').forEach(lang => taglist.add(findTag(findTag(lang, 'a')[0])[0]));
-                            }
-                        });
-                    }
-                });
+                $('body').children('div[class="__next"], div[id="__next"]').first()
+                    .children('main').first()
+                    .children('div').first()
+                    .children('section').first()
+                    .children('div').first()
+                    .children('section').first()
+                    .children('div').first()
+                    .children('div').first()
+                    .children('section').each((_, sec) => {
+                        const testid = $(sec).attr('data-testid');
+                        if (testid === 'title-cast') {
+                            $(sec).children('div').eq(1).children('div').eq(1).children('div').each((_, cast) => {
+                                taglist.add($(cast).children('div').eq(1).children('a').first().text().trim());
+                            });
+                            $(sec).children('ul').first().children('li').each((_, cast) => {
+                                if ($(cast).children('div').length > 0) {
+                                    $(cast).children('div').first().children('ul').first().children('li').each((_, c) => {
+                                        taglist.add($(c).children('a').first().text().trim());
+                                    });
+                                }
+                            });
+                        } else if (testid === 'Storyline') {
+                            $(sec).children('div').eq(1).children('ul').eq(1).children('li').eq(1).children('div').first().children('ul').first().children('li').each((_, genre) => {
+                                taglist.add($(genre).children('a').first().text().trim());
+                            });
+                        } else if (testid === 'Details') {
+                            $(sec).children('div').eq(1).children('ul').first().children('li').each((_, de) => {
+                                const $de = $(de);
+                                const detype = $de.children('a').length > 0
+                                    ? $de.children('a').first().text().trim()
+                                    : $de.children('span').first().text().trim();
+                                if (detype === 'Countries of origin') {
+                                    $de.children('div').first().children('ul').first().children('li').each((_, country) => {
+                                        taglist.add($(country).children('a').first().text().trim());
+                                    });
+                                } else if (detype === 'Languages') {
+                                    $de.children('div').first().children('ul').first().children('li').each((_, lang) => {
+                                        taglist.add($(lang).children('a').first().text().trim());
+                                    });
+                                }
+                            });
+                        }
+                    });
                 return [...taglist].map(t => toValidName(t.toLowerCase()));
             });
             case 'steam':
             return Api('url', url, {cookie: 'birthtime=536425201; lastagecheckage=1-January-1987'}).then(raw_data => {
                 taglist.add('歐美').add('遊戲').add('game');
-                const info = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'responsive_page_frame with_header')[0], 'div', 'responsive_page_content')[0], 'div', 'responsive_page_template_content')[0], 'div', 'game_page_background game')[0], 'div', 'page_content_ctn')[0], 'div', 'page_content')[0], 'div', 'rightcol game_meta_data')[0], 'div', 'block responsive_apppage_details_left game_details underlined_links')[0], 'div')[0], 'div')[0], 'div')[0];
-                findTag(info).forEach(i => {
-                    const name = i.trim();
-                    if (name !== ',') {
+                const $ = cheerio.load(Htmlparser.parseDOM(raw_data));
+                const info = $('body')
+                    .children('div[class="responsive_page_frame with_header"]').first()
+                    .children('div[class="responsive_page_content"]').first()
+                    .children('div[class="responsive_page_template_content"]').first()
+                    .children('div[class="game_page_background game"]').first()
+                    .children('div[class="page_content_ctn"]').first()
+                    .children('div[class="page_content"]').first()
+                    .children('div[class="rightcol game_meta_data"]').first()
+                    .children('div[class="block responsive_apppage_details_left game_details underlined_links"]').first()
+                    .children('div').first()
+                    .children('div').first()
+                    .children('div').first();
+                info.contents().filter((_, n) => n.type === 'text').each((_, n) => {
+                    const name = n.data.toString().trim();
+                    if (name && name !== ',') {
                         const date = name.match(/^\d?\d [a-zA-Z][a-zA-Z][a-zA-Z], (\d\d\d\d)$/);
                         taglist.add(date ? date[1] : name);
                     }
                 });
-                findTag(info, 'a').forEach(i => {
-                    let a = findTag(i)[0].toLowerCase();
+                info.children('a').each((_, anchorEl) => {
+                    let a = $(anchorEl).text().trim().toLowerCase();
                     if (a === 'sports') {
                         a = 'sport';
                     }
@@ -157,26 +199,34 @@ export default {
             case 'allmusic':
             return Api('url', url).then(raw_data => {
                 taglist.add('歐美').add('音樂').add('music');
-                const overflow = findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div')[1];
-                if (overflow.attribs.class === 'overflow-container album') {
-                    const container = findTag(findTag(overflow, 'div', 'cmn_wrap')[0], 'div', 'content-container')[0];
-                    const content = findTag(findTag(findTag(container, 'div', 'content')[0], 'header')[0], 'hgroup')[0];
-                    const basic = findTag(findTag(container, 'div', 'sidebar')[0], 'section', 'basic-info')[0];
-                    taglist.add(findTag(findTag(findTag(findTag(content, 'h2', 'album-artist')[0], 'span')[0], 'a')[0])[0]).add(findTag(findTag(content, 'h1', 'album-title')[0])[0].trim()).add(findTag(findTag(findTag(basic, 'div', 'release-date')[0], 'span')[0])[0].match(/\d+$/)[0]);
-                    findTag(findTag(findTag(basic, 'div', 'genre')[0], 'div')[0], 'a').forEach(a => {
-                        const genre = findTag(a)[0].toLowerCase();
+                const $ = cheerio.load(Htmlparser.parseDOM(raw_data));
+                const overflow = $('body').children('div').eq(1);
+                const overflowClass = overflow.attr('class');
+                if (overflowClass === 'overflow-container album') {
+                    const container = overflow.children('div[class="cmn_wrap"]').first().children('div[class="content-container"]').first();
+                    const content = container.children('div[class="content"]').first().children('header').first().children('hgroup').first();
+                    const basic = container.children('div[class="sidebar"]').first().children('section[class="basic-info"]').first();
+                    taglist
+                        .add(content.children('h2[class="album-artist"]').first().children('span').first().children('a').first().text().trim())
+                        .add(content.children('h1[class="album-title"]').first().text().trim())
+                        .add(basic.children('div[class="release-date"]').first().children('span').first().text().trim().match(/\d+$/)[0]);
+                    basic.children('div[class="genre"]').first().children('div').first().children('a').each((_, a) => {
+                        const genre = $(a).text().trim().toLowerCase();
                         const index = MUSIC_LIST_WEB.indexOf(genre);
                         taglist.add(index !== -1 ? MUSIC_LIST[index] : genre);
                     });
-                } else if (overflow.attribs.class === 'overflow-container song') {
-                    const overview = findTag(findTag(findTag(overflow, 'div', 'cmn_wrap')[0], 'div', 'content-container')[0], 'div', 'content overview')[0];
-                    const content = findTag(findTag(overview, 'header')[0], 'hgroup')[0];
-                    taglist.add(findTag(findTag(findTag(findTag(content, 'h2', 'song-artist')[0], 'span')[0], 'a')[0])[0]).add(findTag(findTag(content, 'h1', 'song-title')[0])[0].trim()).add(findTag(findTag(findTag(findTag(findTag(findTag(overview, 'section', 'appearances')[0], 'table')[0], 'tbody')[0], 'tr')[0], 'td', 'year')[0])[0].trim());
-                } else if (overflow.attribs.class === 'overflow-container artist') {
-                    const container = findTag(findTag(overflow, 'div', 'cmn_wrap')[0], 'div', 'content-container')[0];
-                    taglist.add(findTag(findTag(findTag(findTag(findTag(findTag(container, 'div', 'content')[0], 'header')[0], 'div', 'artist-bio-container')[0], 'hgroup')[0], 'h1', 'artist-name')[0])[0].trim());
-                    findTag(findTag(findTag(findTag(findTag(container, 'div', 'sidebar')[0], 'section', 'basic-info')[0], 'div', 'genre')[0], 'div')[0], 'a').forEach(a => {
-                        const genre = findTag(a)[0].toLowerCase();
+                } else if (overflowClass === 'overflow-container song') {
+                    const overview = overflow.children('div[class="cmn_wrap"]').first().children('div[class="content-container"]').first().children('div[class="content overview"]').first();
+                    const content = overview.children('header').first().children('hgroup').first();
+                    taglist
+                        .add(content.children('h2[class="song-artist"]').first().children('span').first().children('a').first().text().trim())
+                        .add(content.children('h1[class="song-title"]').first().text().trim())
+                        .add(overview.children('section[class="appearances"]').first().children('table').first().children('tbody').first().children('tr').first().children('td[class="year"]').first().text().trim());
+                } else if (overflowClass === 'overflow-container artist') {
+                    const container = overflow.children('div[class="cmn_wrap"]').first().children('div[class="content-container"]').first();
+                    taglist.add(container.children('div[class="content"]').first().children('header').first().children('div[class="artist-bio-container"]').first().children('hgroup').first().children('h1[class="artist-name"]').first().text().trim());
+                    container.children('div[class="sidebar"]').first().children('section[class="basic-info"]').first().children('div[class="genre"]').first().children('div').first().children('a').each((_, a) => {
+                        const genre = $(a).text().trim().toLowerCase();
                         const index = MUSIC_LIST_WEB.indexOf(genre);
                         taglist.add(index !== -1 ? MUSIC_LIST[index] : genre);
                     });
@@ -187,36 +237,62 @@ export default {
             case 'dc':
             return Api('url', url).then(raw_data => {
                 taglist.add('歐美').add('漫畫').add('comic').add(type);
-                for (let div of findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'WikiaSiteWrapper')[0], 'section', 'WikiaPage')[0], 'div', 'WikiaPageContentWrapper')[0], 'article', 'WikiaMainContent')[0], 'div', 'WikiaMainContentContainer')[0], 'div', 'WikiaArticle')[0], 'div', 'mw-content-text')[0], 'div')) {
-                    if (div.attribs.class !== 'center') {
-                        findTag(div, 'div').forEach((d, i) => {
+                const $ = cheerio.load(Htmlparser.parseDOM(raw_data));
+                const textOf = el => $(el).contents().filter((_, n) => n.type === 'text').toArray()
+                    .map(n => n.data.toString().trim()).filter(Boolean);
+                const mwContentDivs = $('body')
+                    .children('div[class="WikiaSiteWrapper"]').first()
+                    .children('section[class="WikiaPage"]').first()
+                    .children('div[class="WikiaPageContentWrapper"]').first()
+                    .children('article[class="WikiaMainContent"]').first()
+                    .children('div[class="WikiaMainContentContainer"]').first()
+                    .children('div[class="WikiaArticle"]').first()
+                    .children('div[class="mw-content-text"]').first()
+                    .children('div');
+                for (const div of mwContentDivs.toArray()) {
+                    if ($(div).attr('class') !== 'center') {
+                        $(div).children('div').each((i, d) => {
                             if (i === 0) {
-                                let name = findTag(d);
-                                if (name.length > 0) {
-                                    taglist.add(name[0]);
+                                const directTexts = textOf(d);
+                                if (directTexts.length > 0) {
+                                    taglist.add(directTexts[0]);
                                 } else {
-                                    for (let c of d.children) {
-                                        name = findTag(c);
-                                        if (c.type === 'tag' && name.length > 0) {
-                                            taglist.add(name[0]);
-                                            break;
+                                    for (const c of $(d).contents().toArray()) {
+                                        if (c.type === 'tag') {
+                                            const childTexts = textOf(c);
+                                            if (childTexts.length > 0) {
+                                                taglist.add(childTexts[0]);
+                                                break;
+                                            }
                                         }
                                     }
                                 }
                             } else {
-                                const dd = findTag(d, 'div');
-                                if (dd.length > 0) {
-                                    if (findTag(dd[0]).length > 0) {
-                                        if (findTag(dd[0])[0].match(/First appearance/i)) {
-                                            const date = findTag(dd[2], 'div')
-                                            if (date.length > 0) {
-                                                taglist.add(findTag(findTag(date[0], 'a')[0])[0].match(/\d+$/)[0]);
+                                const ddArr = $(d).children('div').toArray();
+                                if (ddArr.length > 0) {
+                                    const dd0Texts = textOf(ddArr[0]);
+                                    if (dd0Texts.length > 0) {
+                                        if (dd0Texts[0].match(/First appearance/i)) {
+                                            if (ddArr[2]) {
+                                                const dateChildDivs = $(ddArr[2]).children('div').toArray();
+                                                if (dateChildDivs.length > 0) {
+                                                    const dateText = $(dateChildDivs[0]).children('a').first().text().trim();
+                                                    const dateMatch = dateText.match(/\d+$/);
+                                                    if (dateMatch) taglist.add(dateMatch[0]);
+                                                }
                                             }
-                                        } else if (findTag(dd[0])[0].match(/(creator|Editor\-in\-Chief|Cover Artist|writer|penciler|inker|letterer|editor)/i)) {
-                                            findTag(dd[1], 'a').forEach(a => taglist.add(findTag(a)[0]));
+                                        } else if (dd0Texts[0].match(/(creator|Editor\-in\-Chief|Cover Artist|writer|penciler|inker|letterer|editor)/i)) {
+                                            if (ddArr[1]) {
+                                                $(ddArr[1]).children('a').each((_, a) => taglist.add($(a).text().trim()));
+                                            }
                                         }
-                                    } else if (findTag(dd[0], 'span').length > 0 && findTag(findTag(dd[0], 'span')[1])[0].match(/(creator|Editor\-in\-Chief|Cover Artist|writer|penciler|inker|letterer|editor)/i)) {
-                                        findTag(dd[1], 'a').forEach(a => taglist.add(findTag(a)[0]));
+                                    } else if ($(ddArr[0]).children('span').length > 0) {
+                                        const span1Text = $(ddArr[0]).children('span').eq(1).text().trim();
+                                        if (span1Text.match(/(creator|Editor\-in\-Chief|Cover Artist|writer|penciler|inker|letterer|editor)/i)) {
+                                            if (ddArr[1]) {
+                                                $(ddArr[1]).children('a').each((_, a) => taglist.add($(a).text().trim()));
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -229,19 +305,23 @@ export default {
             case 'tvdb':
             return Api('url', url).then(raw_data => {
                 taglist.add('歐美').add('電視劇').add('tv show');
-                const fanart = findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'table')[0], 'tr')[2], 'td', 'maincontent')[0], 'div', 'fanart')[0];
-                taglist.add(findTag(findTag(findTag(findTag(findTag(findTag(fanart, 'table')[0], 'tr')[0], 'td')[2], 'div', 'content')[0], 'h1')[0])[0]);
-                findTag(fanart, 'div', 'content').forEach((c, i) => {
+                const $ = cheerio.load(Htmlparser.parseDOM(raw_data));
+                const fanart = $('body').children('table').first().children('tr').eq(2).children('td[class="maincontent"]').first().children('div[class="fanart"]').first();
+                taglist.add(fanart.children('table').first().children('tr').first().children('td').eq(2).children('div[class="content"]').first().children('h1').first().text().trim());
+                fanart.children('div[class="content"]').each((i, c) => {
                     if (i === 0) {
-                        findTag(findTag(findTag(findTag(findTag(c, 'table')[0], 'tr')[0], 'td')[0], 'table')[0], 'tr').forEach(t => {
-                            const label = findTag(findTag(t, 'td')[0])[0];
+                        $(c).children('table').first().children('tr').first().children('td').first().children('table').first().children('tr').each((_, t) => {
+                            const label = $(t).children('td').first().text().trim();
                             if (label === 'First Aired:') {
-                                taglist.add(findTag(findTag(t, 'td')[1])[0].match(/\d+$/)[0]);
+                                const dateText = $(t).children('td').eq(1).text().trim();
+                                const m = dateText.match(/\d+$/);
+                                if (m) taglist.add(m[0]);
                             } else if (label === 'Network:') {
-                                taglist.add(findTag(findTag(t, 'td')[1])[0]);
+                                taglist.add($(t).children('td').eq(1).text().trim());
                             } else if (label === 'Genre:') {
-                                findTag(findTag(t, 'td')[1]).forEach(d => {
-                                    let g = d.toLowerCase();
+                                $(t).children('td').eq(1).contents().filter((_, n) => n.type === 'text').each((_, n) => {
+                                    let g = n.data.toString().trim().toLowerCase();
+                                    if (!g) return;
                                     if (g === 'science-fiction') {
                                         g = 'sci-fi';
                                     }
@@ -254,8 +334,10 @@ export default {
                             }
                         });
                     } else {
-                        if (findTag(findTag(c, 'h1')[0])[0] === 'Actors') {
-                            findTag(findTag(findTag(c, 'table')[0], 'tr')[0], 'td').forEach(t => taglist.add(findTag(findTag(findTag(findTag(findTag(findTag(t, 'table')[0], 'tr')[0], 'td')[0], 'h2')[0], 'a')[0])[0]));
+                        if ($(c).children('h1').first().text().trim() === 'Actors') {
+                            $(c).children('table').first().children('tr').first().children('td').each((_, t) => {
+                                taglist.add($(t).children('table').first().children('tr').first().children('td').first().children('h2').first().children('a').first().text().trim());
+                            });
                         }
                     }
                 });
@@ -359,36 +441,46 @@ export default {
                 is_dm5: true,
             }).then(raw_data => {
                 const list = [];
-                const body = findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0];
-                const divs = findTag(body,'div');
+                const $ = cheerio.load(Htmlparser.parseDOM(raw_data));
                 let is_end = false;
-                for (let d of divs) {
-                    if (findTag(d, 'section', 'banner_detail').length > 0) {
-                        if (findTag(findTag(findTag(findTag(findTag(findTag(findTag(d, 'section', 'banner_detail')[0], 'div', 'banner_detail_form')[0], 'div', 'info')[0], 'p', 'tip')[0], 'span', 'block')[0], 'span')[0])[0] === '已完结') {
+                for (const d of $('body').children('div').toArray()) {
+                    if ($(d).children('section[class="banner_detail"]').length > 0) {
+                        if ($(d).children('section[class="banner_detail"]').first()
+                            .children('div[class="banner_detail_form"]').first()
+                            .children('div[class="info"]').first()
+                            .children('p[class="tip"]').first()
+                            .children('span[class="block"]').first()
+                            .children('span').first()
+                            .text().trim() === '已完结') {
                             is_end = true;
                         }
                         break;
                     }
                 }
-                findTag(findTag(findTag(findTag(findTag(findTag(body, 'div', 'view-comment')[0], 'div', 'container')[0], 'div', 'left-bar')[0], 'div', 'tempc')[0], 'div', 'chapterlistload')[0], 'ul').forEach(u => {
-                    let li = findTag(u, 'li');
-                    const more = findTag(u, 'ul');
-                    if (more.length > 0) {
-                        li = li.concat(findTag(more[0], 'li'));
-                    }
-                    li.reverse().forEach(l => {
-                        const a = findTag(l, 'a')[0];
-                        let title = findTag(a)[0];
-                        if (!title) {
-                            title = findTag(findTag(findTag(a, 'div', 'info')[0], 'p', 'title')[0])[0];
+                $('body').children('div[class="view-comment"]').first()
+                    .children('div[class="container"]').first()
+                    .children('div[class="left-bar"]').first()
+                    .children('div[class="tempc"]').first()
+                    .children('div[class="chapterlistload"]').first()
+                    .children('ul').each((_, u) => {
+                        let liArr = $(u).children('li').toArray();
+                        const more = $(u).children('ul').toArray();
+                        if (more.length > 0) {
+                            liArr = liArr.concat($(more[0]).children('li').toArray());
                         }
-                        list.push({
-                            //title: OpenCC.simplifiedToTraditional(title),
-                            title: title,
-                            url: addPre(a.attribs.href, 'http://www.dm5.com'),
+                        liArr.reverse().forEach(l => {
+                            const $a = $(l).children('a').first();
+                            let title = $a.text().trim();
+                            if (!title) {
+                                title = $a.children('div[class="info"]').first().children('p[class="title"]').first().text().trim();
+                            }
+                            list.push({
+                                //title: OpenCC.simplifiedToTraditional(title),
+                                title: title,
+                                url: addPre($a.attr('href'), 'http://www.dm5.com'),
+                            });
                         });
                     });
-                });
                 return [list, is_end];
             });
             return Redis('hgetall', `url: ${encodeURIComponent(url)}`).then(item => {
@@ -419,7 +511,14 @@ export default {
         let url = null;
         switch (type) {
             case 'yify':
-            const getMid = () => isNaN(id) ? Api('url', `https://yts.ag/movie/${id}`, {referer: 'https://yts.ag/'}).then(raw_data => findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'main-content')[0], 'div', 'movie-content')[0], 'div', 'row')[0], 'div', 'movie-info')[0].attribs['data-movie-id']) : Promise.resolve(id);
+            const getMid = () => isNaN(id) ? Api('url', `https://yts.ag/movie/${id}`, {referer: 'https://yts.ag/'}).then(raw_data => {
+                const $ = cheerio.load(Htmlparser.parseDOM(raw_data));
+                return $('body').children('div[class="main-content"]').first()
+                    .children('div[class="movie-content"]').first()
+                    .children('div[class="row"]').first()
+                    .children('div[class="movie-info"]').first()
+                    .attr('data-movie-id');
+            }) : Promise.resolve(id);
             return getMid().then(mid => {
                 url = `https://yts.ag/api/v2/movie_details.json?with_cast=true&movie_id=${mid}`;
                 return Api('url', url, {referer: 'https://yts.ag/'}).then(raw_data => {
@@ -453,31 +552,36 @@ export default {
             case 'dm5':
             url = `http://www.dm5.com/${id}/`;
             return Api('url', url, {is_dm5: true,}).then(raw_data => {
-                const divs = findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div');
-                let info = null;
-                for (let i = 0; i < divs.length; i++) {
-                    if (divs[i].attribs.class === '') {
-                        info = findTag(findTag(divs[i], 'section', 'banner_detail')[0], 'div', 'banner_detail_form')[0];
+                const $ = cheerio.load(Htmlparser.parseDOM(raw_data));
+                const divArr = $('body').children('div').toArray();
+                let $info = null;
+                for (let i = 0; i < divArr.length; i++) {
+                    if ($(divArr[i]).attr('class') === '') {
+                        $info = $(divArr[i]).children('section[class="banner_detail"]').first().children('div[class="banner_detail_form"]').first();
                         break;
                     }
                 }
-                if (!info) {
+                if (!$info || $info.length === 0) {
                     return handleError(new HoError('dm5 misses info'));
                 }
                 let setTag = new Set(['dm5', '漫畫', 'comic', '圖片集', 'image book', '圖片', 'image']);
-                findTag(findTag(findTag(info, 'div', 'info')[0], 'p', 'subtitle')[0], 'a').forEach(a => setTag.add(OpenCC.simplifiedToTraditional(findTag(a)[0])));
-                const block = findTag(findTag(findTag(info, 'div', 'info')[0], 'p', 'tip')[0], 'span', 'block')[1];
-                if (block) {
-                    findTag(block, 'a').forEach(a => setTag.add(OpenCC.simplifiedToTraditional(findTag(findTag(a, 'span')[0])[0])));
+                $info.children('div[class="info"]').first().children('p[class="subtitle"]').first().children('a').each((_, a) => {
+                    setTag.add(OpenCC.simplifiedToTraditional($(a).text().trim()));
+                });
+                const $block = $info.children('div[class="info"]').first().children('p[class="tip"]').first().children('span[class="block"]').eq(1);
+                if ($block.length > 0) {
+                    $block.children('a').each((_, a) => {
+                        setTag.add(OpenCC.simplifiedToTraditional($(a).children('span').first().text().trim()));
+                    });
                 }
                 let newTag = new Set();
                 setTag.forEach(i => newTag.add(DM5_ORI_LIST.includes(i) ? DM5_CH_LIST[DM5_ORI_LIST.indexOf(i)] : i));
                 return [
-                    OpenCC.simplifiedToTraditional(findTag(findTag(findTag(info, 'div', 'info')[0], 'p', 'title')[0])[0]),
+                    OpenCC.simplifiedToTraditional($info.children('div[class="info"]').first().children('p[class="title"]').first().text().trim()),
                     newTag,
                     new Set(),
                     'dm5',
-                    findTag(findTag(info, 'div', 'cover')[0], 'img')[0].attribs.src,
+                    $info.children('div[class="cover"]').first().children('img').first().attr('src'),
                     url,
                 ];
             });

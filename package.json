@@ -43,6 +43,7 @@
     "bitfinex-api-node": "^4.0.16",
     "body-parser": "^1.19.0",
     "chart.js": "^2.9.4",
+    "cheerio": "^1.2.0",
     "connect-multiparty": "^2.2.0",
     "connect-redis": "^5.0.0",
     "connected-react-router": "^6.8.0",

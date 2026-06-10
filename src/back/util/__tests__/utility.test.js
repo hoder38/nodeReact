@@ -121,7 +121,7 @@ let isValidString, toValidName, userPWCheck, checkAdmin, HoError,
     getStorageItem, getPasswordItem, getStockItem, getFileLocation,
     deleteFolderRecursive, SRT2VTT,
     bufferToString, getJson, torrent2Magnet, sortList, completeZero,
-    findTag, convertTimestampToDate, addPre, isEmptyObject;
+    convertTimestampToDate, addPre, isEmptyObject;
 
 let consoleSpy;
 let cryptoModule;
@@ -152,7 +152,6 @@ beforeEach(async () => {
     torrent2Magnet = mod.torrent2Magnet;
     sortList = mod.sortList;
     completeZero = mod.completeZero;
-    findTag = mod.findTag;
     convertTimestampToDate = mod.convertTimestampToDate;
     addPre = mod.addPre;
     isEmptyObject = mod.isEmptyObject;
@@ -1220,94 +1219,6 @@ describe('completeZero', () => {
     });
     test('(0, 3) → "000"', () => {
         expect(completeZero(0, 3)).toBe('000');
-    });
-});
-
-// =====================================================================
-// findTag
-// =====================================================================
-describe('findTag', () => {
-    test('finds tag by name', () => {
-        const node = { children: [
-            { type: 'tag', name: 'div', attribs: {} },
-            { type: 'tag', name: 'span', attribs: {} },
-        ]};
-        expect(findTag(node, 'div')).toHaveLength(1);
-    });
-
-    test('finds tag with matching id attribute', () => {
-        const node = { children: [
-            { type: 'tag', name: 'div', attribs: { class: 'main' } },
-        ]};
-        expect(findTag(node, 'div', 'main')).toHaveLength(1);
-    });
-
-    test('id mismatch returns empty', () => {
-        const node = { children: [
-            { type: 'tag', name: 'div', attribs: { class: 'other' } },
-        ]};
-        expect(findTag(node, 'div', 'main')).toHaveLength(0);
-    });
-
-    test('no tag → extracts text nodes', () => {
-        const node = { children: [
-            { type: 'text', data: '  hello  ' },
-            { type: 'text', data: '   ' },
-        ]};
-        expect(findTag(node)).toEqual(['hello']);
-    });
-
-    test('extracts CDATA comments', () => {
-        const node = { children: [
-            { type: 'comment', data: '[CDATA[some content]]' },
-        ]};
-        expect(findTag(node)).toEqual(['some content']);
-    });
-
-    test('extracts HTML comments', () => {
-        const node = { children: [
-            { type: 'comment', data: '<!--inner comment-->' },
-        ]};
-        expect(findTag(node)).toEqual(['inner comment']);
-    });
-
-    test('regular comment text', () => {
-        const node = { children: [
-            { type: 'comment', data: ' just a comment ' },
-        ]};
-        expect(findTag(node)).toEqual(['just a comment']);
-    });
-
-    test('empty comment ignored', () => {
-        const node = { children: [
-            { type: 'comment', data: '   ' },
-        ]};
-        expect(findTag(node)).toEqual([]);
-    });
-
-    test('non-array input returns empty', () => {
-        expect(findTag({ notAnArray: true })).toEqual([]);
-    });
-
-    test('array input (no children wrapper)', () => {
-        const items = [
-            { type: 'tag', name: 'p', attribs: {} },
-        ];
-        expect(findTag(items, 'p')).toHaveLength(1);
-    });
-
-    test('script type matches', () => {
-        const node = { children: [
-            { type: 'script', name: 'script', attribs: {} },
-        ]};
-        expect(findTag(node, 'script')).toHaveLength(1);
-    });
-
-    test('tag with no attribs and id search returns empty', () => {
-        const node = { children: [
-            { type: 'tag', name: 'div' },
-        ]};
-        expect(findTag(node, 'div', 'myid')).toHaveLength(0);
     });
 });
 

@@ -125,8 +125,11 @@ jest.unstable_mockModule('../tag-tool.js', () => ({
 
 // --- htmlparser2 ---
 const mockParseDOM = jest.fn();
+const ELEMENT_TYPE = {Root:'root',Text:'text',Directive:'directive',Comment:'comment',Script:'script',Style:'style',Tag:'tag',CDATA:'cdata',Doctype:'doctype'};
 jest.unstable_mockModule('htmlparser2', () => ({
     default: { parseDOM: mockParseDOM },
+    ElementType: ELEMENT_TYPE,
+    parseDocument: jest.fn(() => ({ type: 'root', children: [] })),
 }));
 
 // --- yahoo-finance2 ---
@@ -949,9 +952,9 @@ describe('getStockListV2', () => {
         const tbodyNode = mkNode('tbody', '', [dataRow]);
         const constitTable = mkNode('table', 'constituents', [tbodyNode]);
         const parserOutput = mkNode('div', 'mw-content-ltr mw-parser-output', [constitTable]);
-        const contentText = mkNode('div', 'mw-content-text', [parserOutput]);
-        const bodyContent = mkNode('div', 'bodyContent', [contentText]);
-        const contentArea = mkNode('main', 'content', [bodyContent]);
+        const contentText = mkNode('div', null, [parserOutput], {id: 'mw-content-text'});
+        const bodyContent = mkNode('div', null, [contentText], {id: 'bodyContent'});
+        const contentArea = mkNode('main', null, [bodyContent], {id: 'content'});
         const contentContainer = mkNode('div', 'mw-content-container', [contentArea]);
         const innerContainer = mkNode('div', 'mw-page-container-inner', [contentContainer]);
         const pageContainer = mkNode('div', 'mw-page-container', [innerContainer]);
@@ -962,9 +965,9 @@ describe('getStockListV2', () => {
         const emptyTbody = mkNode('tbody', '');
         const emptyTable = mkNode('table', 'constituents', [emptyTbody]);
         const emptyOutput = mkNode('div', 'mw-content-ltr mw-parser-output', [emptyTable]);
-        const emptyText = mkNode('div', 'mw-content-text', [emptyOutput]);
-        const emptyBodyContent = mkNode('div', 'bodyContent', [emptyText]);
-        const emptyContent = mkNode('main', 'content', [emptyBodyContent]);
+        const emptyText = mkNode('div', null, [emptyOutput], {id: 'mw-content-text'});
+        const emptyBodyContent = mkNode('div', null, [emptyText], {id: 'bodyContent'});
+        const emptyContent = mkNode('main', null, [emptyBodyContent], {id: 'content'});
         const emptyContainer = mkNode('div', 'mw-content-container', [emptyContent]);
         const emptyInner = mkNode('div', 'mw-page-container-inner', [emptyContainer]);
         const emptyPage = mkNode('div', 'mw-page-container', [emptyInner]);
@@ -1909,9 +1912,9 @@ describe('getStockListV2 usse non-Dow path', () => {
         const tbody = mkNode('tbody', '', rows);
         const ct = mkNode('table', 'constituents', [tbody]);
         const po = mkNode('div', 'mw-content-ltr mw-parser-output', [ct]);
-        const ctext = mkNode('div', 'mw-content-text', [po]);
-        const bc = mkNode('div', 'bodyContent', [ctext]);
-        const cont = mkNode('main', 'content', [bc]);
+        const ctext = mkNode('div', null, [po], {id: 'mw-content-text'});
+        const bc = mkNode('div', null, [ctext], {id: 'bodyContent'});
+        const cont = mkNode('main', null, [bc], {id: 'content'});
         const cc = mkNode('div', 'mw-content-container', [cont]);
         const ic = mkNode('div', 'mw-page-container-inner', [cc]);
         const pc = mkNode('div', 'mw-page-container', [ic]);

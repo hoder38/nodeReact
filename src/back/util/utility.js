@@ -435,55 +435,6 @@ export const completeZero = (number, offset) => {
     return number.toString();
 }
 
-export const findTag = (node, tag=null, id=null) => {
-    let ret = [];
-    const item = node.children ? node.children : node;
-    if (!Array.isArray(item)) {
-        return ret;
-    }
-    for (let c of item) {
-        if (tag) {
-            if ((c.type === 'tag' || c.type === 'script') && c.name === tag) {
-                if (id) {
-                    if (c.attribs) {
-                        Object.keys(c.attribs).forEach(a => {
-                            if (c.attribs[a].trim() === id) {
-                                ret.push(c);
-                            }
-                        });
-                    }
-                } else {
-                    ret.push(c);
-                }
-            }
-        } else {
-            if (c.type === 'text') {
-                const str = c.data.toString().trim();
-                if (str) {
-                    ret.push(str);
-                }
-            }
-            if (c.type === 'comment') {
-                let str = c.data.toString();
-                let strMatch = str.match(/^\[CDATA\[(.*)\]\]$/);
-                if (strMatch) {
-                    str = strMatch[1].trim();
-                } else {
-                    strMatch = str.match(/^\<\!--(.*)--\>$/);
-                    if (strMatch) {
-                        str = strMatch[1].trim();
-                    } else {
-                        str = str.trim();
-                    }
-                }
-                if (str) {
-                    ret.push(str);
-                }
-            }
-        }
-    }
-    return ret;
-}
 
 export const convertTimestampToDate = (timestamp) => {
   const date = new Date(timestamp * 1000);

@@ -7,7 +7,7 @@
  *
  * Strategy: Mock all external deps (Api, Mongo, Redis, GoogleApi, Htmlparser,
  *   youtubedl, Mkdirp, fs, ReadTorrent, OpenCC, sendWs, utility, tag-tool,
- *   mime, constants). Build minimal DOM-like structures for findTag traversal.
+ *   mime, constants). Build minimal DOM-like structures for cheerio traversal.
  */
 import { jest, describe, test, expect, beforeAll, beforeEach, afterEach } from '@jest/globals';
 
@@ -51,8 +51,11 @@ jest.unstable_mockModule('../tag-tool.js', () => ({
 }));
 
 const mockParseDOM = jest.fn();
+const ELEMENT_TYPE = {Root:'root',Text:'text',Directive:'directive',Comment:'comment',Script:'script',Style:'style',Tag:'tag',CDATA:'cdata',Doctype:'doctype'};
 jest.unstable_mockModule('htmlparser2', () => ({
   default: { parseDOM: mockParseDOM },
+  ElementType: ELEMENT_TYPE,
+  parseDocument: jest.fn(() => ({ type: 'root', children: [] })),
 }));
 
 const mockYoutubedl = jest.fn();
@@ -83,37 +86,6 @@ jest.unstable_mockModule('../../util/mime.js', () => ({ addPost: mockAddPost }))
 class MockHoError extends Error {
   constructor(msg) { super(msg); this.name = 'HoError'; }
 }
-const realFindTag = (node, tag = null, id = null) => {
-  if (!node) return [];
-  const children = Array.isArray(node) ? node : (node.children || []);
-  if (!tag) {
-    // Match real findTag: only return text-node strings (trimmed, non-empty)
-    let result = [];
-    for (const c of children) {
-      if (c.type === 'text') {
-        const str = c.data.toString().trim();
-        if (str) result.push(str);
-      }
-    }
-    return result;
-  }
-  let result = [];
-  for (const c of children) {
-    if ((c.type === 'tag' || c.type === 'script') && c.name === tag) {
-      if (!id) {
-        result.push(c);
-      } else if (c.attribs) {
-        for (const a of Object.keys(c.attribs)) {
-          if (c.attribs[a].trim() === id) {
-            result.push(c);
-            break;
-          }
-        }
-      }
-    }
-  }
-  return result;
-};
 const mockHandleError = jest.fn((err, type) => {
   if (type && typeof type === 'function') return type(err);
   if (type && typeof type === 'string') return undefined;
@@ -139,7 +111,6 @@ jest.unstable_mockModule('../../util/utility.js', () => ({
   getJson: mockGetJson,
   completeZero: mockCompleteZero,
   getFileLocation: mockGetFileLocation,
-  findTag: realFindTag,
   addPre: mockAddPre,
   torrent2Magnet: mockTorrent2Magnet,
 }));

@@ -2,6 +2,7 @@ import { ENV_TYPE } from '../../../ver.js'
 import { CHECK_STOCK, USSE_TICKER, TWSE_TICKER } from '../config.js'
 import { STOCKDB, CACHE_EXPIRE, STOCK_FILTER_LIMIT, STOCK_FILTER, MAX_RETRY, TOTALDB, STOCK_INDEX, NORMAL_DISTRIBUTION, TRADE_FEE, TRADE_INTERVAL, RANGE_INTERVAL, TRADE_TIME, USSE_FEE, USERDB, TWSE_NUM, USSE_NUM, MAX_NEWMID_STACK, EMERGENCY_STOP_THRESHOLD, MIN_BINS, MAX_BINS, VOLUME_DECAY_LAMBDA } from '../constants.js'
 import Htmlparser from 'htmlparser2'
+import * as cheerio from 'cheerio/slim'
 import fsModule from 'fs'
 import yahooFinance from 'yahoo-finance2'
 import Mkdirp from 'mkdirp'
@@ -12,7 +13,7 @@ import TagTool, { isDefaultTag, normalize } from '../models/tag-tool.js'
 import Api from './api-tool.js'
 import { getUssePosition, getUsseOrder } from '../models/tdameritrade-tool.js'
 import { getTwsePosition, getTwseOrder } from '../models/shioaji-tool.js'
-import { handleError, HoError, findTag, completeZero, addPre, isValidString, toValidName, convertTimestampToDate } from '../util/utility.js'
+import { handleError, HoError, completeZero, addPre, isValidString, toValidName, convertTimestampToDate } from '../util/utility.js'
 import { getExtname } from '../util/mime.js'
 import sendWs from '../util/sendWs.js'
 import createLogger from '../util/logger.js'
@@ -37,38 +38,67 @@ export const getStockPrice = (type='twse', index, previous = false) => {
         let count = 0;
         const real = () => Api('url', `https://tw.stock.yahoo.com/quote/${index}`).then(raw_data => {
             // Yahoo Taiwan sometimes serves the legacy center/table markup and sometimes the newer app layout.
-            const center = findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'center')[0];
-            if (!center) {
-                let tabs = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'app')[0], 'div')[0], 'div')[0], 'div')[0], 'div')[0], 'div')[3], 'div')[0], 'div')[0], 'div')[0];
-                if (tabs.attribs.id === 'myLightboxContainer') {
-                    tabs = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'app')[0], 'div')[0], 'div')[0], 'div')[0], 'div')[0], 'div')[2], 'div')[0], 'div')[0], 'div')[0];
+            const $ = cheerio.load(Htmlparser.parseDOM(raw_data));
+            const center = $('body').children('center').first();
+            if (center.length === 0) {
+                let $tabs = $('body').children('div[class="app"], div[id="app"]').first()
+                    .children('div').first()
+                    .children('div').first()
+                    .children('div').first()
+                    .children('div').first()
+                    .children('div').eq(3)
+                    .children('div').first()
+                    .children('div').first()
+                    .children('div').first();
+                if ($tabs.attr('id') === 'myLightboxContainer') {
+                    $tabs = $('body').children('div[class="app"], div[id="app"]').first()
+                        .children('div').first()
+                        .children('div').first()
+                        .children('div').first()
+                        .children('div').first()
+                        .children('div').eq(2)
+                        .children('div').first()
+                        .children('div').first()
+                        .children('div').first();
                 }
-                let div = null;
-                if (findTag(tabs, 'div', 'main-0-QuoteHeader-Proxy')[0]) {
-                    div = findTag(findTag(findTag(findTag(findTag(tabs, 'div', 'main-0-QuoteHeader-Proxy')[0], 'div')[0], 'div')[1], 'div')[0], 'div')[0];
+                let $div;
+                if ($tabs.children('div[class="main-0-QuoteHeader-Proxy"]').length > 0) {
+                    $div = $tabs.children('div[class="main-0-QuoteHeader-Proxy"]').first()
+                        .children('div').first()
+                        .children('div').eq(1)
+                        .children('div').first()
+                        .children('div').first();
                 } else {
-                    div = findTag(findTag(findTag(findTag(findTag(findTag(tabs, 'div')[0], 'div', 'main-0-QuoteHeader-Proxy')[0], 'div')[0], 'div')[1], 'div')[0], 'div')[0];
+                    $div = $tabs.children('div').first()
+                        .children('div[class="main-0-QuoteHeader-Proxy"]').first()
+                        .children('div').first()
+                        .children('div').eq(1)
+                        .children('div').first()
+                        .children('div').first();
                 }
-                let price = findTag(findTag(div, 'span')[0])[0];
+                let price = $div.children('span').first().text().trim();
                 price = price === '-' ? 0 : Number(price.replace(/,/g, ''));
                 if (previous) {
                     let previousPrice = 0;
                     // The overview widget can move when Yahoo injects an extra lightbox wrapper.
-                    if (findTag(tabs, 'div', 'main-2-QuoteOverview-Proxy')[0]) {
-                        findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(tabs, 'div', 'main-2-QuoteOverview-Proxy')[0], 'div')[0], 'section')[0], 'div')[1], 'div')[1], 'div')[0], 'ul')[0], 'li').forEach(l => {
-                            if (findTag(findTag(l, 'span')[0])[0] === '昨收') {
-                                previousPrice = findTag(findTag(l, 'span')[1])[0];
-                                previousPrice = previousPrice === '-' ? 0 : Number(previousPrice.replace(/,/g, ''));
-                            }
-                        });
-                    } else {
-                        findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(tabs, 'div')[0], 'div', 'main-2-QuoteOverview-Proxy')[0], 'div')[0], 'section')[0], 'div')[1], 'div')[1], 'div')[0], 'ul')[0], 'li').forEach(l => {
-                            if (findTag(findTag(l, 'span')[0])[0] === '昨收') {
-                                previousPrice = findTag(findTag(l, 'span')[1])[0];
-                                previousPrice = previousPrice === '-' ? 0 : Number(previousPrice.replace(/,/g, ''));
-                            }
-                        });
+                    const getOverviewLi = ($base) => $base.children('div[class="main-2-QuoteOverview-Proxy"]').first()
+                        .children('div').first()
+                        .children('section').first()
+                        .children('div').eq(1)
+                        .children('div').eq(1)
+                        .children('div').first()
+                        .children('ul').first()
+                        .children('li');
+                    let $lis = getOverviewLi($tabs);
+                    if ($lis.length === 0) {
+                        $lis = getOverviewLi($tabs.children('div').first());
                     }
+                    $lis.each((_, l) => {
+                        if ($(l).children('span').first().text().trim() === '昨收') {
+                            const raw = $(l).children('span').eq(1).text().trim();
+                            previousPrice = raw === '-' ? 0 : Number(raw.replace(/,/g, ''));
+                        }
+                    });
 
                     log.debug({ price, previousPrice }, 'getStockPrice result');
                     return [price, previousPrice];
@@ -77,26 +107,26 @@ export const getStockPrice = (type='twse', index, previous = false) => {
                     return price;
                 }
             }
-            const table1 = findTag(center, 'table')[1];
-            if (!table1) {
+            const table1 = center.children('table').eq(1);
+            if (table1.length === 0) {
                 return handleError(new HoError(`stock ${index} price get fail`));
             }
-            const tr = findTag(table1, 'tr')[0];
-            if (!tr) {
+            const $tr = table1.children('tr').first();
+            if ($tr.length === 0) {
                 return handleError(new HoError(`stock ${index} price get fail`));
             }
-            const table = findTag(findTag(tr, 'td')[0], 'table')[0];
-            if (!table) {
+            const $table = $tr.children('td').first().children('table').first();
+            if ($table.length === 0) {
                 return handleError(new HoError(`stock ${index} price get fail`));
             }
-            const price = findTag(findTag(findTag(findTag(table, 'tr')[1], 'td')[2], 'b')[0])[0].match(/^(\d+(\.\d+)?|\-)/);
+            const price = $table.children('tr').eq(1).children('td').eq(2).children('b').first().text().trim().match(/^(\d+(\.\d+)?|\-)/);
             if (!price || !price[0]) {
                 log.debug({ raw_data }, 'yahoo raw response');
                 return handleError(new HoError(`stock ${index} price get fail`));
             }
             if (price[0] === '-') {
                 // Legacy Yahoo pages sometimes leave the quote cell empty and only expose the last traded price.
-                const last_price = findTag(findTag(findTag(findTag(findTag(table, 'tr')[1], 'td')[5], 'font')[0], 'td')[1])[0].match(/^(\d+(\.\d+)?|\-)/);
+                const last_price = $table.children('tr').eq(1).children('td').eq(5).children('font').first().children('td').eq(1).text().trim().match(/^(\d+(\.\d+)?|\-)/);
                 if (!last_price || !last_price[0]) {
                     return handleError(new HoError(`stock ${index} price get fail`));
                 }
@@ -142,16 +172,17 @@ export const getBasicStockData = (type, index) => {
         case 'twse':
         const real = () => Api('url', `https://mopsov.twse.com.tw/mops/web/ajax_quickpgm?encodeURIComponent=1&step=4&firstin=1&off=1&keyword4=${index}&code1=&TYPEK2=&checkbtn=1&queryName=co_id&TYPEK=all&co_id=${index}`).then(raw_data => {
             let result = {stock_location: ['tw', '台灣', '臺灣']};
-            let i = 0;
-            const form = findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'form')[0];
-            const table = findTag(form, 'table', 'zoom')[0] ? findTag(form, 'table', 'zoom')[0] : findTag(findTag(form, 'table')[0], 'table', 'zoom')[0];
+            const $ = cheerio.load(Htmlparser.parseDOM(raw_data));
+            const $form = $('body').children('form').first();
+            let $table = $form.children('table[class="zoom"]').first();
+            if ($table.length === 0) $table = $form.children('table').first().children('table[class="zoom"]').first();
             // MOPS uses a fixed column order here, so each populated anchor cell maps by position.
-            findTag(findTag(table, 'tr')[1], 'td').forEach(d => {
-                const as = findTag(d, 'a');
-                if (as.length > 0) {
+            $table.children('tr').eq(1).children('td').each((i, d) => {
+                const $as = $(d).children('a');
+                if ($as.length > 0) {
                     let texts = [];
-                    as.forEach(a => {
-                        const text = findTag(a)[0];
+                    $as.each((_, a) => {
+                        const text = $(a).text().trim();
                         if (text) {
                             texts.push(text);
                         }
@@ -197,7 +228,6 @@ export const getBasicStockData = (type, index) => {
                         break;
                     }
                 }
-                i++;
             });
             return result;
         }).catch(err => {
@@ -529,7 +559,7 @@ export default {
                 const recur_getTwseProfit = () => {
                     log.debug({ year, quarter }, 'financial quarter');
                     return Api('url', `https://mopsov.twse.com.tw/server-java/t164sb01?step=1&CO_ID=${index}&SYEAR=${year}&SSEASON=${quarter}&REPORT_ID=${reportType}`, {big5: true}).then(raw_data => {
-                        if (findTag(Htmlparser.parseDOM(raw_data), 'h4')[0]) {
+                        if (cheerio.load(Htmlparser.parseDOM(raw_data))('h4').length > 0) {
                             if (latestQuarter) {
                                 return handleError(new HoError('too short stock data'));
                             } else {
@@ -2827,25 +2857,26 @@ export const validateIntervalData = (interval_data, raw_arr, adjustments) => {
 
 // Download a single TWSE annual report file to the staging path before Drive upload.
 const getTwseAnnual = (index, year, filePath) => Api('url', `https://doc.twse.com.tw/server-java/t57sb01?id=&key=&step=1&co_id=${index}&year=${year-1911}&seamon=&mtype=F&dtype=F04`, {referer: 'https://doc.twse.com.tw/'}).then(raw_data => {
-    const center = findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'center')[0];
-    if (!center) {
+    const $ = cheerio.load(Htmlparser.parseDOM(raw_data));
+    const $center = $('body').children('center').first();
+    if ($center.length === 0) {
         log.debug({ raw_data }, 'annual report step1 response');
         return handleError(new HoError('cannot find form'));
     }
-    const form = findTag(center, 'form')[0];
-    if (!form) {
+    const $form = $center.children('form').first();
+    if ($form.length === 0) {
         log.debug({ raw_data }, 'annual report step2 response');
         return handleError(new HoError('cannot find form'));
     }
-    const tds = findTag(findTag(findTag(findTag(form, 'table')[0], 'table')[0], 'tr')[1], 'td');
     let filename = false;
-    for (let t of tds) {
-        const a = findTag(t, 'a')[0];
-        if (a) {
-            filename = findTag(a)[0];
-            break;
+    $form.children('table').first().children('table').first().children('tr').eq(1).children('td').each((_, t) => {
+        if (!filename) {
+            const $a = $(t).children('a').first();
+            if ($a.length > 0) {
+                filename = $a.text().trim();
+            }
         }
-    }
+    });
     if (!filename) {
         return handleError(new HoError('cannot find annual location'));
     }
@@ -2854,7 +2885,8 @@ const getTwseAnnual = (index, year, filePath) => Api('url', `https://doc.twse.co
         return Api('url', `https://doc.twse.com.tw/server-java/t57sb01?step=9&kind=F&co_id=${index}&filename=${filename}`, {referer: 'https://doc.twse.com.tw/'}, {filePath}).then(() => filename);
     } else {
         return Api('url', `https://doc.twse.com.tw/server-java/t57sb01?step=9&kind=F&co_id=${index}&filename=${filename}`, {referer: 'https://doc.twse.com.tw/'}).then(raw_data => {
-            return Api('url', addPre(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'center')[0], 'a')[0].attribs.href, 'https://doc.twse.com.tw'), {filePath}).then(() => filename);
+            const $2 = cheerio.load(Htmlparser.parseDOM(raw_data));
+            return Api('url', addPre($2('html body center a').first().attr('href'), 'https://doc.twse.com.tw'), {filePath}).then(() => filename);
         });
     }
 });
@@ -3319,11 +3351,12 @@ export const getStockListV2 = (type, year, month) => {
             fund_no: '0',
         }}).then(raw_data => {
             const stock_list = [];
-            const tables = findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div')[0], 'table');
+            const $ = cheerio.load(Htmlparser.parseDOM(raw_data));
+            const tables = $('body').children('div').first().children('table').toArray();
             let tag = false;
             tables.forEach(table => {
-                if (table.attribs.class === 'noBorder') {
-                    const name = findTag(findTag(findTag(table, 'tr')[0], 'td')[1])[0];
+                if ($(table).attr('class') === 'noBorder') {
+                    const name = $(table).children('tr').first().children('td').eq(1).text().trim();
                     tag = false;
                     for (let i = 0; i < STOCK_INDEX[type].length; i++) {
                         if (name === STOCK_INDEX[type][i].name) {
@@ -3333,9 +3366,10 @@ export const getStockListV2 = (type, year, month) => {
                     }
                 } else {
                     if (tag) {
-                        findTag(table, 'tr').forEach(tr => {
-                            if (tr.attribs.class === 'even' || tr.attribs.class === 'odd') {
-                                const index = findTag(findTag(tr, 'td')[0])[0];
+                        $(table).children('tr').each((_, tr) => {
+                            const cls = $(tr).attr('class');
+                            if (cls === 'even' || cls === 'odd') {
+                                const index = $(tr).children('td').first().text().trim();
                                 if (Number(index)) {
                                     if (index != '2888') {
                                         let exist = false;
@@ -3374,29 +3408,39 @@ export const getStockListV2 = (type, year, month) => {
                 return stock_list;
             } else {
                 return Api('url', `https://en.wikipedia.org/wiki/${list[index]}`).then(raw_data => {
-                    findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'mw-page-container')[0], 'div', 'mw-page-container-inner')[0], 'div', 'mw-content-container')[0], 'main', 'content')[0], 'div', 'bodyContent')[0], 'div', 'mw-content-text')[0], 'div', 'mw-content-ltr mw-parser-output')[0], 'table', 'constituents')[0], 'tbody')[0], 'tr').forEach(t => {
+                    const $ = cheerio.load(Htmlparser.parseDOM(raw_data));
+                    $('body').children('div[class="mw-page-container"]').first()
+                        .children('div[class="mw-page-container-inner"]').first()
+                        .children('div[class="mw-content-container"]').first()
+                        .children('main[id="content"]').first()
+                        .children('div[id="bodyContent"]').first()
+                        .children('div[id="mw-content-text"]').first()
+                        .children('div[class="mw-content-ltr mw-parser-output"]').first()
+                        .children('table[class="constituents"]').first()
+                        .children('tbody').first()
+                        .children('tr').each((_, t) => {
                         let name = null;
                         let sIndex = null;
                         if (list[index] === 'Dow_Jones_Industrial_Average') {
-                            const a = findTag(findTag(t, 'th')[0], 'a')[0];
-                            if (a) {
-                                name = toValidName(findTag(a)[0]).replace('&amp;', '&').replace('&#x27;', "'");
-                                sIndex = findTag(findTag(findTag(t, 'td')[1], 'a')[0])[0].replace('.', '-');
+                            const $a = $(t).children('th').first().children('a').first();
+                            if ($a.length > 0) {
+                                name = toValidName($a.text().trim()).replace('&amp;', '&').replace('&#x27;', "'");
+                                sIndex = $(t).children('td').eq(1).children('a').first().text().trim().replace('.', '-');
                             }
                         } else {
-                            const d = findTag(t, 'td')[0];
-                            if (d) {
-                                const a = findTag(findTag(t, 'td')[1], 'a')[0];
-                                if (a) {
-                                    name = findTag(a)[0].replace('&amp;', '&').replace('&#x27;', "'");
+                            const $d = $(t).children('td').first();
+                            if ($d.length > 0) {
+                                const $a = $(t).children('td').eq(1).children('a').first();
+                                if ($a.length > 0) {
+                                    name = $a.text().trim().replace('&amp;', '&').replace('&#x27;', "'");
                                 } else {
-                                    name = findTag(findTag(t, 'td')[1])[0].replace('&amp;', '&').replace('&#x27;', "'");
+                                    name = $(t).children('td').eq(1).text().trim().replace('&amp;', '&').replace('&#x27;', "'");
                                 }
-                                const a1 = findTag(d, 'a')[0];
-                                if (a1) {
-                                    sIndex = findTag(a1)[0].replace('.', '-');
+                                const $a1 = $d.children('a').first();
+                                if ($a1.length > 0) {
+                                    sIndex = $a1.text().trim().replace('.', '-');
                                 } else {
-                                    sIndex = findTag(d)[0].replace('.', '-');
+                                    sIndex = $d.text().trim().replace('.', '-');
                                 }
                             }
                         }
@@ -4615,12 +4659,16 @@ const twseTicker = (price, large = true) => {
 
 // Parse Macrotrends market-cap text and normalize K/M/B/T suffixes into raw dollar values.
 export const parseMacrotrendsMarketCap = raw_data => {
-    let cap = findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'main_content_container')[0], 'div', 'sub_main_content_container')[0], 'div', 'main_content')[0], 'div')[1], 'span')[0];
+    const $ = cheerio.load(Htmlparser.parseDOM(raw_data));
+    const $cap = $('body').children('div[class="main_content_container"]').first()
+        .children('div[class="sub_main_content_container"]').first()
+        .children('div[class="main_content"]').first()
+        .children('div').eq(1).children('span').first();
     let m;
-    if (findTag(cap, 'p')[0]) {
-        m = findTag(findTag(findTag(cap, 'p')[0], 'strong')[0])[0].match(/^\$([\d\,]+\.?\d*)([a-zA-Z])?$/);
+    if ($cap.children('p').length > 0) {
+        m = $cap.children('p').first().children('strong').first().text().trim().match(/^\$([\d\,]+\.?\d*)([a-zA-Z])?$/);
     } else {
-        m = findTag(findTag(cap, 'strong')[0])[0].match(/^\$([\d\,]+\.?\d*)([a-zA-Z])?$/);
+        m = $cap.children('strong').first().text().trim().match(/^\$([\d\,]+\.?\d*)([a-zA-Z])?$/);
     }
     if (!m) {
         return 0;
@@ -4638,12 +4686,16 @@ export const parseMacrotrendsMarketCap = raw_data => {
 
 // Parse a single Macrotrends ratio card and return its numeric value.
 export const parseMacrotrendsRatio = raw_data => {
-    let r = findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'main_content_container')[0], 'div', 'sub_main_content_container')[0], 'div', 'main_content')[0], 'div')[1], 'span')[0];
+    const $ = cheerio.load(Htmlparser.parseDOM(raw_data));
+    const $r = $('body').children('div[class="main_content_container"]').first()
+        .children('div[class="sub_main_content_container"]').first()
+        .children('div[class="main_content"]').first()
+        .children('div').eq(1).children('span').first();
     let m;
-    if (findTag(r, 'p')[0]) {
-        m = findTag(findTag(findTag(r, 'p')[0], 'strong')[0])[0].match(/\d+\.?\d*/);
+    if ($r.children('p').length > 0) {
+        m = $r.children('p').first().children('strong').first().text().trim().match(/\d+\.?\d*/);
     } else {
-        m = findTag(findTag(r, 'strong')[0])[0].match(/\d+\.?\d*/);
+        m = $r.children('strong').first().text().trim().match(/\d+\.?\d*/);
     }
     return m ? Number(m[0]) : 9999;
 };
