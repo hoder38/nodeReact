@@ -325,41 +325,7 @@ router.put('/sendTag/:uid', function(req, res, next){
 
 router.put('/addTagUrl', function(req, res, next) {
     console.log('storage addTagUrl');
-    const url = isValidString(req.body.url, 'url');
-    if (!url) {
-        return handleError(new HoError('invalid tag url'), next);
-    }
-    const getTaglist = () => {
-        if (req.body.url.match(/^(http|https):\/\/store\.steampowered\.com\/app\//)) {
-            console.log('steam');
-            return External.parseTagUrl('steam', req.body.url);
-        } else if (req.body.url.match(/^(http|https):\/\/www\.imdb\.com\/title\//)) {
-            console.log('imdb');
-            return External.parseTagUrl('imdb', req.body.url);
-        } else if (req.body.url.match(/^(http|https):\/\/www\.allmusic\.com\//)) {
-            console.log('allmusic');
-            return External.parseTagUrl('allmusic', req.body.url);
-        } else if (req.body.url.match(/^(http|https):\/\/marvel\.wikia\.com\/wiki\//)) {
-            console.log('marvel');
-            return External.parseTagUrl('marvel', req.body.url);
-        } else if (req.body.url.match(/^(http|https):\/\/dc\.wikia\.com\/wiki\//)) {
-            console.log('dc');
-            return External.parseTagUrl('dc', req.body.url);
-        } else if (req.body.url.match(/^(http|https):\/\/thetvdb\.com\//)) {
-            console.log('tvdb');
-            return External.parseTagUrl('tvdb', req.body.url);
-        } else {
-            return Promise.reject(new HoError('invalid tag url'));
-        }
-    }
-    getTaglist().then(taglist => {
-        const recur = (index, u, adultonly=false) => (index >= taglist.length) ? Promise.resolve(sendWs({
-            type: 'file',
-            data: u,
-        }, adultonly)) : StorageTagTool.addTag(u, taglist[index], req.user, false).then(result => new Promise(resolve => setTimeout(() => resolve(recur(index + 1, u, result.adultonly)), 500)));
-        const recur_add = index => (index >= req.body.uids.length) ? res.json({apiOK: true}) : recur(0, req.body.uids[index]).then(() => recur_add(index + 1));
-        return req.body.uids ? recur_add(0) : res.json({tags: taglist})
-    }).catch(err => handleError(err, next));
+    handleError(new HoError('not support!!!'), next);
 });
 
 router.put('/delTag/:tag', function(req, res, next) {
@@ -528,7 +494,7 @@ router.get('/media/setTime/:id/:type/:obj?/:pageToken?/:back(back)?', function(r
                     playurl = `https://yts.ag/api/v2/movie_details.json?movie_id=${playlistId}`;
                     playtype = 'yify';
                 } else if (playlist === 5) {
-                    playurl = `http://www.dm5.com/${playlistId}/`;
+                    playurl = `https://www.dm5.com/${playlistId}/`;
                     playtype = 'dm5';
                 }
                 return External.getSingleId(playtype, playurl, recordTime).then(([obj, is_end, total]) => ret_rest(obj, is_end, total));

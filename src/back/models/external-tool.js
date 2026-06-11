@@ -15,8 +15,6 @@ import Mongo, { objectID } from '../models/mongo-tool.js'
 import { handleError, HoError, toValidName, isValidString, getJson, completeZero, getFileLocation, addPre, torrent2Magnet } from '../util/utility.js'
 import Api from './api-tool.js'
 
-
-
 export default {
     //type要補到deltag裡
     getSingleList: function(type, url, post=null) {
@@ -98,242 +96,6 @@ export default {
                     });
                 }
                 return list;
-            });
-            default:
-            return handleError(new HoError('unknown external type'));
-        }
-    },
-    parseTagUrl: function(type, url) {
-        let taglist = new Set();
-        switch (type) {
-            case 'imdb':
-            return Api('url', url).then(raw_data => {
-                taglist.add('歐美');
-                console.log(raw_data);
-                const $ = cheerio.load(Htmlparser.parseDOM(raw_data));
-                let title = $('title').text().trim();
-                console.log(title);
-                title = title.match(/^(.*?) \([^\d]*(\d\d\d\d)[^\)]*\) - IMDb$/);
-                taglist.add(title[1]).add(title[2]);
-                $('body').children('div[class="__next"], div[id="__next"]').first()
-                    .children('main').first()
-                    .children('div').first()
-                    .children('section').first()
-                    .children('div').first()
-                    .children('section').first()
-                    .children('div').first()
-                    .children('div').first()
-                    .children('section').each((_, sec) => {
-                        const testid = $(sec).attr('data-testid');
-                        if (testid === 'title-cast') {
-                            $(sec).children('div').eq(1).children('div').eq(1).children('div').each((_, cast) => {
-                                taglist.add($(cast).children('div').eq(1).children('a').first().text().trim());
-                            });
-                            $(sec).children('ul').first().children('li').each((_, cast) => {
-                                if ($(cast).children('div').length > 0) {
-                                    $(cast).children('div').first().children('ul').first().children('li').each((_, c) => {
-                                        taglist.add($(c).children('a').first().text().trim());
-                                    });
-                                }
-                            });
-                        } else if (testid === 'Storyline') {
-                            $(sec).children('div').eq(1).children('ul').eq(1).children('li').eq(1).children('div').first().children('ul').first().children('li').each((_, genre) => {
-                                taglist.add($(genre).children('a').first().text().trim());
-                            });
-                        } else if (testid === 'Details') {
-                            $(sec).children('div').eq(1).children('ul').first().children('li').each((_, de) => {
-                                const $de = $(de);
-                                const detype = $de.children('a').length > 0
-                                    ? $de.children('a').first().text().trim()
-                                    : $de.children('span').first().text().trim();
-                                if (detype === 'Countries of origin') {
-                                    $de.children('div').first().children('ul').first().children('li').each((_, country) => {
-                                        taglist.add($(country).children('a').first().text().trim());
-                                    });
-                                } else if (detype === 'Languages') {
-                                    $de.children('div').first().children('ul').first().children('li').each((_, lang) => {
-                                        taglist.add($(lang).children('a').first().text().trim());
-                                    });
-                                }
-                            });
-                        }
-                    });
-                return [...taglist].map(t => toValidName(t.toLowerCase()));
-            });
-            case 'steam':
-            return Api('url', url, {cookie: 'birthtime=536425201; lastagecheckage=1-January-1987'}).then(raw_data => {
-                taglist.add('歐美').add('遊戲').add('game');
-                const $ = cheerio.load(Htmlparser.parseDOM(raw_data));
-                const info = $('div[id="appDetailsUnderlinedLinks"]')
-                    .children('div').first()
-                    .children('div').first()
-                    .children('div').first();
-                info.contents().filter((_, n) => n.type === 'text').each((_, n) => {
-                    const name = n.data.toString().trim();
-                    if (name && name !== ',') {
-                        const date = name.match(/^\d?\d [a-zA-Z][a-zA-Z][a-zA-Z], (\d\d\d\d)$/);
-                        taglist.add(date ? date[1] : name);
-                    }
-                });
-                info.children('a').each((_, anchorEl) => {
-                    let a = $(anchorEl).text().trim().toLowerCase();
-                    if (a === 'sports') {
-                        a = 'sport';
-                    }
-                    taglist.add(a);
-                    const index = GAME_LIST.indexOf(a);
-                    if (index !== -1) {
-                        taglist.add(GAME_LIST_CH[index]);
-                    }
-                });
-                return [...taglist].map(t => toValidName(t.toLowerCase()));
-            });
-            case 'allmusic':
-            return Api('url', url).then(raw_data => {
-                taglist.add('歐美').add('音樂').add('music');
-                const $ = cheerio.load(Htmlparser.parseDOM(raw_data));
-                const overflow = $('body').children('div').eq(1);
-                const overflowClass = overflow.attr('class');
-                if (overflowClass === 'overflow-container album') {
-                    const container = overflow.children('div[id="cmn_wrap"]').first().children('div[id="content-container"]').first();
-                    const content = container.children('div[id="content"]').first().children('header').first().children('hgroup').first();
-                    const basic = container.children('div[id="sidebar"]').first().children('section[id="basic-info"]').first();
-                    taglist
-                        .add(content.children('h2[id="album-artist"]').first().children('span').first().children('a').first().text().trim())
-                        .add(content.children('h1[id="album-title"]').first().text().trim())
-                        .add(basic.children('div[id="release-date"]').first().children('span').first().text().trim().match(/\d+$/)[0]);
-                    basic.children('div[id="genre"]').first().children('div').first().children('a').each((_, a) => {
-                        const genre = $(a).text().trim().toLowerCase();
-                        const index = MUSIC_LIST_WEB.indexOf(genre);
-                        taglist.add(index !== -1 ? MUSIC_LIST[index] : genre);
-                    });
-                } else if (overflowClass === 'overflow-container song') {
-                    const overview = overflow.children('div[id="cmn_wrap"]').first().children('div[id="content-container"]').first().children('div[id="content overview"]').first();
-                    const content = overview.children('header').first().children('hgroup').first();
-                    taglist
-                        .add(content.children('h2[id="song-artist"]').first().children('span').first().children('a').first().text().trim())
-                        .add(content.children('h1[id="song-title"]').first().text().trim())
-                        .add(overview.children('section[id="appearances"]').first().children('table').first().children('tbody').first().children('tr').first().children('td[id="year"]').first().text().trim());
-                } else if (overflowClass === 'overflow-container artist') {
-                    const container = overflow.children('div[id="cmn_wrap"]').first().children('div[id="content-container"]').first();
-                    taglist.add(container.children('div[id="content"]').first().children('header').first().children('div[id="artist-bio-container"]').first().children('hgroup').first().children('h1[id="artist-name"]').first().text().trim());
-                    container.children('div[id="sidebar"]').first().children('section[id="basic-info"]').first().children('div[id="genre"]').first().children('div').first().children('a').each((_, a) => {
-                        const genre = $(a).text().trim().toLowerCase();
-                        const index = MUSIC_LIST_WEB.indexOf(genre);
-                        taglist.add(index !== -1 ? MUSIC_LIST[index] : genre);
-                    });
-                }
-                return [...taglist].map(t => toValidName(t.toLowerCase()));
-            });
-            case 'marvel':
-            case 'dc':
-            return Api('url', url).then(raw_data => {
-                taglist.add('歐美').add('漫畫').add('comic').add(type);
-                const $ = cheerio.load(Htmlparser.parseDOM(raw_data));
-                const textOf = el => $(el).contents().filter((_, n) => n.type === 'text').toArray()
-                    .map(n => n.data.toString().trim()).filter(Boolean);
-                const mwContentDivs = $('body')
-                    .children('div[id="WikiaSiteWrapper"]').first()
-                    .children('section[id="WikiaPage"]').first()
-                    .children('div[id="WikiaPageContentWrapper"]').first()
-                    .children('article[id="WikiaMainContent"]').first()
-                    .children('div[id="WikiaMainContentContainer"]').first()
-                    .children('div[id="WikiaArticle"]').first()
-                    .children('div[id="mw-content-text"]').first()
-                    .children('div');
-                for (const div of mwContentDivs.toArray()) {
-                    if ($(div).attr('class') !== 'center') {
-                        $(div).children('div').each((i, d) => {
-                            if (i === 0) {
-                                const directTexts = textOf(d);
-                                if (directTexts.length > 0) {
-                                    taglist.add(directTexts[0]);
-                                } else {
-                                    for (const c of $(d).contents().toArray()) {
-                                        if (c.type === 'tag') {
-                                            const childTexts = textOf(c);
-                                            if (childTexts.length > 0) {
-                                                taglist.add(childTexts[0]);
-                                                break;
-                                            }
-                                        }
-                                    }
-                                }
-                            } else {
-                                const ddArr = $(d).children('div').toArray();
-                                if (ddArr.length > 0) {
-                                    const dd0Texts = textOf(ddArr[0]);
-                                    if (dd0Texts.length > 0) {
-                                        if (dd0Texts[0].match(/First appearance/i)) {
-                                            if (ddArr[2]) {
-                                                const dateChildDivs = $(ddArr[2]).children('div').toArray();
-                                                if (dateChildDivs.length > 0) {
-                                                    const dateText = $(dateChildDivs[0]).children('a').first().text().trim();
-                                                    const dateMatch = dateText.match(/\d+$/);
-                                                    if (dateMatch) taglist.add(dateMatch[0]);
-                                                }
-                                            }
-                                        } else if (dd0Texts[0].match(/(creator|Editor\-in\-Chief|Cover Artist|writer|penciler|inker|letterer|editor)/i)) {
-                                            if (ddArr[1]) {
-                                                $(ddArr[1]).children('a').each((_, a) => taglist.add($(a).text().trim()));
-                                            }
-                                        }
-                                    } else if ($(ddArr[0]).children('span').length > 0) {
-                                        const span1Text = $(ddArr[0]).children('span').eq(1).text().trim();
-                                        if (span1Text.match(/(creator|Editor\-in\-Chief|Cover Artist|writer|penciler|inker|letterer|editor)/i)) {
-                                            if (ddArr[1]) {
-                                                $(ddArr[1]).children('a').each((_, a) => taglist.add($(a).text().trim()));
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        });
-                        break;
-                    }
-                }
-                return [...taglist].map(t => toValidName(t.toLowerCase()));
-            });
-            case 'tvdb':
-            return Api('url', url).then(raw_data => {
-                taglist.add('歐美').add('電視劇').add('tv show');
-                const $ = cheerio.load(Htmlparser.parseDOM(raw_data));
-                const fanart = $('body').children('table').first().children('tr').eq(2).children('td[id="maincontent"]').first().children('div[id="fanart"]').first();
-                taglist.add(fanart.children('table').first().children('tr').first().children('td').eq(2).children('div[id="content"]').first().children('h1').first().text().trim());
-                fanart.children('div[id="content"]').each((i, c) => {
-                    if (i === 0) {
-                        $(c).children('table').first().children('tr').first().children('td').first().children('table').first().children('tr').each((_, t) => {
-                            const label = $(t).children('td').first().text().trim();
-                            if (label === 'First Aired:') {
-                                const dateText = $(t).children('td').eq(1).text().trim();
-                                const m = dateText.match(/\d+$/);
-                                if (m) taglist.add(m[0]);
-                            } else if (label === 'Network:') {
-                                taglist.add($(t).children('td').eq(1).text().trim());
-                            } else if (label === 'Genre:') {
-                                $(t).children('td').eq(1).contents().filter((_, n) => n.type === 'text').each((_, n) => {
-                                    let g = n.data.toString().trim().toLowerCase();
-                                    if (!g) return;
-                                    if (g === 'science-fiction') {
-                                        g = 'sci-fi';
-                                    }
-                                    const index = GENRE_LIST.indexOf(g);
-                                    taglist.add(g);
-                                    if (index !== -1) {
-                                        taglist.add(GENRE_LIST_CH[index]);
-                                    }
-                                });
-                            }
-                        });
-                    } else {
-                        if ($(c).children('h1').first().text().trim() === 'Actors') {
-                            $(c).children('table').first().children('tr').first().children('td').each((_, t) => {
-                                taglist.add($(t).children('table').first().children('tr').first().children('td').first().children('h2').first().children('a').first().text().trim());
-                            });
-                        }
-                    }
-                });
-                return [...taglist].map(t => toValidName(t.toLowerCase()));
             });
             default:
             return handleError(new HoError('unknown external type'));
@@ -428,13 +190,12 @@ export default {
             });
             case 'dm5':
             const madGetlist = () => Api('url', url, {
-                referer: 'http://www.dm5.com/',
-                cookie: 'SERVERID=node1; isAdult=1; frombot=1',
+                referer: url,
+                cookie: 'SERVERID=node3; isAdult=1',
                 is_dm5: true,
             }).then(raw_data => {
                 const list = [];
                 const $ = cheerio.load(Htmlparser.parseDOM(raw_data));
-                console.log(raw_data);
                 let is_end = false;
                 for (const d of $('body').children('div').toArray()) {
                     if ($(d).children('section[class="banner_detail"]').length > 0) {
@@ -579,27 +340,3 @@ export default {
         }
     },
 }
-
-/*export const subHdUrl = str => Api('url', `https://subhd.com/search/${encodeURIComponent(str)}`).then(raw_data => {
-    const list = findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'container pt-4')[0], 'div', 'row justify-content-center')[0], 'div', 'col-sm-11')[0];
-    if (findTag(list)[0] && findTag(list)[0].match(/暂时没有/)) {
-        return null;
-    }
-    const big_item = findTag(findTag(findTag(list, 'div', 'row pt-2')[0], 'div', 'col-md-9')[0], 'div', 'mb-4 bg-white rounded shadow-sm')[0];
-    if (!big_item) {
-        console.log(raw_data);
-        return handleError(new HoError('sub data error!!!'));
-    }
-    const sub_id = findTag(findTag(findTag(findTag(findTag(findTag(findTag(big_item, 'div', 'row no-gutters')[0], 'div', 'col-sm-10 p-3 position-relative')[0], 'table')[0], 'tr')[0], 'td')[0], 'div')[0], 'a')[0].attribs.href;
-    return Api('url', 'http://subhd.com/ajax/down_ajax', {
-        post: {sub_id: sub_id.match(/\d+$/)[0]},
-        is_json: true,
-        referer: `https://subhd.com${sub_id}`,
-    }).then(data => {
-        console.log(data);
-        return data.success ? data.url : handleError(new HoError('too many times!!!'));
-    });
-});*/
-
-
-

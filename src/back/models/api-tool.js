@@ -149,7 +149,7 @@ function download(user, url, { filePath=null, is_check=true, referer=null, is_js
         } : {}, fake_ip ? {
             'X-Forwarded-For': fake_ip,
             'Client-IP': fake_ip,
-        } : {}, is_dm5 ? {'Accept-Language': 'en-US,en;q=0.9'} : {})}, (post && !isEmptyObject(post)) ? {
+        } : {}, is_dm5 ? {'Accept-Language': 'en-US,en;q=0.9', 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7'} : {})}, (post && !isEmptyObject(post)) ? {
         method: 'POST',
         body: qspost,
     } : {}, timeout ? {timeout} : {})).then(res => {
