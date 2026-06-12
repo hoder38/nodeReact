@@ -8,7 +8,7 @@ services:
     container_name: redis
     env_file: .env.dev
     volumes:
-      - /mnt/redis-docker:/data
+      - /mnt/dev/redis:/data
       - /etc/timezone:/etc/timezone:ro
       - /etc/localtime:/etc/localtime:ro
     command: redis-server /etc/redis/redis.conf --requirepass ${SESS_PWD}
@@ -27,7 +27,7 @@ services:
     container_name: mongodb
     env_file: .env.dev
     volumes:
-      - /mnt/mongodb-docker:/data/db
+      - /mnt/dev/mongodb:/data/db
       - /etc/timezone:/etc/timezone:ro
       - /etc/localtime:/etc/localtime:ro
     command: mongod --config /etc/mongo/mongod.conf
@@ -53,7 +53,7 @@ services:
       - "8081:80"
     volumes:
       - /etc/letsencrypt:/etc/letsencrypt:ro
-      - /mnt/storage:/mnt/storage:ro
+      - /mnt/dev/storage:/mnt/storage:ro
       - /etc/timezone:/etc/timezone:ro
       - /etc/localtime:/etc/localtime:ro
     depends_on:
@@ -79,8 +79,8 @@ services:
       - "3391" # Expose internally for Nginx to access
     volumes:
       - /etc/letsencrypt:/etc/letsencrypt:ro
-      - /mnt/tmp_dev:/mnt/tmp
-      - /mnt/storage:/mnt/storage
+      - /mnt/dev/tmp:/mnt/tmp
+      - /mnt/dev/storage:/mnt/storage
       - /etc/timezone:/etc/timezone:ro
       - /etc/localtime:/etc/localtime:ro
       - .:/app/
@@ -104,8 +104,8 @@ services:
       - "3389" # Expose internally for Nginx to access
     volumes:
       - /etc/letsencrypt:/etc/letsencrypt:ro
-      - /mnt/tmp_dev:/mnt/tmp
-      - /mnt/storage:/mnt/storage:ro
+      - /mnt/dev/tmp:/mnt/tmp
+      - /mnt/dev/storage:/mnt/storage:ro
       - /etc/timezone:/etc/timezone:ro
       - /etc/localtime:/etc/localtime:ro
       - .:/app/

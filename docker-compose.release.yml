@@ -75,7 +75,7 @@ services:
       - "3391" # Expose internally for Nginx to access
     volumes:
       - /etc/letsencrypt:/etc/letsencrypt:ro
-      - /mnt/tmp_dev:/mnt/tmp
+      - /mnt/tmp:/mnt/tmp
       - /mnt/release/storage:/mnt/release/storage
       - /etc/timezone:/etc/timezone:ro
       - /etc/localtime:/etc/localtime:ro
@@ -99,7 +99,7 @@ services:
       - "3389" # Expose internally for Nginx to access
     volumes:
       - /etc/letsencrypt:/etc/letsencrypt:ro
-      - /mnt/tmp_dev:/mnt/tmp
+      - /mnt/tmp:/mnt/tmp
       - /mnt/release/storage:/mnt/release/storage:ro
       - /etc/timezone:/etc/timezone:ro
       - /etc/localtime:/etc/localtime:ro
