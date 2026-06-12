@@ -12,7 +12,7 @@
  *   PUT  /addTag/:tag   (recursive + sendWs with adultonly)
  *   PUT  /delTag/:tag
  *   PUT  /sendTag/:uid
- *   PUT  /addTagUrl     (parse external URLs, double-recursive tag apply)
+ *   PUT  /addTagUrl     (not supported)
  *   PUT  /recover/:uid  (admin only, recycled items)
  *   POST /media/saveParent/:sortName/:sortType
  *   GET  /media/setTime/:id/:type/:obj?/:pageToken?/:back?
@@ -1093,91 +1093,14 @@ describe('storage-router.js', () => {
   });
 
   // ---------------------------------------------------------------
-  // PUT /addTagUrl — parse external URL + apply tags
+  // PUT /addTagUrl — not supported
   // ---------------------------------------------------------------
   describe('PUT /addTagUrl', () => {
-    test('invalid URL returns 400', async () => {
-      const res = await request(app).put('/addTagUrl')
-        .set('x-test-user', u(ADMIN)).send({ url: 'not-a-url' });
-      expect(res.status).toBe(400);
-      expect(res.text).toContain('invalid tag url');
-    });
-
-    test('unsupported domain returns 400', async () => {
-      const res = await request(app).put('/addTagUrl')
-        .set('x-test-user', u(ADMIN)).send({ url: 'https://example.com/page' });
-      expect(res.status).toBe(400);
-    });
-
-    test('preview mode (no uids) returns parsed tags', async () => {
-      mockParseTagUrl.mockResolvedValueOnce(['action', 'drama']);
-      const res = await request(app).put('/addTagUrl')
-        .set('x-test-user', u(ADMIN)).send({ url: 'https://www.imdb.com/title/tt1234567/' });
-      expect(res.status).toBe(200);
-      expect(res.body.tags).toEqual(['action', 'drama']);
-    });
-
-    test('with uids: applies tags to each uid then returns apiOK', async () => {
-      mockParseTagUrl.mockResolvedValueOnce(['tag1', 'tag2']);
-      mockAddTag.mockResolvedValue({ adultonly: 0 }); // called for each tag+uid
-      const res = await request(app).put('/addTagUrl')
-        .set('x-test-user', u(ADMIN)).send({
-          url: 'https://store.steampowered.com/app/123/',
-          uids: ['uid1'],
-        });
-      expect(res.status).toBe(200);
-      expect(res.body.apiOK).toBe(true);
-      expect(mockAddTag).toHaveBeenCalledTimes(2); // 2 tags × 1 uid
-      expect(mockSendWs).toHaveBeenCalledWith({ type: 'file', data: 'uid1' }, 0);
-    }, 10000);
-
-    test('Steam URL detected', async () => {
-      mockParseTagUrl.mockResolvedValueOnce([]);
-      await request(app).put('/addTagUrl')
-        .set('x-test-user', u(ADMIN)).send({ url: 'https://store.steampowered.com/app/730/' });
-      expect(mockParseTagUrl).toHaveBeenCalledWith('steam', 'https://store.steampowered.com/app/730/');
-    });
-
-    test('IMDB URL detected', async () => {
-      mockParseTagUrl.mockResolvedValueOnce([]);
-      await request(app).put('/addTagUrl')
-        .set('x-test-user', u(ADMIN)).send({ url: 'https://www.imdb.com/title/tt0111161/' });
-      expect(mockParseTagUrl).toHaveBeenCalledWith('imdb', expect.anything());
-    });
-
-    test('Allmusic URL detected', async () => {
-      mockParseTagUrl.mockResolvedValueOnce([]);
-      await request(app).put('/addTagUrl')
-        .set('x-test-user', u(ADMIN)).send({ url: 'https://www.allmusic.com/artist' });
-      expect(mockParseTagUrl).toHaveBeenCalledWith('allmusic', expect.anything());
-    });
-
-    test('Marvel wiki URL detected', async () => {
-      mockParseTagUrl.mockResolvedValueOnce([]);
-      await request(app).put('/addTagUrl')
-        .set('x-test-user', u(ADMIN)).send({ url: 'https://marvel.wikia.com/wiki/Spider-Man' });
-      expect(mockParseTagUrl).toHaveBeenCalledWith('marvel', expect.anything());
-    });
-
-    test('DC wiki URL detected', async () => {
-      mockParseTagUrl.mockResolvedValueOnce([]);
-      await request(app).put('/addTagUrl')
-        .set('x-test-user', u(ADMIN)).send({ url: 'https://dc.wikia.com/wiki/Batman' });
-      expect(mockParseTagUrl).toHaveBeenCalledWith('dc', expect.anything());
-    });
-
-    test('TVDB URL detected', async () => {
-      mockParseTagUrl.mockResolvedValueOnce([]);
-      await request(app).put('/addTagUrl')
-        .set('x-test-user', u(ADMIN)).send({ url: 'https://thetvdb.com/series/friends' });
-      expect(mockParseTagUrl).toHaveBeenCalledWith('tvdb', expect.anything());
-    });
-
-    test('parseTagUrl error returns 500', async () => {
-      mockParseTagUrl.mockRejectedValueOnce(new Error('parse fail'));
+    test('returns 400 not support', async () => {
       const res = await request(app).put('/addTagUrl')
         .set('x-test-user', u(ADMIN)).send({ url: 'https://www.imdb.com/title/tt0000001/' });
-      expect(res.status).toBe(500);
+      expect(res.status).toBe(400);
+      expect(res.text).toContain('not support');
     });
   });
 

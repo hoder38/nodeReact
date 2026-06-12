@@ -110,3 +110,18 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  daily-backup-job:
+    build:
+      context: .
+      dockerfile: log-backup.Dockerfile
+    image: nodereact-log-backup:v1.0
+    container_name: daily-backup-job
+    environment:
+      - TZ=Asia/Taipei
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /var/lib/docker/containers:/var/lib/docker/containers
+      - /mnt/release/log:/log
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+    restart: unless-stopped
