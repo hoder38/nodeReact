@@ -91,7 +91,7 @@
   },
   "author": {
     "name": "hoder",
-    "emial": "hoder3388@gmail.com"
+    "email": "hoder3388@gmail.com"
   },
   "devDependencies": {
     "@playwright/test": "^1.29.2",
