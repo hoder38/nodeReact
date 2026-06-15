@@ -51,8 +51,6 @@ else:
 
 retryApi(lambda: api.update_status(api.stock_account, timeout=10000))
 acc_order = retryApi(lambda: api.list_trades())
-print(acc_order)
-print('ok')
 if len(sys.argv) == 3:
     position = []
     for p in acc_position:
@@ -66,7 +64,6 @@ if len(sys.argv) == 3:
         price_type = str(o.order.price_type)
         order_lot = str(o.order.order_lot)
         if status == 'OrderStatus.PendingSubmit' or status == 'OrderStatus.PreSubmitted' or status == 'OrderStatus.Submitted' or status == 'OrderStatus.Filling':
-            print(o)
             if action == 'Buy':
                 order.append('{\"symbol\":\"' + o.contract.code + '\",\"amount\":' + str(o.order.quantity) + ',\"price\":' + str(o.order.price) + ',\"type\":\"' + price_type + order_lot + '\",\"time\":' + str(datetime.datetime.timestamp(o.status.order_datetime)) + '}')
             else:
@@ -94,7 +91,6 @@ if len(sys.argv) == 3:
                 quantity = (o.order.quantity - quantity) * 100
                 quantitystr = '\"quantity\":' + str(quantity)
             fill_order.append('{\"symbol\":\"' + o.contract.code + '\",\"id\":\"' + o.order.id + '\",\"profit\":\"' + profit + '\",\"price\":' + str(price) + ',\"type\":\"' + action + '\",\"time\":' + str(ts) + ',\"ptime\":\"' + ptime + '\",' + quantitystr + ',\"starttime\":' + str(datetime.datetime.timestamp(o.status.order_datetime)) + '}')
-    print(order)
     order = '[' + ','.join(order) + ']'
     fill_order = '[' + ','.join(fill_order) + ']'
     begin_date = (datetime.date.today() - datetime.timedelta(days=7)).strftime('%Y-%m-%d')

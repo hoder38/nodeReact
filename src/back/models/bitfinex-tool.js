@@ -1151,6 +1151,9 @@ export const _recur_status = async ({ id, uid, current, userRest, items }) => {
                 }
             });
         }
+        if (item.orig < 1000) {
+            item.orig = 1000;
+        }
         log.debug({ item }, 'recur_status item');
 
         const cancelOrder = async () => {
@@ -1203,6 +1206,9 @@ export const _recur_status = async ({ id, uid, current, userRest, items }) => {
                         item.pricecost = v.price;
                     }
                 });
+            }
+            if (item.orig < 1000) {
+                item.orig = 1000;
             }
             // Apply the pending newMid stack before asking stockProcess() for the next ladder action.
             let newArr = resolveNewMidStack(item.newMid, +priceData[item.index].lastPrice, item.mid, item.web, (nm) => {

@@ -619,12 +619,6 @@ describe('stockProcess', () => {
         expect(result.type).toBe(0);
     });
 
-    test('pAmount=0 → finalSell: sCount=4*priceTimes', () => {
-        // pCount > 0, pAmount=0, sP=3 → type=9 → finalSell → sCount=4
-        const result = stockProcess(400, PA2, 1, empty, 10000, 0, 5, 0, 0, 10, 0, 0, 0.006, ttime, tinterval, farFuture);
-        expect(result.sCount).toBe(4);
-    });
-
     test('priceTimes=2 affects bCount/sCount calculation', () => {
         const r1 = stockProcess(200, PA2, 1, empty, 10000, 10000, 5, 0, 0, 10, 0, 0, 0.006, ttime, tinterval, farFuture);
         const r2 = stockProcess(200, PA2, 2, empty, 10000, 10000, 5, 0, 0, 10, 0, 0, 0.006, ttime, tinterval, farFuture);
@@ -4172,13 +4166,6 @@ describe('stockProcess finalSell pAmount cap', () => {
         const r = stockProcess(700, PA2, 100, prev, 1000000, 700000, 200, 0, 0, 1000, 0, 0, 0.006, ttime, tinterval, farFuture);
         expect(r.str).toMatch(/Sell/);
         expect(r.sCount).toBeLessThan(100);
-    });
-
-    test('pAmount == 0 -> sCount = 4*priceTimes (line 3539-3540)', () => {
-        const prev = { price: 500, time: farFuture - 600000, type: 'buy', buy: [], sell: [] };
-        const r = stockProcess(700, PA2, 1, prev, 1000000, 0, 50, 0, 0, 1000, 0, 0, 0.006, ttime, tinterval, farFuture);
-        expect(r.sCount).toBe(4);
-        expect(r.str).toMatch(/Sell/);
     });
 
     test('pPricecost + pPl negative, sell < pPricecost -> sCount=0 (lines 3507-3516)', () => {

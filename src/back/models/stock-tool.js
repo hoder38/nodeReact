@@ -2947,6 +2947,9 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
                             }
                         }
                     }
+                    if (item.orig < 1000) {
+                        item.orig = 1000;
+                    }
                     log.debug({ item }, 'stock status item');
                     const fee = items[index].setype === 'usse' ? USSE_FEE : TRADE_FEE;
                     // Resolve any breakout-driven midpoint shifts before generating fresh buy/sell guidance.
@@ -3611,14 +3614,14 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
 
     const finalSell = () => {
         // If the position is only slightly underwater, avoid selling below cost once cash is already > 3/4 of pOrig.
-        if (pPricecost && pPl && pPl < 0 && -pPl < (pOrig * 1 / 4) && sCount > 0 && ((pAmount - pPl) / pOrig) > (3 / 4)) {
+        /*if (pPricecost && pPl && pPl < 0 && -pPl < (pOrig * 1 / 4) && sCount > 0 && ((pAmount - pPl) / pOrig) > (3 / 4)) {
             if (sell < pPricecost) {
                 sCount = 0;
                 if (type === 8 || type === 5 || type === 9) {
                     type = 0;
                 }
             }
-        }
+        }*/
         if (pCount === 0) {
             sCount = 0;
             if (type === 8 || type === 5 || type === 9) {
@@ -3638,9 +3641,9 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
                 sCount = count;
             }
         }
-        if (pAmount == 0) {
+        /*if (pAmount == 0) {
             sCount = 4 * priceTimes;
-        }
+        }*/
     }
 
     const finalBuy = () => {
