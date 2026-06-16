@@ -2875,7 +2875,6 @@ export const getSingleAnnual = (year, folder, index) => {
         return recur_annual(year, annualList[0].id);
     }));
 }
-//let changeProfit = 0;
 // Refresh live price/status data for every tracked stock, recompute trade suggestions,
 // and persist the latest portfolio snapshot for downstream order generation.
 export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: false}}).then(items => {
@@ -2886,7 +2885,6 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
     const twsePosition = getTwsePosition();
     const twseOrder = getTwseOrder();
     log.debug({ twsePosition, twseOrder }, 'TWSE portfolio state');
-    //changeProfit++;
     const recur_price = index => {
         if (index >= items.length) {
             if (newStr && (!stringSent || stringSent !== _dateFactory().getDay() + 1)) {
@@ -2918,7 +2916,7 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
                     if (USSE_TICKER(ENV_TYPE) && CHECK_STOCK(ENV_TYPE) && item.setype === 'usse') {
                         for (let i = 0; i < ussePosition.length; i++) {
                             if (ussePosition[i].symbol === item.index) {
-                                item.pricecost = ussePosition[i].price;
+                                //item.pricecost = ussePosition[i].price;
                                 //item.pl = ussePosition[i].amount * (price - ussePosition[i].price);
                                 //item.orig += item.pl;
                                 item.orig += (ussePosition[i].amount * price);
@@ -2938,7 +2936,7 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
                     } else if (TWSE_TICKER(ENV_TYPE) && CHECK_STOCK(ENV_TYPE) && item.setype === 'twse') {
                         for (let i = 0; i < twsePosition.length; i++) {
                             if (twsePosition[i].symbol === item.index) {
-                                item.pricecost = twsePosition[i].price;
+                                //item.pricecost = twsePosition[i].price;
                                 //item.pl = twsePosition[i].amount * (price - twsePosition[i].price);
                                 //item.orig += item.pl;
                                 item.orig += (twsePosition[i].amount * price);
@@ -2956,9 +2954,6 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
                             }
                         }
                     }
-                    //if (changeProfit < 2) {
-                    //    item.profit = item.profit - item.count * item.pricecost;
-                    //}
                     if (item.orig < 1000) {
                         item.orig = 1000;
                     }
@@ -3219,7 +3214,6 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
                         count: item.count,
                         amount: item.amount,
                         order: item.order,
-                        //profit: item.profit,
                     }});
                     });
                 });

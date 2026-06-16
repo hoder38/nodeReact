@@ -4722,9 +4722,10 @@ describe('stockStatus "no need" branches', () => {
         StockTool._resetFlags();
         setMaxRetry(0);
         setStatusDelay(0);
-        // After position: orig=1000000, pCount=5000, pricecost=90
-        // item.amount = 1000000 - 5000*90 = 550000 <= orig*5/8=625000 → "no need"
-        const item = makeNoNeedItem('BNOAMT3', 90, 0, 1000000);
+        // New mechanism: item.amount = orig (set before position), item.orig += count*price
+        // item.amount = 600000, item.orig = 600000 + 5000*90 = 1050000
+        // 600000 <= 1050000*5/8 = 656250 → "no need"
+        const item = makeNoNeedItem('BNOAMT3', 90, 0, 600000);
         let callCount = 0;
         mockMongo.mockImplementation(() => {
             callCount++;
@@ -4754,9 +4755,10 @@ describe('stockStatus "no need" branches', () => {
         StockTool._resetFlags();
         setMaxRetry(0);
         setStatusDelay(0);
-        // After position: orig=1000000, pCount=15000, pricecost=50
-        // item.amount = 1000000 - 15000*50 = 250000 <= orig*3/8=375000 → "no need"
-        const item = makeNoNeedItem('BNOAMT6', 50, 0, 1000000);
+        // New mechanism: item.amount = orig (set before position), item.orig += count*price
+        // item.amount = 300000, item.orig = 300000 + 15000*50 = 1050000
+        // 300000 <= 1050000*3/8 = 393750 → "no need"
+        const item = makeNoNeedItem('BNOAMT6', 50, 0, 300000);
         let callCount = 0;
         mockMongo.mockImplementation(() => {
             callCount++;

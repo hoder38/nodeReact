@@ -132,29 +132,31 @@ export const twseShioajiInit = (force = false) => {
                                         }
                                     } else {
                                         let profit = 0;
-                                        const this_profit = o.profit.split('p').filter(i => i);
-                                        const this_time = o.ptime.split('t').filter(i => i);
-                                        let matchCount = 0;
-                                        for (let i = this_profit.length - 1; i >= 0; i--) {
-                                            const p = Number(this_profit[i]);
-                                            const t = Number(this_time[i]);
-                                            for (let k = 0; k < item.previous.buy.length; k++) {
-                                                if (item.previous.buy[k].time === t) {
-                                                    matchCount++;
+                                        if (typeof o.profit === 'string' && typeof o.ptime === 'string') {
+                                            const this_profit = o.profit.split('p').filter(i => i);
+                                            const this_time = o.ptime.split('t').filter(i => i);
+                                            let matchCount = 0;
+                                            for (let i = this_profit.length - 1; i >= 0; i--) {
+                                                const p = Number(this_profit[i]);
+                                                const t = Number(this_time[i]);
+                                                for (let k = 0; k < item.previous.buy.length; k++) {
+                                                    if (item.previous.buy[k].time === t) {
+                                                        matchCount++;
+                                                        break;
+                                                    }
+                                                }
+                                                if (matchCount < 2) {
+                                                    profit += p;
+                                                    while (Number(this_time[i - 1]) === t) {
+                                                        profit += Number(this_profit[i - 1]);
+                                                        i--;
+                                                    }
+                                                } else {
                                                     break;
                                                 }
                                             }
-                                            if (matchCount < 2) {
-                                                profit += p;
-                                                while (Number(this_time[i - 1]) === t) {
-                                                    profit += Number(this_profit[i - 1]);
-                                                    i--;
-                                                }
-                                            } else {
-                                                break;
-                                            }
+                                            item.profit -= profit;
                                         }
-                                        item.profit -= profit;
                                         item.previous = {
                                             price: o.price,
                                             time: o.time,
@@ -205,29 +207,31 @@ export const twseShioajiInit = (force = false) => {
                                         }
                                     } else {
                                         let profit = 0;
-                                        const this_profit = o.profit.split('p').filter(i => i);
-                                        const this_time = o.ptime.split('t').filter(i => i);
-                                        let matchCount = 0;
-                                        for (let i = this_profit.length - 1; i >= 0; i--) {
-                                            const p = Number(this_profit[i]);
-                                            const t = Number(this_time[i]);
-                                            for (let k = 0; k < item.previous.sell.length; k++) {
-                                                if (item.previous.sell[k].time === t) {
-                                                    matchCount++;
+                                        if (typeof o.profit === 'string' && typeof o.ptime === 'string') {
+                                            const this_profit = o.profit.split('p').filter(i => i);
+                                            const this_time = o.ptime.split('t').filter(i => i);
+                                            let matchCount = 0;
+                                            for (let i = this_profit.length - 1; i >= 0; i--) {
+                                                const p = Number(this_profit[i]);
+                                                const t = Number(this_time[i]);
+                                                for (let k = 0; k < item.previous.sell.length; k++) {
+                                                    if (item.previous.sell[k].time === t) {
+                                                        matchCount++;
+                                                        break;
+                                                    }
+                                                }
+                                                if (matchCount < 2) {
+                                                    profit += p;
+                                                    while (Number(this_time[i - 1]) === t) {
+                                                        profit += Number(this_profit[i - 1]);
+                                                        i--;
+                                                    }
+                                                } else {
                                                     break;
                                                 }
                                             }
-                                            if (matchCount < 2) {
-                                                profit += p;
-                                                while (Number(this_time[i - 1]) === t) {
-                                                    profit += Number(this_profit[i - 1]);
-                                                    i--;
-                                                }
-                                            } else {
-                                                break;
-                                            }
+                                            item.profit += profit * (1 - TRADE_FEE);
                                         }
-                                        item.profit += profit * (1 - TRADE_FEE);
                                         item.previous = {
                                             price: o.price,
                                             time: o.time,
