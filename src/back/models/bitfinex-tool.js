@@ -493,6 +493,7 @@ export const processOrderRest = (amount, price, oid, time, item, fake) => {
                 sell: item.previous.sell,
             }
         } else {
+            item.profit -= amount * price;
             item.previous = {
                 price,
                 time,
@@ -528,6 +529,7 @@ export const processOrderRest = (amount, price, oid, time, item, fake) => {
                 buy: item.previous.buy,
             }
         } else {
+            item.profit -= amount * price * (1 - BITFINEX_FEE);
             item.previous = {
                 price,
                 time,
@@ -539,6 +541,7 @@ export const processOrderRest = (amount, price, oid, time, item, fake) => {
     }
     return Mongo('update', TOTALDB, {_id: item._id}, {$set: {
         previous: item.previous,
+        profit: item.profit,
     }});
 };
 
@@ -829,7 +832,7 @@ export const makeOnPositionClose = (id, curArr, uid) => fc => {
                 const lastP = position[id][symbol].splice(j, 1);
                 log.debug({ lastP }, 'last position profit');
                 // Match the closed position back to the configured pair so realized profit stays in sync.
-                for (let i = 0; i < curArr.length; i++) {
+                /*for (let i = 0; i < curArr.length; i++) {
                     if (curArr[i].type === symbol && curArr[i].pair) {
                         for (let k = 0; k < curArr[i].pair.length; k++) {
                             if (curArr[i].pair[k].type === fc.symbol) {
@@ -854,7 +857,7 @@ export const makeOnPositionClose = (id, curArr, uid) => fc => {
                         }
                         break;
                     }
-                }
+                }*/
                 break;
             }
         }
@@ -1133,24 +1136,26 @@ export const _recur_status = async ({ id, uid, current, userRest, items }) => {
         }
         item.amount = item.orig;
         // Unrealized P/L is treated as deployable capital for the next decision.
-        if (position[id][current.type]) {
+        /*if (position[id][current.type]) {
             position[id][current.type].forEach(v => {
                 if (v.symbol === item.index) {
                     item.orig += v.pl;
                     item.pl += v.pl;
                 }
             });
-        }
+        }*/
         // Holdings reduce remaining cash and preserve the latest entry cost for stockProcess().
         if (position[id][current.type]) {
             position[id][current.type].forEach(v => {
                 if (v.symbol === item.index) {
+                    item.orig += (v.amount * (+priceData[item.index].lastPrice));
                     item.count += v.amount;
-                    item.amount = item.amount - v.amount * v.price;
-                    item.pricecost = v.price;
+                    //item.amount = item.amount - v.amount * v.price;
+                    //item.pricecost = v.price;
                 }
             });
         }
+
         if (item.orig < 1000) {
             item.orig = 1000;
         }
@@ -1190,20 +1195,21 @@ export const _recur_status = async ({ id, uid, current, userRest, items }) => {
                 item.orig += item.profit;
             }
             item.amount = item.orig;
-            if (position[id][current.type]) {
+            /*if (position[id][current.type]) {
                 position[id][current.type].forEach(v => {
                     if (v.symbol === item.index) {
                         item.orig += v.pl;
                         item.pl += v.pl;
                     }
                 });
-            }
+            }*/
             if (position[id][current.type]) {
                 position[id][current.type].forEach(v => {
                     if (v.symbol === item.index) {
+                        item.orig += (v.amount * (+priceData[item.index].lastPrice));
                         item.count += v.amount;
-                        item.amount = item.amount - v.amount * v.price;
-                        item.pricecost = v.price;
+                        //item.amount = item.amount - v.amount * v.price;
+                        //item.pricecost = v.price;
                     }
                 });
             }
@@ -2466,7 +2472,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                             } else {
                                 closeCredit[id].push(credit[id][current.type][index].id);
                             }
-                        } else if (currentRate[current.type].frr > 0 && credit[id][current.type][index].rate * BITFINEX_EXP > currentRate[current.type].frr && credit[id][current.type][index].rate > current.miniRate / 100 * 2) {
+                        } else if ((currentRate[current.type].frr > 0 && credit[id][current.type][index].rate * BITFINEX_EXP > currentRate[current.type].frr && credit[id][current.type][index].rate > current.miniRate / 100 * 2) || credit[id][current.type][index].period > 2) {
                             if (!closeCredit[id]) {
                                 closeCredit[id] = [credit[id][current.type][index].id];
                             } else {
@@ -3211,7 +3217,7 @@ export default {
                 if (position[id] && position[id][`f${i.substr(-3)}`]) {
                     position[id][`f${i.substr(-3)}`].forEach(o => {
                         if (o.symbol === i) {
-                            profit = profit + o.pl;
+                            profit = profit + o.amount * priceData[i].lastPrice;
                         }
                     });
                 }

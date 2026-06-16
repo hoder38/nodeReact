@@ -3723,7 +3723,7 @@ describe('recur_status + recur_NewOrder paths', () => {
         expect(mockStockProcess).toHaveBeenCalledWith(
             60000, expect.any(Array), expect.any(Number), expect.any(Object),
             expect.any(Number), expect.any(Number),
-            0.5, 55000, 2500,
+            0.5, 0, 0,
             expect.any(Number), expect.any(Number), 1,
             expect.any(Number), expect.any(Number), expect.any(Number),
             undefined, expect.any(Number)
@@ -6621,6 +6621,7 @@ describe('_recur_status — ing=2 sell order isExist/deleteOrder paths', () => {
             order: { rs: { fUSD: [] } },
             fakeOrder: { rs: { fUSD: [] } },
             margin: { rs: { fUSD: {} } },
+            priceData: { tBTCUSD: { lastPrice: 50000 } },
             // position data needed: L1035 resets item.count=0, L1051 restores from position
             position: { rs: { fUSD: [
                 { symbol: 'tBTCUSD', amount: 0.5, price: 50000, pl: 0 },
@@ -6662,6 +6663,7 @@ describe('_recur_status — ing=2 sell order isExist/deleteOrder paths', () => {
             order: { rd: { fUSD: [] } },
             fakeOrder: { rd: { fUSD: [] } },
             margin: { rd: { fUSD: {} } },
+            priceData: { tBTCUSD: { lastPrice: 50000 } },
             position: { rd: { fUSD: [
                 { symbol: 'tBTCUSD', amount: 0.5, price: 50000, pl: 0 },
             ] } },
