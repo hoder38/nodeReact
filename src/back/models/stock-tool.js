@@ -1786,9 +1786,11 @@ export default {
                     let current = v.price * v.count;
                     // Cleared positions may stash realized profit separately; normalize the
                     // remaining cash basis before calculating the open-position summary.
-                    v.amount = v.profit ? (v.amount - v.profit) : v.amount;
+                    //v.amount = v.profit ? (v.amount - v.profit) : v.amount;
+                    v.amount = (v.mul ? v.orig * v.mul : v.orig) + (v.profit ? v.profit : 0);
                     // p: lifetime P/L versus original allocation, y: day-over-day change.
-                    let p = current + v.amount - (v.mul ? v.orig * v.mul : v.orig);
+                    //let p = current + v.amount - (v.mul ? v.orig * v.mul : v.orig);
+                    let p = (v.profit ? v.profit : 0) + current;
                     let y = v.previousPrice ? ((v.price - v.previousPrice) * v.count) : 0;
                     let se = 0;
                     if (v.setype === 'usse') {
@@ -2282,9 +2284,11 @@ export default {
                         let current = v.price * v.count;
                         // Cleared positions may stash realized profit separately; normalize the
                         // remaining cash basis before calculating the open-position summary.
-                        v.amount = v.profit ? (v.amount - v.profit) : v.amount;
+                        //v.amount = v.profit ? (v.amount - v.profit) : v.amount;
                         // p: lifetime P/L versus original allocation, y: day-over-day change.
-                        let p = current + v.amount - (v.mul ? v.orig * v.mul : v.orig);
+                        //let p = current + v.amount - (v.mul ? v.orig * v.mul : v.orig);
+                        v.amount = (v.mul ? v.orig * v.mul : v.orig) + (v.profit ? v.profit : 0);
+                        let p = (v.profit ? v.profit : 0) + current;
                         let y = v.previousPrice ? ((v.price - v.previousPrice) * v.count) : 0;
                         if (v.setype === 'usse') {
                             totalPrice1 += current;
@@ -2871,7 +2875,7 @@ export const getSingleAnnual = (year, folder, index) => {
         return recur_annual(year, annualList[0].id);
     }));
 }
-
+//let changeProfit = 0;
 // Refresh live price/status data for every tracked stock, recompute trade suggestions,
 // and persist the latest portfolio snapshot for downstream order generation.
 export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: false}}).then(items => {
@@ -2882,6 +2886,7 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
     const twsePosition = getTwsePosition();
     const twseOrder = getTwseOrder();
     log.debug({ twsePosition, twseOrder }, 'TWSE portfolio state');
+    //changeProfit++;
     const recur_price = index => {
         if (index >= items.length) {
             if (newStr && (!stringSent || stringSent !== _dateFactory().getDay() + 1)) {
@@ -2903,6 +2908,8 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
                         item.orig = item.orig * item.mul;
                         item.times = Math.floor(item.times * item.mul);
                     }
+                    item.pricecost = 0;
+                    item.pl = 0;
                     item.count = 0;
                     if (item.profit) {
                         item.orig += item.profit;
@@ -2912,10 +2919,11 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
                         for (let i = 0; i < ussePosition.length; i++) {
                             if (ussePosition[i].symbol === item.index) {
                                 item.pricecost = ussePosition[i].price;
-                                item.pl = ussePosition[i].amount * (price - ussePosition[i].price);
-                                item.orig += item.pl;
+                                //item.pl = ussePosition[i].amount * (price - ussePosition[i].price);
+                                //item.orig += item.pl;
+                                item.orig += (ussePosition[i].amount * price);
                                 item.count = ussePosition[i].amount;
-                                item.amount = item.orig - ussePosition[i].amount * ussePosition[i].price;
+                                //item.amount = item.orig - ussePosition[i].amount * ussePosition[i].price;
                                 break;
                             }
                         }
@@ -2931,10 +2939,11 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
                         for (let i = 0; i < twsePosition.length; i++) {
                             if (twsePosition[i].symbol === item.index) {
                                 item.pricecost = twsePosition[i].price;
-                                item.pl = twsePosition[i].amount * (price - twsePosition[i].price);
-                                item.orig += item.pl;
+                                //item.pl = twsePosition[i].amount * (price - twsePosition[i].price);
+                                //item.orig += item.pl;
+                                item.orig += (twsePosition[i].amount * price);
                                 item.count = twsePosition[i].amount;
-                                item.amount = item.orig - twsePosition[i].amount * twsePosition[i].price;
+                                //item.amount = item.orig - twsePosition[i].amount * twsePosition[i].price;
                                 break;
                             }
                         }
@@ -2947,6 +2956,9 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
                             }
                         }
                     }
+                    //if (changeProfit < 2) {
+                    //    item.profit = item.profit - item.count * item.pricecost;
+                    //}
                     if (item.orig < 1000) {
                         item.orig = 1000;
                     }
@@ -3197,7 +3209,7 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
                         suggestionData['twse'][item.index] = suggestion;
                     }
                     // Persist the derived suggestion snapshot used by UI displays and later order placement.
-                    return Mongo('update', TOTALDB, {_id: item._id}, {$set : Object.assign({
+                    return Mongo('update', TOTALDB, {_id: item._id}, {$set : {
                         price,
                         previousPrice,
                         str: suggestion.str,
@@ -3207,7 +3219,8 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
                         count: item.count,
                         amount: item.amount,
                         order: item.order,
-                    })});
+                        //profit: item.profit,
+                    }});
                     });
                 });
             }).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(recur_price(index + 1)), _statusDelay)))

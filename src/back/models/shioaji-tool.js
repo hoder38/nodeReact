@@ -131,6 +131,30 @@ export const twseShioajiInit = (force = false) => {
                                             //real: false,
                                         }
                                     } else {
+                                        let profit = 0;
+                                        const this_profit = o.profit.split('p').filter(i => i);
+                                        const this_time = o.ptime.split('t').filter(i => i);
+                                        let matchCount = 0;
+                                        for (let i = this_profit.length - 1; i >= 0; i--) {
+                                            const p = Number(this_profit[i]);
+                                            const t = Number(this_time[i]);
+                                            for (let k = 0; k < item.previous.buy.length; k++) {
+                                                if (item.previous.buy[k].time === t) {
+                                                    matchCount++;
+                                                    break;
+                                                }
+                                            }
+                                            if (matchCount < 2) {
+                                                profit += p;
+                                                while (Number(this_time[i - 1]) === t) {
+                                                    profit += Number(this_profit[i - 1]);
+                                                    i--;
+                                                }
+                                            } else {
+                                                break;
+                                            }
+                                        }
+                                        item.profit -= profit;
                                         item.previous = {
                                             price: o.price,
                                             time: o.time,
@@ -180,6 +204,30 @@ export const twseShioajiInit = (force = false) => {
                                             //real: false,
                                         }
                                     } else {
+                                        let profit = 0;
+                                        const this_profit = o.profit.split('p').filter(i => i);
+                                        const this_time = o.ptime.split('t').filter(i => i);
+                                        let matchCount = 0;
+                                        for (let i = this_profit.length - 1; i >= 0; i--) {
+                                            const p = Number(this_profit[i]);
+                                            const t = Number(this_time[i]);
+                                            for (let k = 0; k < item.previous.sell.length; k++) {
+                                                if (item.previous.sell[k].time === t) {
+                                                    matchCount++;
+                                                    break;
+                                                }
+                                            }
+                                            if (matchCount < 2) {
+                                                profit += p;
+                                                while (Number(this_time[i - 1]) === t) {
+                                                    profit += Number(this_profit[i - 1]);
+                                                    i--;
+                                                }
+                                            } else {
+                                                break;
+                                            }
+                                        }
+                                        item.profit += profit * (1 - TRADE_FEE);
                                         item.previous = {
                                             price: o.price,
                                             time: o.time,
@@ -198,7 +246,7 @@ export const twseShioajiInit = (force = false) => {
                                 }
                             }
                             console.log(item.previous);
-                            return Mongo('update', TOTALDB, {_id: item._id}, {$set: Object.assign({previous: item.previous}, o.hasOwnProperty("quantity") ? (o.type === 'Buy') ? {bquantity: o.quantity} : {squantity: o.quantity} : (o.type === 'Buy') ? {boddquantity: o.oddquantity} : {soddquantity: o.oddquantity})}).then(() => fill_order_recur(index + 1));
+                            return Mongo('update', TOTALDB, {_id: item._id}, {$set: Object.assign({previous: item.previous, profit: item.profit}, o.hasOwnProperty("quantity") ? (o.type === 'Buy') ? {bquantity: o.quantity} : {squantity: o.quantity} : (o.type === 'Buy') ? {boddquantity: o.oddquantity} : {soddquantity: o.oddquantity})}).then(() => fill_order_recur(index + 1));
                         });
                     }
                 }
@@ -229,7 +277,7 @@ export const twseShioajiInit = (force = false) => {
             }
         }
         const updateProfit = () => {
-            if (!profitData || !profitData.items || profitData.items.length === 0) {
+            /*if (!profitData || !profitData.items || profitData.items.length === 0) {
                 return Promise.resolve();
             }
             const codeMap = {};
@@ -256,7 +304,8 @@ export const twseShioajiInit = (force = false) => {
                     );
                 }
                 return Promise.all(updates);
-            });
+            });*/
+            return Promise.resolve();
         };
         return updateProfit().then(() => Mongo('find', TOTALDB, {setype: 'twse', sType: {$exists: false}}).then(items => {
             const newOrder = [];

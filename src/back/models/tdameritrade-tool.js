@@ -141,29 +141,31 @@ const submitTDOrder = (id, price, count) => {
 // Helper: process a filled order — updates previous ledger & calculates profit
 const processFilledOrder = (o, lastP, currentPosition, order_recur, nextIndex) => {
     const symbol = o.fake ? o.symbol : (o.orderLegCollection[0].instrument.symbol === 'BRK/B' || o.orderLegCollection[0].instrument.symbol === 'BRK.B') ? 'BRK-B' : o.orderLegCollection[0].instrument.symbol;
-    let profit = 0;
+    //let profit = 0;
     const type = o.fake ? o.type : o.orderLegCollection[0].instruction;
     let time = o.fake ? o.time : 0;
-    let fillRevenue = [];
+    //let fillRevenue = [];
     let price = o.fake ? o.price : 0;
+    let revenue = 0;
     if (!o.fake) {
         console.log(o);
         console.log(o.orderActivityCollection[0].executionLegs[0]);
         o.orderActivityCollection.forEach(oac => oac.executionLegs.forEach(oace => {
             time = Math.round(new Date(oace.time).getTime() / 1000);
             price = oace.price;
-            fillRevenue.push({
+            revenue += oace.quantity * oace.price;
+            /*fillRevenue.push({
                 time,
                 price,
                 revenue: oace.quantity * oace.price,
-            });
+            });*/
         }));
     }
     console.log(symbol);
     console.log(type);
     console.log(time);
     console.log(price);
-    console.log(fillRevenue);
+    console.log(revenue);
     if (price <= 0) {
         return order_recur(nextIndex);
     }
@@ -199,6 +201,7 @@ const processFilledOrder = (o, lastP, currentPosition, order_recur, nextIndex) =
                         sell: item.previous.sell,
                     }
                 } else {
+                    item.profit -= revenue;
                     item.previous = {
                         price,
                         time,
@@ -240,6 +243,7 @@ const processFilledOrder = (o, lastP, currentPosition, order_recur, nextIndex) =
                         buy: item.previous.buy,
                     }
                 } else {
+                    item.profit += revenue * (1 - USSE_FEE);
                     item.previous = {
                         price,
                         time,
@@ -257,7 +261,7 @@ const processFilledOrder = (o, lastP, currentPosition, order_recur, nextIndex) =
                 item.previous.sell = item.previous.sell.filter(v => (time - v.time < RANGE_INTERVAL) ? true : false);
             }
             // Calculate profit from position delta
-            console.log(lastP);
+            /*console.log(lastP);
             console.log(currentPosition);
             if (!o.fake && lastP.length > 0) {
                 let pp = 0;
@@ -302,9 +306,9 @@ const processFilledOrder = (o, lastP, currentPosition, order_recur, nextIndex) =
                     }
                     console.log(profit);
                 }
-            }
+            }*/
         }
-        item.profit = item.profit ? item.profit + profit : profit;
+        //item.profit = item.profit ? item.profit + profit : profit;
         console.log(item.previous);
         return Mongo('update', TOTALDB, {_id: item._id}, {$set: {previous: item.previous, profit: item.profit}}).then(() => order_recur(nextIndex));
     });
