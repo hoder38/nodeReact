@@ -93,16 +93,11 @@ if len(sys.argv) == 3:
             fill_order.append('{\"symbol\":\"' + o.contract.code + '\",\"id\":\"' + o.order.id + '\",\"profit\":\"' + profit + '\",\"price\":' + str(price) + ',\"type\":\"' + action + '\",\"time\":' + str(ts) + ',\"ptime\":\"' + ptime + '\",' + quantitystr + ',\"starttime\":' + str(datetime.datetime.timestamp(o.status.order_datetime)) + '}')
     order = '[' + ','.join(order) + ']'
     fill_order = '[' + ','.join(fill_order) + ']'
-    begin_date = (datetime.date.today() - datetime.timedelta(days=7)).strftime('%Y-%m-%d')
-    end_date = datetime.date.today().strftime('%Y-%m-%d')
-    acc_profit = retryApi(lambda: api.list_profit_loss(api.stock_account, begin_date=begin_date, end_date=end_date, unit=sj.Unit.Share, timeout=10000))
-    profit_items = [{'code': p.code, 'pnl': p.pnl//10, 'date': p.date} for p in acc_profit]
     print("start result")
     print(current_cash)
     print(position)
     print(order)
     print(fill_order)
-    print(json.dumps({'items': profit_items}))
 elif sys.argv[3] == 'submit':
     if current_cash == 'same':
         raise ValueError('Current cash error')

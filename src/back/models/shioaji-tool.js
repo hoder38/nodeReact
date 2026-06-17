@@ -12,7 +12,6 @@ let available = 0;
 let order = [];
 let position = [];
 let fakeOrder = [];
-let profitData = null;
 let _TWSE_MARKET_TIME = TWSE_MARKET_TIME;
 
 // Test helpers — expose state for white-box testing without jest.resetModules()
@@ -22,11 +21,10 @@ export function _resetState() {
     order = [];
     position = [];
     fakeOrder = [];
-    profitData = null;
     _TWSE_MARKET_TIME = TWSE_MARKET_TIME;
 }
 export function _getState() {
-    return { updateTime: {...updateTime}, available, order: [...order], position: [...position], fakeOrder: [...fakeOrder], profitData };
+    return { updateTime: {...updateTime}, available, order: [...order], position: [...position], fakeOrder: [...fakeOrder] };
 }
 export function _setState(overrides) {
     if ('updateTime' in overrides) updateTime = overrides.updateTime;
@@ -34,7 +32,6 @@ export function _setState(overrides) {
     if ('order' in overrides) order = overrides.order;
     if ('position' in overrides) position = overrides.position;
     if ('fakeOrder' in overrides) fakeOrder = overrides.fakeOrder;
-    if ('profitData' in overrides) profitData = overrides.profitData;
     if ('marketTime' in overrides) _TWSE_MARKET_TIME = overrides.marketTime;
 }
 
@@ -280,38 +277,7 @@ export const twseShioajiInit = (force = false) => {
                 return Promise.resolve();
             }
         }
-        const updateProfit = () => {
-            /*if (!profitData || !profitData.items || profitData.items.length === 0) {
-                return Promise.resolve();
-            }
-            const codeMap = {};
-            for (const p of profitData.items) {
-                if (!codeMap[p.code]) codeMap[p.code] = [];
-                codeMap[p.code].push({date: p.date, pnl: p.pnl});
-            }
-            const codes = Object.keys(codeMap);
-            return Mongo('find', TOTALDB, {setype: 'twse', index: {$in: codes}}).then(dbItems => {
-                const updates = [];
-                for (const item of dbItems) {
-                    const records = codeMap[item.index];
-                    if (!records) continue;
-                    const profit_date = item.profit_date || '';
-                    const newRecords = records.filter(r => r.date > profit_date);
-                    if (newRecords.length === 0) continue;
-                    const totalPnl = newRecords.reduce((sum, r) => sum + r.pnl, 0);
-                    const maxDate = newRecords.reduce((m, r) => r.date > m ? r.date : m, '');
-                    updates.push(
-                        Mongo('update', TOTALDB,
-                            {_id: item._id, profit_date: {$not: {$gte: maxDate}}},
-                            {$inc: {profit: totalPnl}, $set: {profit_date: maxDate}}
-                        )
-                    );
-                }
-                return Promise.all(updates);
-            });*/
-            return Promise.resolve();
-        };
-        return updateProfit().then(() => Mongo('find', TOTALDB, {setype: 'twse', sType: {$exists: false}}).then(items => {
+        return Mongo('find', TOTALDB, {setype: 'twse', sType: {$exists: false}}).then(items => {
             const newOrder = [];
             const twseSuggestion = getSuggestionData('twse');
             console.log(twseSuggestion);
@@ -395,7 +361,7 @@ export const twseShioajiInit = (force = false) => {
                 }
             }
             return recur_status(0).then(() => submitTwseOrder());
-        }));
+        });
     });
 }
 
@@ -408,7 +374,6 @@ const getShioajiData = (simulation = true) => {
         console.log(result);
         let start_result = 0;
         const ret = {};
-        profitData = null;
         for (let i = 0; i < result.length; i++) {
             if (!start_result) {
                 if (result[i] === 'start result') {
@@ -428,9 +393,6 @@ const getShioajiData = (simulation = true) => {
                 start_result = 4;
             } else if (start_result === 4) {
                 ret.fill_order = JSON.parse(result[i]);
-                start_result = 5;
-            } else if (start_result === 5) {
-                try { profitData = JSON.parse(result[i]); } catch (e) {}
                 break;
             }
         }

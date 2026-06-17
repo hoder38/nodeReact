@@ -59,8 +59,6 @@ def parse_query_output(stdout):
         'order': lines[start_idx + 3].strip(),
         'fill_order': lines[start_idx + 4].strip(),
     }
-    if start_idx + 5 < len(lines) and lines[start_idx + 5].strip():
-        result['profit'] = lines[start_idx + 5].strip()
     return result
 
 
@@ -906,95 +904,6 @@ class TestBugDiscovery:
         data = parse_query_output(stdout)
         fills = json.loads(data['fill_order'])
         assert len(fills) == 1
-
-
-# ===========================================================================
-# 11. Profit output (list_profit_loss)
-# ===========================================================================
-class TestProfitOutput:
-    """PL-01 through PL-06: list_profit_loss output in query mode."""
-
-    def test_pl01_empty_profit_loss(self):
-        """PL-01: No P&L records → profit line has empty items list."""
-        rc, stdout, _ = run_twse('KEY', 'PW')
-        assert rc == 0
-        data = parse_query_output(stdout)
-        assert 'profit' in data
-        profit = json.loads(data['profit'])
-        assert profit['items'] == []
-
-    def test_pl02_single_record(self):
-        """PL-02: One P&L record → profit line contains it."""
-        rc, stdout, _ = run_twse('KEY', 'PW', env_overrides={
-            'MOCK_SJ_PROFIT_LOSS': json.dumps([{'code': '2330', 'pnl': 1500.0}]),
-            'MOCK_SJ_PROFIT_DATE': '2025-01-13',
-        })
-        assert rc == 0
-        data = parse_query_output(stdout)
-        profit = json.loads(data['profit'])
-        assert len(profit['items']) == 1
-        assert profit['items'][0]['code'] == '2330'
-        assert profit['items'][0]['pnl'] == 150.0
-        assert profit['items'][0]['date'] == '2025-01-13'
-
-    def test_pl03_multiple_records(self):
-        """PL-03: Multiple P&L records → all returned."""
-        pl = [
-            {'code': '2330', 'pnl': 1000.0},
-            {'code': '2317', 'pnl': -500.0},
-            {'code': '2454', 'pnl': 250.5},
-        ]
-        rc, stdout, _ = run_twse('KEY', 'PW', env_overrides={
-            'MOCK_SJ_PROFIT_LOSS': json.dumps(pl),
-            'MOCK_SJ_PROFIT_DATE': '2025-01-14',
-        })
-        assert rc == 0
-        data = parse_query_output(stdout)
-        profit = json.loads(data['profit'])
-        assert len(profit['items']) == 3
-        codes = [p['code'] for p in profit['items']]
-        assert '2330' in codes
-        assert '2317' in codes
-        assert '2454' in codes
-
-    def test_pl04_negative_pnl(self):
-        """PL-04: Negative P&L is preserved."""
-        rc, stdout, _ = run_twse('KEY', 'PW', env_overrides={
-            'MOCK_SJ_PROFIT_LOSS': json.dumps([{'code': '2330', 'pnl': -3000.0}]),
-            'MOCK_SJ_PROFIT_DATE': '2025-01-15',
-        })
-        assert rc == 0
-        data = parse_query_output(stdout)
-        profit = json.loads(data['profit'])
-        assert profit['items'][0]['pnl'] == -300.0
-
-    def test_pl05_per_record_date(self):
-        """PL-05: Each record carries its own date if provided."""
-        pl = [
-            {'code': '2330', 'pnl': 100.0, 'date': '2025-01-10'},
-            {'code': '2330', 'pnl': 200.0, 'date': '2025-01-13'},
-        ]
-        rc, stdout, _ = run_twse('KEY', 'PW', env_overrides={
-            'MOCK_SJ_PROFIT_LOSS': json.dumps(pl),
-        })
-        assert rc == 0
-        data = parse_query_output(stdout)
-        profit = json.loads(data['profit'])
-        assert len(profit['items']) == 2
-        dates = [p['date'] for p in profit['items']]
-        assert '2025-01-10' in dates
-        assert '2025-01-13' in dates
-
-    def test_pl06_profit_line_is_valid_json(self):
-        """PL-06: Profit line is always valid JSON."""
-        rc, stdout, _ = run_twse('KEY', 'PW')
-        assert rc == 0
-        data = parse_query_output(stdout)
-        assert 'profit' in data
-        parsed = json.loads(data['profit'])
-        assert 'items' in parsed
-        assert isinstance(parsed['items'], list)
-
 
 # ===========================================================================
 if __name__ == "__main__":
