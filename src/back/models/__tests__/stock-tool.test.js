@@ -437,7 +437,7 @@ describe('stockProcess', () => {
     // -----------------------------------------------------------------------
     test('price below entire array → resetWeb:1 with newMid', () => {
         // price=5: abs(-10)*1.001=10.01 >= 5 → break at last index immediately
-        const result = stockProcess(5, PA2, 1, empty, 10000, 10000, 0, 0, 0, 10, 0, 0, 0.006, ttime, tinterval, farFuture);
+        const result = stockProcess(5, PA2, 1, empty, 10000, 10000, 0, 10, 0, 0, 0.006, ttime, tinterval, farFuture);
         expect(result.resetWeb).toBe(1);
         expect(typeof result.newMid).toBe('number');
     });
@@ -445,13 +445,13 @@ describe('stockProcess', () => {
     test('resetWeb:1 newMid via calcResetMid: mid=4th boundary, sigma1=5th', () => {
         // PA2 boundaries from top: 1000,900,600,400,250,120,60,10
         // mid=boundaries[3]=400, sigma1=boundaries[4]=250, cap=400*0.94=376 → newMid=250
-        const result = stockProcess(5, PA2, 1, empty, 10000, 10000, 0, 0, 0, 10, 0, 0, 0.006, ttime, tinterval, farFuture);
+        const result = stockProcess(5, PA2, 1, empty, 10000, 10000, 0, 10, 0, 0, 0.006, ttime, tinterval, farFuture);
         expect(result.newMid).toBe(250);
     });
 
     test('price above entire array → resetWeb:2 with newMid', () => {
         // price=1000: abs(-1000)*0.999=999 <= 1000 → break at nowSP=0
-        const result = stockProcess(1000, PA2, 1, empty, 10000, 10000, 0, 0, 0, 10, 0, 0, 0.006, ttime, tinterval, farFuture);
+        const result = stockProcess(1000, PA2, 1, empty, 10000, 10000, 0, 10, 0, 0, 0.006, ttime, tinterval, farFuture);
         expect(result.resetWeb).toBe(2);
         expect(typeof result.newMid).toBe('number');
     });
@@ -459,7 +459,7 @@ describe('stockProcess', () => {
     test('resetWeb:2 newMid via calcResetMid: mid=4th boundary, sigma1=3rd', () => {
         // PA2 boundaries from top: 1000,900,600,400,250,120,60,10
         // mid=boundaries[3]=400, sigma1=boundaries[2]=600, cap=400*1.06=424 → newMid=600
-        const result = stockProcess(1000, PA2, 1, empty, 10000, 10000, 0, 0, 0, 10, 0, 0, 0.006, ttime, tinterval, farFuture);
+        const result = stockProcess(1000, PA2, 1, empty, 10000, 10000, 0, 10, 0, 0, 0.006, ttime, tinterval, farFuture);
         expect(result.newMid).toBe(600);
     });
 
@@ -469,7 +469,7 @@ describe('stockProcess', () => {
     test('bP=7 (>6) → type 6 "Buy 3/4" in str', () => {
         // price=50: bP=7 (one negative -10 below price), no resetWeb
         // pCount=5 >= 2*priceTimes(1) so finalBuy does NOT reset type
-        const result = stockProcess(50, PA2, 1, empty, 10000, 10000, 5, 0, 0, 10, 0, 0, 0.006, ttime, tinterval, farFuture);
+        const result = stockProcess(50, PA2, 1, empty, 10000, 10000, 5, 10, 0, 0, 0.006, ttime, tinterval, farFuture);
         expect(result.str).toMatch(/Buy 3\/4/);
         expect(result.type).toBe(6);
         expect(result.buy).toBeGreaterThan(0);
@@ -477,28 +477,28 @@ describe('stockProcess', () => {
 
     test('bP=6 (>5) → type 3 "Buy 1/2" in str', () => {
         // price=100: bP=6 (two negatives -10,-60 below price)
-        const result = stockProcess(100, PA2, 1, empty, 10000, 10000, 5, 0, 0, 10, 0, 0, 0.006, ttime, tinterval, farFuture);
+        const result = stockProcess(100, PA2, 1, empty, 10000, 10000, 5, 10, 0, 0, 0.006, ttime, tinterval, farFuture);
         expect(result.str).toMatch(/Buy 1\/2/);
         expect(result.type).toBe(3);
     });
 
     test('bP=5 (>4) → type 7 "Buy 1/4" in str', () => {
         // price=200: bP=5 (three negatives -10,-60,-120 below)
-        const result = stockProcess(200, PA2, 1, empty, 10000, 10000, 5, 0, 0, 10, 0, 0, 0.006, ttime, tinterval, farFuture);
+        const result = stockProcess(200, PA2, 1, empty, 10000, 10000, 5, 10, 0, 0, 0.006, ttime, tinterval, farFuture);
         expect(result.str).toMatch(/Buy 1\/4/);
         expect(result.type).toBe(7);
     });
 
     test('bP=4 (else branch) → standard "Buy" in str', () => {
         // price=400: bP=4 (four negatives -10,-60,-120,-250 below)
-        const result = stockProcess(400, PA2, 1, empty, 10000, 10000, 5, 0, 0, 10, 0, 0, 0.006, ttime, tinterval, farFuture);
+        const result = stockProcess(400, PA2, 1, empty, 10000, 10000, 5, 10, 0, 0, 0.006, ttime, tinterval, farFuture);
         expect(result.str).toMatch(/Buy \d/);
         expect(result.buy).toBeGreaterThan(0);
     });
 
     test('bP<3 → "Buy too high" in str, bCount=0', () => {
         // price=950: bP=1 (seven negatives below), buy too high
-        const result = stockProcess(950, PA2, 1, empty, 10000, 10000, 0, 0, 0, 10, 0, 0, 0.006, ttime, tinterval, farFuture);
+        const result = stockProcess(950, PA2, 1, empty, 10000, 10000, 0, 10, 0, 0, 0.006, ttime, tinterval, farFuture);
         expect(result.str).toMatch(/Buy too high/);
         expect(result.bCount).toBe(0);
     });
@@ -508,35 +508,35 @@ describe('stockProcess', () => {
     // -----------------------------------------------------------------------
     test('sP=1 (<2) → type 8 "Sell 3/4" in str', () => {
         // price=950: sP=1 (one negative -1000 above)
-        const result = stockProcess(950, PA2, 1, empty, 10000, 10000, 5, 0, 0, 10, 0, 0, 0.006, ttime, tinterval, farFuture);
+        const result = stockProcess(950, PA2, 1, empty, 10000, 10000, 5, 10, 0, 0, 0.006, ttime, tinterval, farFuture);
         expect(result.str).toMatch(/Sell 3\/4/);
         expect(result.type).toBe(8);
     });
 
     test('sP=2 (<3) → type 5 "Sell 1/2" in str', () => {
         // price=700: sP=2 (two negatives -1000,-900 above)
-        const result = stockProcess(700, PA2, 1, empty, 10000, 10000, 5, 0, 0, 10, 0, 0, 0.006, ttime, tinterval, farFuture);
+        const result = stockProcess(700, PA2, 1, empty, 10000, 10000, 5, 10, 0, 0, 0.006, ttime, tinterval, farFuture);
         expect(result.str).toMatch(/Sell 1\/2/);
         expect(result.type).toBe(5);
     });
 
     test('sP=3 (<4) → type 9 "Sell 1/4" in str', () => {
         // price=400: sP=3 (three negatives -1000,-900,-600 above)
-        const result = stockProcess(400, PA2, 1, empty, 10000, 10000, 5, 0, 0, 10, 0, 0, 0.006, ttime, tinterval, farFuture);
+        const result = stockProcess(400, PA2, 1, empty, 10000, 10000, 5, 10, 0, 0, 0.006, ttime, tinterval, farFuture);
         expect(result.str).toMatch(/Sell 1\/4/);
         expect(result.type).toBe(9);
     });
 
     test('sP=5 (else branch) → standard "Sell" in str', () => {
         // price=200: sP=5 (five negatives above), standard sell
-        const result = stockProcess(200, PA2, 1, empty, 10000, 10000, 5, 0, 0, 10, 0, 0, 0.006, ttime, tinterval, farFuture);
+        const result = stockProcess(200, PA2, 1, empty, 10000, 10000, 5, 10, 0, 0, 0.006, ttime, tinterval, farFuture);
         expect(result.str).toMatch(/Sell \d/);
         expect(result.sell).toBeGreaterThan(0);
     });
 
     test('sP>5 → "Sell too low" in str, sCount=0', () => {
         // price=50: sP=7 (all negatives above 50), sell too low
-        const result = stockProcess(50, PA2, 1, empty, 10000, 10000, 5, 0, 0, 10, 0, 0, 0.006, ttime, tinterval, farFuture);
+        const result = stockProcess(50, PA2, 1, empty, 10000, 10000, 5, 10, 0, 0, 0.006, ttime, tinterval, farFuture);
         expect(result.str).toMatch(/Sell too low/);
         expect(result.sCount).toBe(0);
     });
@@ -545,7 +545,7 @@ describe('stockProcess', () => {
     // Combined buy + sell signals in middle range
     // -----------------------------------------------------------------------
     test('price=200 produces both buy (type 7) and standard sell in one call', () => {
-        const result = stockProcess(200, PA2, 1, empty, 10000, 10000, 3, 0, 0, 10, 0, 0, 0.006, ttime, tinterval, farFuture);
+        const result = stockProcess(200, PA2, 1, empty, 10000, 10000, 3, 10, 0, 0, 0.006, ttime, tinterval, farFuture);
         expect(result.str).toMatch(/Buy 1\/4/);
         expect(result.str).toMatch(/Sell/);
         expect(result.buy).toBeGreaterThan(0);
@@ -559,7 +559,7 @@ describe('stockProcess', () => {
         const now = 10000000;
         const prev = { price: 300, time: now - 100, type: 'buy', buy: [], sell: [] };
         // now - prev.time = 100 << ttime → both false
-        const result = stockProcess(200, PA2, 1, prev, 10000, 10000, 3, 0, 0, 10, 0, 0, 0.006, ttime, tinterval, now);
+        const result = stockProcess(200, PA2, 1, prev, 10000, 10000, 3, 10, 0, 0, 0.006, ttime, tinterval, now);
         expect(result.bCount).toBe(0);
         expect(result.sCount).toBe(0);
     });
@@ -567,7 +567,7 @@ describe('stockProcess', () => {
     test('previous.price >= price, type=buy, cooldown expired → both can trade', () => {
         const now = 10000000;
         const prev = { price: 300, time: now - ttime - 1, type: 'buy', buy: [], sell: [] };
-        const result = stockProcess(200, PA2, 1, prev, 10000, 10000, 3, 0, 0, 10, 0, 0, 0.006, ttime, tinterval, now);
+        const result = stockProcess(200, PA2, 1, prev, 10000, 10000, 3, 10, 0, 0, 0.006, ttime, tinterval, now);
         // at least one of buy/sell should be non-zero (timer expired)
         expect(result.bCount + result.sCount).toBeGreaterThanOrEqual(0);
     });
@@ -575,7 +575,7 @@ describe('stockProcess', () => {
     test('previous.price >= price, type=sell, in cooldown → both false', () => {
         const now = 10000000;
         const prev = { price: 300, time: now - 100, type: 'sell', buy: [], sell: [] };
-        const result = stockProcess(200, PA2, 1, prev, 10000, 10000, 3, 0, 0, 10, 0, 0, 0.006, ttime, tinterval, now);
+        const result = stockProcess(200, PA2, 1, prev, 10000, 10000, 3, 10, 0, 0, 0.006, ttime, tinterval, now);
         expect(result.bCount).toBe(0);
         expect(result.sCount).toBe(0);
     });
@@ -586,7 +586,7 @@ describe('stockProcess', () => {
     test('previous.price < price, type=sell, in cooldown → both false', () => {
         const now = 10000000;
         const prev = { price: 50, time: now - 100, type: 'sell', buy: [], sell: [] };
-        const result = stockProcess(200, PA2, 1, prev, 10000, 10000, 3, 0, 0, 10, 0, 0, 0.006, ttime, tinterval, now);
+        const result = stockProcess(200, PA2, 1, prev, 10000, 10000, 3, 10, 0, 0, 0.006, ttime, tinterval, now);
         expect(result.bCount).toBe(0);
         expect(result.sCount).toBe(0);
     });
@@ -594,7 +594,7 @@ describe('stockProcess', () => {
     test('previous.price < price, type=buy, in cooldown → both false', () => {
         const now = 10000000;
         const prev = { price: 50, time: now - 100, type: 'buy', buy: [], sell: [] };
-        const result = stockProcess(200, PA2, 1, prev, 10000, 10000, 3, 0, 0, 10, 0, 0, 0.006, ttime, tinterval, now);
+        const result = stockProcess(200, PA2, 1, prev, 10000, 10000, 3, 10, 0, 0, 0.006, ttime, tinterval, now);
         expect(result.bCount).toBe(0);
         expect(result.sCount).toBe(0);
     });
@@ -603,39 +603,39 @@ describe('stockProcess', () => {
     // finalBuy — pAmount=0 → bCount=0
     // -----------------------------------------------------------------------
     test('pAmount=0 → finalBuy sets bCount=0', () => {
-        const result = stockProcess(200, PA2, 1, empty, 10000, 0, 0, 0, 0, 10, 0, 0, 0.006, ttime, tinterval, farFuture);
+        const result = stockProcess(200, PA2, 1, empty, 10000, 0, 0, 10, 0, 0, 0.006, ttime, tinterval, farFuture);
         expect(result.bCount).toBe(0);
     });
 
     test('pAmount very small → finalBuy sets bCount=0', () => {
-        const result = stockProcess(200, PA2, 1, empty, 10000, 0.001, 0, 0, 0, 10, 0, 0, 0.006, ttime, tinterval, farFuture);
+        const result = stockProcess(200, PA2, 1, empty, 10000, 0.001, 0, 10, 0, 0, 0.006, ttime, tinterval, farFuture);
         expect(result.bCount).toBe(0);
     });
 
     test('pCount=0 → finalSell sets sCount=0, type back to 0', () => {
         // sP=3 normally gives type=9, but pCount=0 zeroes sCount
-        const result = stockProcess(400, PA2, 1, empty, 10000, 10000, 0, 0, 0, 10, 0, 0, 0.006, ttime, tinterval, farFuture);
+        const result = stockProcess(400, PA2, 1, empty, 10000, 10000, 0, 10, 0, 0, 0.006, ttime, tinterval, farFuture);
         expect(result.sCount).toBe(0);
         expect(result.type).toBe(0);
     });
 
     test('priceTimes=2 affects bCount/sCount calculation', () => {
-        const r1 = stockProcess(200, PA2, 1, empty, 10000, 10000, 5, 0, 0, 10, 0, 0, 0.006, ttime, tinterval, farFuture);
-        const r2 = stockProcess(200, PA2, 2, empty, 10000, 10000, 5, 0, 0, 10, 0, 0, 0.006, ttime, tinterval, farFuture);
+        const r1 = stockProcess(200, PA2, 1, empty, 10000, 10000, 5, 10, 0, 0, 0.006, ttime, tinterval, farFuture);
+        const r2 = stockProcess(200, PA2, 2, empty, 10000, 10000, 5, 10, 0, 0, 0.006, ttime, tinterval, farFuture);
         // priceTimes changes bCount/sCount; we only assert they differ or are proportional
         expect(r2.buy).toBeGreaterThan(0);
         expect(r2.sell).toBeGreaterThan(0);
     });
 
     test('priceTimes=0 is treated as 1 (via priceTimes = priceTimes || 1)', () => {
-        const r0 = stockProcess(200, PA2, 0, empty, 10000, 10000, 3, 0, 0, 10, 0, 0, 0.006, ttime, tinterval, farFuture);
-        const r1 = stockProcess(200, PA2, 1, empty, 10000, 10000, 3, 0, 0, 10, 0, 0, 0.006, ttime, tinterval, farFuture);
+        const r0 = stockProcess(200, PA2, 0, empty, 10000, 10000, 3, 10, 0, 0, 0.006, ttime, tinterval, farFuture);
+        const r1 = stockProcess(200, PA2, 1, empty, 10000, 10000, 3, 10, 0, 0, 0.006, ttime, tinterval, farFuture);
         expect(r0.buy).toBe(r1.buy);
         expect(r0.sell).toBe(r1.sell);
     });
 
     test('returns object with required keys', () => {
-        const result = stockProcess(200, PA2, 1, empty, 10000, 10000, 3, 0, 0, 10, 0, 0, 0.006, ttime, tinterval, farFuture);
+        const result = stockProcess(200, PA2, 1, empty, 10000, 10000, 3, 10, 0, 0, 0.006, ttime, tinterval, farFuture);
         expect(result).toHaveProperty('price', 200);
         expect(result).toHaveProperty('str');
         expect(result).toHaveProperty('buy');
@@ -647,30 +647,22 @@ describe('stockProcess', () => {
 
     test('sType=1 (bitfinex) uses bitfinexTicker for rounding', () => {
         // sType=1 → bitfinexTicker instead of twse/usse ticker
-        const result = stockProcess(200, PA2, 1, empty, 10000, 10000, 3, 0, 0, 10, 0, 1, 0.006, ttime, tinterval, farFuture);
+        const result = stockProcess(200, PA2, 1, empty, 10000, 10000, 3, 10, 0, 1, 0.006, ttime, tinterval, farFuture);
         expect(result.buy).toBeGreaterThan(0);
     });
 
     test('fee=USSE_FEE uses usseTicker for rounding', () => {
-        const result = stockProcess(200, PA2, 1, empty, 10000, 10000, 3, 0, 0, 10, 0, 0, 0.004, ttime, tinterval, farFuture);
+        const result = stockProcess(200, PA2, 1, empty, 10000, 10000, 3, 10, 0, 0, 0.004, ttime, tinterval, farFuture);
         expect(result.buy).toBeGreaterThan(0);
     });
 
     test('buy price clamped to upLimit when pCount < 2*priceTimes', () => {
         // pCount=0 < 2, upLimit=50, price=200 → bP=5 → type 7 buy
         // finalBuy: buy > upLimit=50 → buy = twseTicker(50, false) = 50
-        const result = stockProcess(200, PA2, 1, empty, 10000, 10000, 0, 0, 0, 50, 0, 0, 0.006, ttime, tinterval, farFuture);
+        const result = stockProcess(200, PA2, 1, empty, 10000, 10000, 0, 50, 0, 0, 0.006, ttime, tinterval, farFuture);
         if (result.buy > 0) {
             expect(result.buy).toBeLessThanOrEqual(50);
         }
-    });
-
-    test('pPl<0, pPricecost set → sell below cost is zeroed', () => {
-        // pCount > 0, pPl < 0 > -pOrig/4, pAmount/pOrig > 3/4, sell < pPricecost
-        const result = stockProcess(700, PA2, 1, empty, 10000, 9000, 5, 500, -100, 10, 0, 0, 0.006, ttime, tinterval, farFuture);
-        // sell=type5 sell price; if sell < pPricecost(500), sCount zeroed
-        // 700 gives sP=2 → type5 sell at ~700; 700 > 500 so condition not met
-        expect(result).toBeDefined();
     });
 });
 
@@ -1479,21 +1471,21 @@ describe('stockProcess additional previous.time branches', () => {
     test('previous.price >= price, type=sell, cooldown expired → is_buy=is_sell=true', () => {
         const now = 10000000;
         const prev = { price: 300, time: now - ttime - 1, type: 'sell', buy: [], sell: [] };
-        const result = stockProcess(200, PA2, 1, prev, 10000, 10000, 3, 0, 0, 10, 0, 0, 0.006, ttime, tinterval, now);
+        const result = stockProcess(200, PA2, 1, prev, 10000, 10000, 3, 10, 0, 0, 0.006, ttime, tinterval, now);
         expect(result.bCount + result.sCount).toBeGreaterThan(0);
     });
 
     test('previous.price < price, type=sell, sell cooldown expired → is_sell=true', () => {
         const now = 10000000;
         const prev = { price: 50, time: now - ttime * 10, type: 'sell', buy: [], sell: [] };
-        const result = stockProcess(400, PA2, 1, prev, 10000, 10000, 3, 0, 0, 10, 0, 0, 0.006, ttime, tinterval, now);
+        const result = stockProcess(400, PA2, 1, prev, 10000, 10000, 3, 10, 0, 0, 0.006, ttime, tinterval, now);
         expect(result).toBeDefined();
     });
 
     test('previous.price < price, type=buy, cooldown expired → both can trade', () => {
         const now = 10000000;
         const prev = { price: 50, time: now - ttime * 10, type: 'buy', buy: [], sell: [] };
-        const result = stockProcess(400, PA2, 1, prev, 10000, 10000, 3, 0, 0, 10, 0, 0, 0.006, ttime, tinterval, now);
+        const result = stockProcess(400, PA2, 1, prev, 10000, 10000, 3, 10, 0, 0, 0.006, ttime, tinterval, now);
         expect(result.bCount + result.sCount).toBeGreaterThan(0);
     });
 });
@@ -1518,7 +1510,7 @@ describe('stockProcess alternate newMid branches', () => {
     ];
 
     test('resetWeb:1 with newMid updated (3rd neg > 4th neg * 0.94) covers line 3256', () => {
-        const result = stockProcess(5, PA3, 1, empty, 10000, 10000, 0, 0, 0, 10, 0, 0, 0.006, ttime, tinterval, farFuture);
+        const result = stockProcess(5, PA3, 1, empty, 10000, 10000, 0, 10, 0, 0, 0.006, ttime, tinterval, farFuture);
         expect(result.resetWeb).toBe(1);
         expect(typeof result.newMid).toBe('number');
     });
@@ -1534,7 +1526,7 @@ describe('stockProcess alternate newMid branches', () => {
     ];
 
     test('resetWeb:2 with newMid updated (3rd neg < 4th neg * 1.06) covers line 3297', () => {
-        const result = stockProcess(1000, PA4, 1, empty, 10000, 10000, 0, 0, 0, 10, 0, 0, 0.006, ttime, tinterval, farFuture);
+        const result = stockProcess(1000, PA4, 1, empty, 10000, 10000, 0, 10, 0, 0, 0.006, ttime, tinterval, farFuture);
         expect(result.resetWeb).toBe(2);
         expect(typeof result.newMid).toBe('number');
     });
@@ -2287,7 +2279,7 @@ describe('stockProcess tprice branches', () => {
     test('previous.tprice < previous.price → pPrice uses tprice for buy side (line 3318)', () => {
         const now = 10000000;
         const prev = { price: 500, tprice: 300, time: now - ttime - 1, type: 'buy', buy: [], sell: [] };
-        const result = stockProcess(200, PA2, 1, prev, 10000, 10000, 3, 0, 0, 10, 0, 0, 0.006, ttime, tinterval, now);
+        const result = stockProcess(200, PA2, 1, prev, 10000, 10000, 3, 10, 0, 0, 0.006, ttime, tinterval, now);
         expect(result).toBeDefined();
         expect(typeof result.str).toBe('string');
     });
@@ -2295,14 +2287,14 @@ describe('stockProcess tprice branches', () => {
     test('previous.tprice > previous.price → pPrice uses tprice for sell side (line 3366)', () => {
         const now = 10000000;
         const prev = { price: 200, tprice: 700, time: now - ttime - 1, type: 'sell', buy: [], sell: [] };
-        const result = stockProcess(100, PA2, 1, prev, 10000, 10000, 3, 0, 0, 10, 0, 0, 0.006, ttime, tinterval, now);
+        const result = stockProcess(100, PA2, 1, prev, 10000, 10000, 3, 10, 0, 0, 0.006, ttime, tinterval, now);
         expect(result).toBeDefined();
     });
 
     test('previous.price < price, type=sell, tprice > price (line 3386)', () => {
         const now = 10000000;
         const prev = { price: 100, tprice: 800, time: now - ttime * 10, type: 'sell', buy: [], sell: [] };
-        const result = stockProcess(400, PA2, 1, prev, 10000, 10000, 3, 0, 0, 10, 0, 0, 0.006, ttime, tinterval, now);
+        const result = stockProcess(400, PA2, 1, prev, 10000, 10000, 3, 10, 0, 0, 0.006, ttime, tinterval, now);
         expect(result).toBeDefined();
         expect(result.sCount + result.bCount).toBeGreaterThanOrEqual(0);
     });
@@ -2310,7 +2302,7 @@ describe('stockProcess tprice branches', () => {
     test('previous.price < price, tprice < price → pPrice uses previous.price (line 3434)', () => {
         const now = 10000000;
         const prev = { price: 100, tprice: 50, time: now - ttime * 10, type: 'buy', buy: [], sell: [] };
-        const result = stockProcess(400, PA2, 1, prev, 10000, 10000, 3, 0, 0, 10, 0, 0, 0.006, ttime, tinterval, now);
+        const result = stockProcess(400, PA2, 1, prev, 10000, 10000, 3, 10, 0, 0, 0.006, ttime, tinterval, now);
         expect(result).toBeDefined();
     });
 
@@ -2318,15 +2310,15 @@ describe('stockProcess tprice branches', () => {
         const now = 10000000;
         // price=200, bP=5 initially. prev.price=900 >= 200, pCount=0, bP<5 → condition met
         const prev = { price: 900, time: now - ttime - 1, type: 'buy', buy: [], sell: [] };
-        const result = stockProcess(200, PA2, 1, prev, 10000, 10000, 0, 0, 0, 10, 0, 0, 0.006, ttime, tinterval, now);
+        const result = stockProcess(200, PA2, 1, prev, 10000, 10000, 0, 10, 0, 0, 0.006, ttime, tinterval, now);
         expect(result).toBeDefined();
     });
 });
 
 // ===========================================================================
-// stockProcess — finalSell pPricecost/pPl branches (lines 3507-3516)
+// stockProcess — finalSell pAmount cap
 // ===========================================================================
-describe('stockProcess finalSell pPricecost/pPl branches', () => {
+describe('stockProcess finalSell pAmount cap', () => {
     const PA2 = [
         -1000, -900, 800, 750, 700,
         -600, 550, 500, 450,
@@ -2339,28 +2331,9 @@ describe('stockProcess finalSell pPricecost/pPl branches', () => {
     const tinterval = 86400 * 5;
     const farFuture = Math.round(new Date().getTime() / 1000) + 999999999;
 
-    test('pPl < 0, sell < pPricecost → sCount zeroed (line 3510-3516)', () => {
-        // pPricecost=1000, pPl=-100 (< 0), -pPl=100 < pOrig/4=2500
-        // pAmount - pPl / pOrig: (9900+100)/10000 = 1 > 3/4
-        // sell: sP=5 at price=200, sell ≈ 200 < pPricecost=1000 → zeroed
-        const result = stockProcess(200, PA2, 1, {buy:[], sell:[]}, 10000, 9900, 5, 1000, -100, 10, 0, 0, 0.006, ttime, tinterval, farFuture);
-        expect(result.sCount).toBe(0);
-    });
-
-    test('pPl < 0, sell >= pPricecost → sCount preserved or adjusted (line 3508)', () => {
-        // pPricecost=100, pPl=-100, sell ≈ 700 (sP=2 → type 5 sell)
-        // sell=700 >= pPricecost=100 → pPricecost branch does NOT zero
-        // But pAmount=9900 > 0 and (9900+sCount*sell) > pOrig*3/4=7500 → sCount may be capped
-        const result = stockProcess(700, PA2, 1, {buy:[], sell:[]}, 10000, 9900, 5, 100, -100, 10, 0, 0, 0.006, ttime, tinterval, farFuture);
-        // The sell >= pPricecost branch was entered (didn't zero sCount), 
-        // but the later cap at line 3527 may still reduce it
-        expect(result).toBeDefined();
-        expect(typeof result.sCount).toBe('number');
-    });
-
     test('pAmount > 0, sell total exceeds 3/4 orig → sCount capped (line 3527-3538)', () => {
         // pOrig=10000, pAmount=8000, sCount * sell > 10000*3/4-8000=−500 → while loop
-        const result = stockProcess(700, PA2, 1, {buy:[], sell:[]}, 10000, 8000, 5, 0, 0, 10, 0, 0, 0.006, ttime, tinterval, farFuture);
+        const result = stockProcess(700, PA2, 1, {buy:[], sell:[]}, 10000, 8000, 5, 10, 0, 0, 0.006, ttime, tinterval, farFuture);
         expect(result).toBeDefined();
         expect(typeof result.sCount).toBe('number');
     });
@@ -2385,32 +2358,32 @@ describe('stockProcess type branch coverage', () => {
 
     test('bP > 6, pCount < 2*priceTimes → finalBuy resets type 6 to 0 (line 3570)', () => {
         // price=50 → bP=7 → type=6, pCount=0 < 2 → finalBuy resets type to 0
-        const result = stockProcess(50, PA2, 1, empty, 10000, 10000, 0, 0, 0, 10, 0, 0, 0.006, ttime, tinterval, farFuture);
+        const result = stockProcess(50, PA2, 1, empty, 10000, 10000, 0, 10, 0, 0, 0.006, ttime, tinterval, farFuture);
         expect(result.type).toBe(0);
     });
 
     test('sType=2 (not 0, not 1) → raw price used (no ticker rounding)', () => {
-        const result = stockProcess(200, PA2, 1, empty, 10000, 10000, 3, 0, 0, 10, 0, 2, 0.006, ttime, tinterval, farFuture);
+        const result = stockProcess(200, PA2, 1, empty, 10000, 10000, 3, 10, 0, 2, 0.006, ttime, tinterval, farFuture);
         expect(result.buy).toBeGreaterThan(0);
         expect(result.sell).toBeGreaterThan(0);
     });
 
     test('sType=0, fee=USSE_FEE → usseTicker used for buy/sell price', () => {
-        const result = stockProcess(200, PA2, 1, empty, 10000, 10000, 3, 0, 0, 10, 0, 0, 0.004, ttime, tinterval, farFuture);
+        const result = stockProcess(200, PA2, 1, empty, 10000, 10000, 3, 10, 0, 0, 0.004, ttime, tinterval, farFuture);
         expect(result.buy).toBeGreaterThan(0);
     });
 
     test('nowBP > priceArray.length-2 → buy uses last element (line 3613)', () => {
         // price must be very low so nowBP lands at priceArray.length-1, but not resetWeb
         // Actually this triggers resetWeb. We need price just barely above last element
-        const result = stockProcess(11, PA2, 1, empty, 10000, 10000, 5, 0, 0, 10, 0, 0, 0.006, ttime, tinterval, farFuture);
+        const result = stockProcess(11, PA2, 1, empty, 10000, 10000, 5, 10, 0, 0, 0.006, ttime, tinterval, farFuture);
         // 11 > abs(-10)*1.001=10.01 → breaks at nowBP=20 (PA2.length-1=21), bP=7-ish
         expect(result).toBeDefined();
     });
 
     test('nowSP < 1 → sell uses priceArray[0] (line 3713)', () => {
         // price=950, sP=1, nowSP=1, sell uses priceArray[nowSP-1]=priceArray[0]
-        const result = stockProcess(950, PA2, 1, empty, 10000, 10000, 5, 0, 0, 10, 0, 0, 0.006, ttime, tinterval, farFuture);
+        const result = stockProcess(950, PA2, 1, empty, 10000, 10000, 5, 10, 0, 0, 0.006, ttime, tinterval, farFuture);
         expect(result.sell).toBeGreaterThan(0);
         expect(result.type).toBe(8);
     });
@@ -3375,23 +3348,23 @@ describe('ticker functions via stockProcess', () => {
     ];
 
     test('twseTicker <10 (price ~ 2) → fee=TRADE_FEE exercises small price branch', () => {
-        const r = stockProcess(2, PA_SMALL, 1, empty, 10000, 10000, 5, 0, 0, 50, 0, 0, 0.006, ttime, tinterval, farFuture);
+        const r = stockProcess(2, PA_SMALL, 1, empty, 10000, 10000, 5, 50, 0, 0, 0.006, ttime, tinterval, farFuture);
         expect(r.buy).toBeGreaterThanOrEqual(0);
         expect(r.sell).toBeGreaterThanOrEqual(0);
     });
 
     test('twseTicker <50 (price ~ 30) → exercises 10-50 branch', () => {
-        const r = stockProcess(30, PA_MED, 1, empty, 10000, 10000, 5, 0, 0, 200, 0, 0, 0.006, ttime, tinterval, farFuture);
+        const r = stockProcess(30, PA_MED, 1, empty, 10000, 10000, 5, 200, 0, 0, 0.006, ttime, tinterval, farFuture);
         expect(r).toBeDefined();
     });
 
     test('twseTicker <100 (price ~ 70) → exercises 50-100 branch', () => {
-        const r = stockProcess(70, PA_MED, 1, empty, 10000, 10000, 5, 0, 0, 200, 0, 0, 0.006, ttime, tinterval, farFuture);
+        const r = stockProcess(70, PA_MED, 1, empty, 10000, 10000, 5, 200, 0, 0, 0.006, ttime, tinterval, farFuture);
         expect(r).toBeDefined();
     });
 
     test('twseTicker <500 (price ~ 300) → exercises 100-500 branch', () => {
-        const r = stockProcess(300, PA_LG, 1, empty, 100000, 100000, 5, 0, 0, 1000, 0, 0, 0.006, ttime, tinterval, farFuture);
+        const r = stockProcess(300, PA_LG, 1, empty, 100000, 100000, 5, 1000, 0, 0, 0.006, ttime, tinterval, farFuture);
         expect(r).toBeDefined();
     });
 
@@ -3404,12 +3377,12 @@ describe('ticker functions via stockProcess', () => {
             -500, 450, 400,
             -350, 300, 250, -200,
         ];
-        const r = stockProcess(700, PA_1K, 1, empty, 100000, 100000, 5, 0, 0, 2000, 0, 0, 0.006, ttime, tinterval, farFuture);
+        const r = stockProcess(700, PA_1K, 1, empty, 100000, 100000, 5, 2000, 0, 0, 0.006, ttime, tinterval, farFuture);
         expect(r).toBeDefined();
     });
 
     test('twseTicker >=1000 (price ~ 1500) → exercises >=1000 branch', () => {
-        const r = stockProcess(1500, PA_XL, 1, empty, 1000000, 1000000, 5, 0, 0, 5000, 0, 0, 0.006, ttime, tinterval, farFuture);
+        const r = stockProcess(1500, PA_XL, 1, empty, 1000000, 1000000, 5, 5000, 0, 0, 0.006, ttime, tinterval, farFuture);
         expect(r).toBeDefined();
     });
 
@@ -3422,7 +3395,7 @@ describe('ticker functions via stockProcess', () => {
             -0.15, 0.1, 0.08,
             -0.05, 0.03, 0.02, -0.01,
         ];
-        const r = stockProcess(0.05, PA_TINY, 1, empty, 10000, 10000, 5, 0, 0, 5, 0, 0, 0.004, ttime, tinterval, farFuture);
+        const r = stockProcess(0.05, PA_TINY, 1, empty, 10000, 10000, 5, 5, 0, 0, 0.004, ttime, tinterval, farFuture);
         expect(r).toBeDefined();
     });
 
@@ -3435,7 +3408,7 @@ describe('ticker functions via stockProcess', () => {
             -120, 100, 80,
             -60, 40, 20, -10,
         ];
-        const r = stockProcess(200, PA2, 1, empty, 10000, 10000, 5, 0, 0, 10, 0, 0, 0.004, ttime, tinterval, farFuture);
+        const r = stockProcess(200, PA2, 1, empty, 10000, 10000, 5, 10, 0, 0, 0.004, ttime, tinterval, farFuture);
         expect(r).toBeDefined();
     });
 
@@ -3448,17 +3421,17 @@ describe('ticker functions via stockProcess', () => {
             -40, 35, 30,
             -25, 20, 15, -10,
         ];
-        const r = stockProcess(50, PA_BF, 1, empty, 10000, 10000, 5, 0, 0, 200, 0, 1, 0.006, ttime, tinterval, farFuture);
+        const r = stockProcess(50, PA_BF, 1, empty, 10000, 10000, 5, 200, 0, 1, 0.006, ttime, tinterval, farFuture);
         expect(r).toBeDefined();
     });
 
     test('bitfinexTicker <1000 (price ~ 500) → sType=1', () => {
-        const r = stockProcess(500, PA_LG, 1, empty, 100000, 100000, 5, 0, 0, 1000, 0, 1, 0.006, ttime, tinterval, farFuture);
+        const r = stockProcess(500, PA_LG, 1, empty, 100000, 100000, 5, 1000, 0, 1, 0.006, ttime, tinterval, farFuture);
         expect(r).toBeDefined();
     });
 
     test('bitfinexTicker >=1000 (price ~ 1500) → sType=1', () => {
-        const r = stockProcess(1500, PA_XL, 1, empty, 1000000, 1000000, 5, 0, 0, 5000, 0, 1, 0.006, ttime, tinterval, farFuture);
+        const r = stockProcess(1500, PA_XL, 1, empty, 1000000, 1000000, 5, 5000, 0, 1, 0.006, ttime, tinterval, farFuture);
         expect(r).toBeDefined();
     });
 });
@@ -4163,15 +4136,9 @@ describe('stockProcess finalSell pAmount cap', () => {
 
     test('pAmount > 0, pAmount+sCount*sell > pOrig*3/4 -> sCount capped', () => {
         const prev = { price: 500, time: farFuture - 600000, type: 'buy', buy: [], sell: [] };
-        const r = stockProcess(700, PA2, 100, prev, 1000000, 700000, 200, 0, 0, 1000, 0, 0, 0.006, ttime, tinterval, farFuture);
+        const r = stockProcess(700, PA2, 100, prev, 1000000, 700000, 200, 1000, 0, 0, 0.006, ttime, tinterval, farFuture);
         expect(r.str).toMatch(/Sell/);
         expect(r.sCount).toBeLessThan(100);
-    });
-
-    test('pPricecost + pPl negative, sell < pPricecost -> sCount=0 (lines 3507-3516)', () => {
-        const prev = { price: 500, time: farFuture - 600000, type: 'buy', buy: [], sell: [] };
-        const r = stockProcess(700, PA2, 1, prev, 1000000, 800000, 50, 1000, -100000, 1000, 0, 0, 0.006, ttime, tinterval, farFuture);
-        expect(r.sCount).toBe(0);
     });
 });
 
@@ -6305,11 +6272,7 @@ describe('stockProcess newMid 4th negative edge', () => {
         // then uses 5th boundary (=60) as 1σ below, capped at 70*0.94=65.8 → newMid=60
         const PA = [-100, -90, -80, -70, -60, -50, -40, -30, -20, -10];
         const farFuture = Math.round(new Date().getTime() / 1000) + 100000;
-        const result = stockProcess(
-            5, PA, 1,
-            { price: 50, time: farFuture - 600000, type: 'sell', buy: [], sell: [] },
-            1000, 500, 0, 0, 0, 100, 0, 0, 0.006
-        );
+        const result = stockProcess(5, PA, 1, { price: 50, time: farFuture - 600000, type: 'sell', buy: [], sell: [] }, 1000, 500, 0, 100, 0, 0, 0.006);
         expect(result).toBeDefined();
         expect(result.newMid).toBe(60);
         expect(result.resetWeb).toBe(1);
@@ -6319,7 +6282,7 @@ describe('stockProcess newMid 4th negative edge', () => {
         // boundaries from top: [100, 90, 80, 70, 60, 50, 42, 40, 20, 10]
         // mid=boundaries[3]=70, sigma1=boundaries[4]=60, cap=70*0.94=65.8 → newMid=60
         const PA = [-100, -90, -80, -70, -60, -50, -42, -40, -20, -10];
-        const result = stockProcess(5, PA, 1, { buy: [], sell: [] }, 1000, 500, 0, 0, 0, 100, 0, 0, 0.006);
+        const result = stockProcess(5, PA, 1, { buy: [], sell: [] }, 1000, 500, 0, 100, 0, 0, 0.006);
         expect(result.resetWeb).toBe(1);
         expect(result.newMid).toBe(60);
     });
@@ -6337,12 +6300,7 @@ describe('usseTicker penny-stock sell', () => {
         const ttime = 86400 * 5;
         const tinterval = 86400 * 5;
         const farFuture = Math.round(new Date().getTime() / 1000) + 999999999;
-        const result = stockProcess(
-            0.5, PA_PENNY, 1,
-            { buy: [], sell: [] },
-            10000, 5000, 5, 0.3, 0, 1,
-            0, 0, 0.004, ttime, tinterval, farFuture
-        );
+        const result = stockProcess(0.5, PA_PENNY, 1, { buy: [], sell: [] }, 10000, 5000, 5, 1, 0, 0, 0.004, ttime, tinterval, farFuture);
         expect(result.str).toContain('Sell');
         expect(result.sell).toBeLessThan(1);
     });
@@ -6359,11 +6317,7 @@ describe('stockProcess fee-aware dead zone', () => {
     test('buy suppressed when buy price within 3*fee of previous trade price', () => {
         // Previous buy at 100, new buy suggestion close to 100
         // deadZone = 100 * 0.006 * 3 = 1.8
-        const result = stockProcess(
-            99, PA, 1,
-            { price: 100, time: farFuture - 200000, type: 'buy', tprice: 0, buy: [], sell: [] },
-            1000000, 500000, 0, 0, 0, 1000, 0, 0, fee, 86400, 86400, farFuture
-        );
+        const result = stockProcess(99, PA, 1, { price: 100, time: farFuture - 200000, type: 'buy', tprice: 0, buy: [], sell: [] }, 1000000, 500000, 0, 1000, 0, 0, fee, 86400, 86400, farFuture);
         if (result.buy > 0 && Math.abs(result.buy - 100) <= 100 * fee * 3) {
             expect(result.bCount).toBe(0);
             expect(result.str).toContain('[dead zone]');
@@ -6371,11 +6325,7 @@ describe('stockProcess fee-aware dead zone', () => {
     });
 
     test('sell suppressed when sell price within 3*fee of previous trade price', () => {
-        const result = stockProcess(
-            101, PA, 1,
-            { price: 100, time: farFuture - 200000, type: 'sell', tprice: 0, buy: [], sell: [] },
-            1000000, 500000, 5, 0, 0, 1000, 0, 0, fee, 86400, 86400, farFuture
-        );
+        const result = stockProcess(101, PA, 1, { price: 100, time: farFuture - 200000, type: 'sell', tprice: 0, buy: [], sell: [] }, 1000000, 500000, 5, 1000, 0, 0, fee, 86400, 86400, farFuture);
         if (result.sell > 0 && Math.abs(result.sell - 100) <= 100 * fee * 3) {
             expect(result.sCount).toBe(0);
             expect(result.str).toContain('[dead zone]');
@@ -6384,20 +6334,12 @@ describe('stockProcess fee-aware dead zone', () => {
 
     test('buy NOT suppressed when buy price far from previous trade price', () => {
         // Previous buy at 1000, new buy at ~60 — well outside dead zone
-        const result = stockProcess(
-            50, PA, 1,
-            { price: 1000, time: farFuture - 200000, type: 'buy', tprice: 0, buy: [], sell: [] },
-            1000000, 500000, 0, 0, 0, 1000, 0, 0, fee, 86400, 86400, farFuture
-        );
+        const result = stockProcess(50, PA, 1, { price: 1000, time: farFuture - 200000, type: 'buy', tprice: 0, buy: [], sell: [] }, 1000000, 500000, 0, 1000, 0, 0, fee, 86400, 86400, farFuture);
         expect(result.str).not.toContain('[dead zone]');
     });
 
     test('no previous trade → dead zone not applied', () => {
-        const result = stockProcess(
-            100, PA, 1,
-            { buy: [], sell: [] },
-            1000000, 500000, 0, 0, 0, 1000, 0, 0, fee
-        );
+        const result = stockProcess(100, PA, 1, { buy: [], sell: [] }, 1000000, 500000, 0, 1000, 0, 0, fee);
         expect(result.str).not.toContain('[dead zone]');
     });
 });

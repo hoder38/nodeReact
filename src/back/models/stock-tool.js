@@ -958,7 +958,7 @@ export default {
                                 return restTest().then(([result, index, type, metrics]) => {
                                     web.type = type;
                                     if (metrics) web.metrics = metrics;
-                                    return Mongo('update', STOCKDB, {_id: id}, {$set: {web}}).then(item => recur_web(0, type).then(() => [result, index]));
+                                    return Mongo('update', STOCKDB, {_id: id}, {$set: {web}}).then(() => recur_web(0, type).then(() => [result, index]));
                                 });
                             });
                         })
@@ -1183,7 +1183,7 @@ export default {
                                 return restTest().then(([result, index, type, metrics]) => {
                                     web.type = type;
                                     if (metrics) web.metrics = metrics;
-                                    return Mongo('update', STOCKDB, {_id: id}, {$set: {web}}).then(item => recur_web(0, type).then(() => [result, index]));
+                                    return Mongo('update', STOCKDB, {_id: id}, {$set: {web}}).then(() => recur_web(0, type).then(() => [result, index]));
                                 });
                             });
                         })
@@ -2906,8 +2906,8 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
                         item.orig = item.orig * item.mul;
                         item.times = Math.floor(item.times * item.mul);
                     }
-                    item.pricecost = 0;
-                    item.pl = 0;
+                    //item.pricecost = 0;
+                    //item.pl = 0;
                     item.count = 0;
                     if (item.profit) {
                         item.orig += item.profit;
@@ -2963,7 +2963,7 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
                     let newArr = resolveNewMidStack(item.newMid, price, item.mid, item.web, (nm) => {
                         log.debug({ nm }, 'newMid value');
                     });
-                    let suggestion = stockProcess(price, newArr, item.times, item.previous, item.orig, item.clear ? 0 : item.amount, item.count, item.pricecost, item.pl, Math.abs(item.web[0]), item.wType, 0, fee, undefined, undefined, undefined, item.newMid.length);
+                    let suggestion = stockProcess(price, newArr, item.times, item.previous, item.orig, item.clear ? 0 : item.amount, item.count, Math.abs(item.web[0]), item.wType, 0, fee, undefined, undefined, undefined, item.newMid.length);
                     // Re-run the web whenever repeated breakouts push too many provisional mids onto the stack.
                     // The preferred path rebuilds from cached interval data; the ratio fallback preserves behavior
                     // when the cache is missing or the recalculation cannot produce a stable stair array.
@@ -3023,13 +3023,13 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
                                     item.newMid = [];
                                     newArr = item.web;
                                 }
-                                suggestion = stockProcess(price, newArr, item.times, item.previous, item.orig, item.clear ? 0 : item.amount, item.count, item.pricecost, item.pl, Math.abs(item.web[0]), item.wType, 0, fee, undefined, undefined, undefined, item.newMid.length);
+                                suggestion = stockProcess(price, newArr, item.times, item.previous, item.orig, item.clear ? 0 : item.amount, item.count, Math.abs(item.web[0]), item.wType, 0, fee, undefined, undefined, undefined, item.newMid.length);
                                 return processResetWeb(recalcCount);
                             });
                         } else {
                             newArr = scaleWebArr(item.newMid, item.mid, item.web);
                         }
-                        suggestion = stockProcess(price, newArr, item.times, item.previous, item.orig, item.clear ? 0 : item.amount, item.count, item.pricecost, item.pl, Math.abs(item.web[0]), item.wType, 0, fee, undefined, undefined, undefined, item.newMid.length);
+                        suggestion = stockProcess(price, newArr, item.times, item.previous, item.orig, item.clear ? 0 : item.amount, item.count, Math.abs(item.web[0]), item.wType, 0, fee, undefined, undefined, undefined, item.newMid.length);
                         return processResetWeb(recalcCount);
                     };
                     return processResetWeb(0).then(() => {
@@ -3460,7 +3460,7 @@ export const resolveNewMidStack = (stack, price, mid, webArr, onPop) => {
 
 // Generate buy/sell suggestions for a single price probe against the current web.
 // Returns resetWeb when price escapes the ladder and a new midpoint must be derived.
-export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:[], sell:[]}, pOrig, pAmount, pCount, pPricecost, pPl, upLimit, pType = 0, sType = 0, fee = TRADE_FEE, ttime = TRADE_TIME, tinterval = TRADE_INTERVAL, now = Math.round(_dateFactory().getTime() / 1000), newMidDepth = 0) => {
+export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:[], sell:[]}, pOrig, pAmount, pCount, upLimit, pType = 0, sType = 0, fee = TRADE_FEE, ttime = TRADE_TIME, tinterval = TRADE_INTERVAL, now = Math.round(_dateFactory().getTime() / 1000), newMidDepth = 0) => {
     priceTimes = priceTimes ? priceTimes : 1;
     let is_buy = true;
     let is_sell = true;
@@ -3620,15 +3620,6 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
     sCount = sTimes * sCount * priceTimes;
 
     const finalSell = () => {
-        // If the position is only slightly underwater, avoid selling below cost once cash is already > 3/4 of pOrig.
-        /*if (pPricecost && pPl && pPl < 0 && -pPl < (pOrig * 1 / 4) && sCount > 0 && ((pAmount - pPl) / pOrig) > (3 / 4)) {
-            if (sell < pPricecost) {
-                sCount = 0;
-                if (type === 8 || type === 5 || type === 9) {
-                    type = 0;
-                }
-            }
-        }*/
         if (pCount === 0) {
             sCount = 0;
             if (type === 8 || type === 5 || type === 9) {
@@ -3994,7 +3985,7 @@ export const stockTest = (his_arr, loga, min, pType = 0, rinterval = RANGE_INTER
 
         const runSignalFn = (p, i, newArr) => {
             // §3.2 Mirror live-engine signal generation, preserving newMid/resetWeb handling.
-            let suggest = stockProcess(p, newArr, web.times, priviousTrade, FIXED_MAX_AMOUNT, amount, count, 0, 0, Math.abs(web.arr[0]), pType, sType, fee, ttime, tinterval, now - (i * tinterval), newMid.length);
+            let suggest = stockProcess(p, newArr, web.times, priviousTrade, FIXED_MAX_AMOUNT, amount, count, Math.abs(web.arr[0]), pType, sType, fee, ttime, tinterval, now - (i * tinterval), newMid.length);
             let recalcCount = 0;
             while (suggest.resetWeb) {
                 if (suggest.resetWeb === 1) stopLoss++;
@@ -4015,7 +4006,7 @@ export const stockTest = (his_arr, loga, min, pType = 0, rinterval = RANGE_INTER
                 } else {
                     newArr = scaleWebArr(newMid, web.mid, web.arr);
                 }
-                suggest = stockProcess(p, newArr, web.times, priviousTrade, FIXED_MAX_AMOUNT, amount, count, 0, 0, Math.abs(web.arr[0]), pType, sType, fee, ttime, tinterval, now - (i * tinterval), newMid.length);
+                suggest = stockProcess(p, newArr, web.times, priviousTrade, FIXED_MAX_AMOUNT, amount, count, Math.abs(web.arr[0]), pType, sType, fee, ttime, tinterval, now - (i * tinterval), newMid.length);
             }
             return { suggest, newArr };
         };

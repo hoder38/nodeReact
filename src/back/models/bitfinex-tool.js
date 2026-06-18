@@ -1129,8 +1129,8 @@ export const _recur_status = async ({ id, uid, current, userRest, items }) => {
         const clearP = (current.clear === true || current.clear[item.index] === true) ? true : false;
         // Reset the live position snapshot before folding in the current holdings.
         item.count = 0;
-        item.pricecost = 0;
-        item.pl = 0;
+        //item.pricecost = 0;
+        //item.pl = 0;
         if (item.profit) {
             item.orig += item.profit;
         }
@@ -1189,8 +1189,8 @@ export const _recur_status = async ({ id, uid, current, userRest, items }) => {
                 item.times = Math.floor(item.times * item.mul * 10000) / 10000;
             }
             item.count = 0;
-            item.pricecost = 0;
-            item.pl = 0;
+            //item.pricecost = 0;
+            //item.pl = 0;
             if (item.profit) {
                 item.orig += item.profit;
             }
@@ -1220,7 +1220,7 @@ export const _recur_status = async ({ id, uid, current, userRest, items }) => {
             let newArr = resolveNewMidStack(item.newMid, +priceData[item.index].lastPrice, item.mid, item.web, (nm) => {
                 log.debug({ nm }, 'newMid check');
             });
-            let suggestion = stockProcess(+priceData[item.index].lastPrice, newArr, item.times, item.previous, item.orig, clearP ? 0 : item.amount, item.count, item.pricecost, item.pl, Math.abs(item.web[0]), item.wType, 1, BITFINEX_FEE, BITFINEX_INTERVAL, BITFINEX_INTERVAL, undefined, item.newMid.length);
+            let suggestion = stockProcess(+priceData[item.index].lastPrice, newArr, item.times, item.previous, item.orig, clearP ? 0 : item.amount, item.count, Math.abs(item.web[0]), item.wType, 1, BITFINEX_FEE, BITFINEX_INTERVAL, BITFINEX_INTERVAL, undefined, item.newMid.length);
             const processResetWeb = (recalcCount) => {
                 if (!suggestion.resetWeb) return Promise.resolve();
                 item.newMid.push(suggestion.newMid);
@@ -1274,7 +1274,7 @@ export const _recur_status = async ({ id, uid, current, userRest, items }) => {
                             item.newMid = [];
                             newArr = item.web;
                         }
-                        suggestion = stockProcess(+priceData[item.index].lastPrice, newArr, item.times, item.previous, item.orig, clearP ? 0 : item.amount, item.count, item.pricecost, item.pl, Math.abs(item.web[0]), item.wType, 1, BITFINEX_FEE, BITFINEX_INTERVAL, BITFINEX_INTERVAL, undefined, item.newMid.length);
+                        suggestion = stockProcess(+priceData[item.index].lastPrice, newArr, item.times, item.previous, item.orig, clearP ? 0 : item.amount, item.count, Math.abs(item.web[0]), item.wType, 1, BITFINEX_FEE, BITFINEX_INTERVAL, BITFINEX_INTERVAL, undefined, item.newMid.length);
                         return processResetWeb(recalcCount);
                     }).catch(() => {
                         // On candle fetch failure, keep trading with a rescaled ladder instead of aborting the loop.
@@ -1283,13 +1283,13 @@ export const _recur_status = async ({ id, uid, current, userRest, items }) => {
                         item.web = item.web.map(v => v * ratio);
                         item.newMid = [];
                         newArr = item.web;
-                        suggestion = stockProcess(+priceData[item.index].lastPrice, newArr, item.times, item.previous, item.orig, clearP ? 0 : item.amount, item.count, item.pricecost, item.pl, Math.abs(item.web[0]), item.wType, 1, BITFINEX_FEE, BITFINEX_INTERVAL, BITFINEX_INTERVAL, undefined, item.newMid.length);
+                        suggestion = stockProcess(+priceData[item.index].lastPrice, newArr, item.times, item.previous, item.orig, clearP ? 0 : item.amount, item.count, Math.abs(item.web[0]), item.wType, 1, BITFINEX_FEE, BITFINEX_INTERVAL, BITFINEX_INTERVAL, undefined, item.newMid.length);
                         return processResetWeb(recalcCount);
                     });
                 } else {
                     newArr = scaleWebArr(item.newMid, item.mid, item.web);
                 }
-                suggestion = stockProcess(+priceData[item.index].lastPrice, newArr, item.times, item.previous, item.orig, clearP ? 0 : item.amount, item.count, item.pricecost, item.pl, Math.abs(item.web[0]), item.wType, 1, BITFINEX_FEE, BITFINEX_INTERVAL, BITFINEX_INTERVAL, undefined, item.newMid.length);
+                suggestion = stockProcess(+priceData[item.index].lastPrice, newArr, item.times, item.previous, item.orig, clearP ? 0 : item.amount, item.count, Math.abs(item.web[0]), item.wType, 1, BITFINEX_FEE, BITFINEX_INTERVAL, BITFINEX_INTERVAL, undefined, item.newMid.length);
                 return processResetWeb(recalcCount);
             };
             await processResetWeb(0);

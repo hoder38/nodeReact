@@ -3723,7 +3723,7 @@ describe('recur_status + recur_NewOrder paths', () => {
         expect(mockStockProcess).toHaveBeenCalledWith(
             60000, expect.any(Array), expect.any(Number), expect.any(Object),
             expect.any(Number), expect.any(Number),
-            0.5, 0, 0,
+            0.5,
             expect.any(Number), expect.any(Number), 1,
             expect.any(Number), expect.any(Number), expect.any(Number),
             undefined, expect.any(Number)
