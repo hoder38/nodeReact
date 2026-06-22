@@ -379,7 +379,7 @@ export default function process(collection) {
                         id: items[0]._id,
                         adultonly: items[0].adultonly,
                         tag: tagType.name,
-                    } : Mongo('update', collection, {_id: id}, {$set: tagType.tag}).then(item2 => ({
+                    } : Mongo('update', collection, {_id: id}, {$set: tagType.tag}).then(() => ({
                         id: items[0]._id,
                         adultonly: items[0].adultonly,
                         tag: tagType.name,
@@ -394,7 +394,7 @@ export default function process(collection) {
                     }
                     if (!items[0].tags.includes(tagType.tag.tags)) {
                         tagType.tag[user._id.toString()] = tagType.tag.tags;
-                        return Mongo('update', collection, { _id: id }, {$addToSet: tagType.tag}, {upsert: true}).then(item2 => ({
+                        return Mongo('update', collection, { _id: id }, {$addToSet: tagType.tag}, {upsert: true}).then(() => ({
                             id: items[0]._id,
                             adultonly: items[0].adultonly,
                             tag: tagType.tag.tags,
@@ -434,7 +434,7 @@ export default function process(collection) {
                     return handleError(new HoError('can not find object!!!'));
                 }
                 if (tagType.type === 2) {
-                    return Mongo('update', collection, { _id: id}, {$set: tagType.tag}).then(item1 => ({
+                    return Mongo('update', collection, { _id: id}, {$set: tagType.tag}).then(() => ({
                         id: items[0]._id,
                         adultonly: items[0].adultonly,
                         tag: tagType.name,
@@ -457,7 +457,7 @@ export default function process(collection) {
                             for (let i in items[0]) {
                                 if (isValidString(i, 'uid')) {
                                     tagType.tag[i] = tagType.tag.tags;
-                                    return Mongo('update', collection, {_id: id}, {$pull: tagType.tag}).then(item1 => ({
+                                    return Mongo('update', collection, {_id: id}, {$pull: tagType.tag}).then(() => ({
                                         id: items[0]._id,
                                         adultonly: items[0].adultonly,
                                         tag: tagType.tag.tags,
@@ -474,7 +474,7 @@ export default function process(collection) {
                             };
                         } else {
                             tagType.tag[user._id.toString()] = tagType.tag.tags;
-                            return Mongo('update', collection, { _id: id}, {$pull: tagType.tag}).then(item1 => ({
+                            return Mongo('update', collection, { _id: id}, {$pull: tagType.tag}).then(() => ({
                                 id: items[0]._id,
                                 adultonly: items[0].adultonly,
                                 tag: tagType.tag.tags,
@@ -512,7 +512,7 @@ export default function process(collection) {
                 if (!id) {
                     return handleError(new HoError('uid is not vaild!!!'));
                 }
-                return Mongo('update', collection, {_id: id}, {$set: {untag: 0}}).then(item => Mongo('find', collection, {_id: id}, {limit: 1}).then(items => {
+                return Mongo('update', collection, {_id: id}, {$set: {untag: 0}}).then(() => Mongo('find', collection, {_id: id}, {limit: 1}).then(items => {
                     if (items.length < 1) {
                         return handleError(new HoError('can not find object!!!'));
                     }

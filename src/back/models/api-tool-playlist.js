@@ -473,7 +473,7 @@ const megaAdd = (user, url, filePath, data={})  => setLock('mega').then(go => {
     return is_run ? startMega(user, url, filePath, data) : Promise.resolve();
 });
 
-const startZip = (user, index, id, owner, name, pwd, zip_type) => Mongo('update', STORAGEDB, {_id: id}, {$set: {utime: Math.round(new Date().getTime() / 1000)}}).then(item => {
+const startZip = (user, index, id, owner, name, pwd, zip_type) => Mongo('update', STORAGEDB, {_id: id}, {$set: {utime: Math.round(new Date().getTime() / 1000)}}).then(() => {
     const filePath = getFileLocation(owner, id);
     const comPath = `${filePath}/${index}_complete`;
     if (FsExistsSync(comPath)) {
@@ -540,7 +540,7 @@ const startZip = (user, index, id, owner, name, pwd, zip_type) => Mongo('update'
                         DBdata['status'] = 9;
                         DBdata[`mediaType.${index}`] = mediaType;
                         console.log(DBdata);
-                        return Mongo('update', STORAGEDB, {_id: id}, {$set: DBdata}).then(item2 => MediaHandleTool.handleMediaUpload(mediaType, filePath, id, user).catch(err => handleError(err, errorMedia, id, mediaType['fileIndex'])));
+                        return Mongo('update', STORAGEDB, {_id: id}, {$set: DBdata}).then(() => MediaHandleTool.handleMediaUpload(mediaType, filePath, id, user).catch(err => handleError(err, errorMedia, id, mediaType['fileIndex'])));
                     });
                 }
             }
@@ -600,7 +600,7 @@ function zipAdd(user, index, id, owner, name, pwd='') {
     });
 }
 
-const startTorrent = (user, id, owner, index, hash, engine) => Mongo('update', STORAGEDB, {_id: id}, {$set: {utime: Math.round(new Date().getTime() / 1000)}}).then(item => {
+const startTorrent = (user, id, owner, index, hash, engine) => Mongo('update', STORAGEDB, {_id: id}, {$set: {utime: Math.round(new Date().getTime() / 1000)}}).then(() => {
     const filePath = getFileLocation(owner, id);
     const bufferPath = `${filePath}/${index}`;
     const comPath = `${bufferPath}_complete`;
@@ -730,7 +730,7 @@ const startTorrent = (user, id, owner, index, hash, engine) => Mongo('update', S
                         DBdata['status'] = 9;
                         DBdata[`mediaType.${index}`] = mediaType;
                         console.log(DBdata);
-                        return Mongo('update', STORAGEDB, {_id: id}, {$set: DBdata}).then(item2 => MediaHandleTool.handleMediaUpload(mediaType, filePath, id, user).catch(err => handleError(err, errorMedia, id, mediaType['fileIndex'])));
+                        return Mongo('update', STORAGEDB, {_id: id}, {$set: DBdata}).then(() => MediaHandleTool.handleMediaUpload(mediaType, filePath, id, user).catch(err => handleError(err, errorMedia, id, mediaType['fileIndex'])));
                     });
                 }
             }

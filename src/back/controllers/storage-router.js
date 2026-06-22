@@ -359,7 +359,7 @@ router.put('/recover/:uid', function(req, res, next) {
         if (items[0].recycle !== 1) {
             return handleError(new HoError('recycle file first!!!'), next);
         }
-        return Mongo('update', STORAGEDB, {_id: items[0]._id}, {$set: {recycle: 0}}).then(item2 => {
+        return Mongo('update', STORAGEDB, {_id: items[0]._id}, {$set: {recycle: 0}}).then(() => {
             sendWs({
                 type: 'file',
                 data: items[0]._id,
@@ -618,7 +618,7 @@ router.put('/zipPassword/:uid', function (req, res, next){
         return Mongo('update', STORAGEDB, {
             _id: id,
             status: 9,
-        }, {$set: {pwd}}).then(item => res.json({apiOK: true}));
+        }, {$set: {pwd}}).then(() => res.json({apiOK: true}));
     }).catch(err => handleError(err, next));
 });
 

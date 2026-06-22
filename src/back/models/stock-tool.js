@@ -883,8 +883,8 @@ export default {
                         const loga = logArray(max, min, bins);
                         const web = calStair(raw_arr, loga, min);
                         log.debug({ web }, 'computed web');
-                        return Mongo('update', STOCKDB, {_id: id}, {$set: {web}}).then(item => {
-                            log.debug({ item }, 'web update result');
+                        return Mongo('update', STOCKDB, {_id: id}, {$set: {web}}).then(_n => {
+                            log.debug({ n: _n }, 'web update result');
                             if (!web) {
                                 return [interval_data, 'no profit'];
                             }
@@ -1108,8 +1108,8 @@ export default {
                         const loga = logArray(max, min, bins);
                         const web = calStair(raw_arr, loga, min, 0, USSE_FEE);
                         log.debug({ web }, 'computed web');
-                        return Mongo('update', STOCKDB, {_id: id}, {$set: {web}}).then(item => {
-                            log.debug({ item }, 'web update result');
+                        return Mongo('update', STOCKDB, {_id: id}, {$set: {web}}).then(_n => {
+                            log.debug({ n: _n }, 'web update result');
                             if (!web) {
                                 return [interval_data, 'no profit'];
                             }
@@ -3742,10 +3742,12 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
         const deadZone = previous.price * fee * 3;
         if (buy > 0 && bCount > 0 && Math.abs(buy - previous.price) <= deadZone) {
             bCount = 0;
+            buy = 0;
             str += '[dead zone] ';
         }
         if (sell > 0 && sCount > 0 && Math.abs(sell - previous.price) <= deadZone) {
             sCount = 0;
+            sell = 0;
             str += '[dead zone] ';
         }
     }

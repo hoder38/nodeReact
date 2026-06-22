@@ -67,8 +67,8 @@ export const getToken = code => {
         console.log(token);
         return Mongo('find', 'accessToken', {api: 'tdameritrade'}).then(items => {
             if (items.length > 0) {
-                return Mongo('update', 'accessToken', {api: 'tdameritrade'}, {$set: token}).then(item => {
-                    console.log(item);
+                return Mongo('update', 'accessToken', {api: 'tdameritrade'}, {$set: token}).then(_n => {
+                    console.log(_n);
                     Object.assign(tokens, token);
                 });
             } else {

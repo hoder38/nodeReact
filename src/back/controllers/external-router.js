@@ -641,7 +641,7 @@ router.post('/upload/url', function(req, res, next) {
                                     DBdata['status'] = 9;
                                     DBdata[`mediaType.${index}`] = mediaType;
                                     console.log(DBdata);
-                                    return Mongo('update', STORAGEDB, {_id: item[0]._id}, {$set: DBdata}).then(item2 => MediaHandleTool.handleMediaUpload(mediaType, filePath, item[0]._id, req.user).catch(err => handleError(err, errorMedia, item[0]._id, mediaType['fileIndex'])))
+                                    return Mongo('update', STORAGEDB, {_id: item[0]._id}, {$set: DBdata}).then(() => MediaHandleTool.handleMediaUpload(mediaType, filePath, item[0]._id, req.user).catch(err => handleError(err, errorMedia, item[0]._id, mediaType['fileIndex'])))
                                 });
                             }
                             return singel_mhandle().then(() => {

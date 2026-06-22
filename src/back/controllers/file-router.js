@@ -242,7 +242,7 @@ router.get('/media/:action(act|del)/:uid/:index(\\d+|v)?', function(req, res, ne
                     }
                 }
                 if (is_empty) {
-                    return Mongo('update', STORAGEDB, {_id: items[0]._id}, {$unset: {mediaType: ''}}).then(item => {
+                    return Mongo('update', STORAGEDB, {_id: items[0]._id}, {$unset: {mediaType: ''}}).then(() => {
                         sendWs({
                             type: 'file',
                             data: items[0]._id,
