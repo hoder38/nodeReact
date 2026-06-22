@@ -124,7 +124,7 @@ jest.unstable_mockModule('../../util/sendWs.js', () => ({
 }));
 
 jest.unstable_mockModule('../../util/logger.js', () => ({
-  default: () => ({ debug: jest.fn(), info: jest.fn(), warn: jest.fn() }),
+  default: () => ({ debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() }),
 }));
 
 // =====================================================================

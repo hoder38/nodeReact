@@ -1,13 +1,16 @@
 import { ENV_TYPE, SESS_PWD } from '../../../ver.js'
 import { SESS_IP, SESS_PORT } from '../config.js'
+import createLogger from '../util/logger.js'
 
 import Redis from 'redis'
 
+const log = createLogger('redis')
+
 const client = Redis.createClient(SESS_PORT(ENV_TYPE), SESS_IP(ENV_TYPE), {auth_pass: SESS_PWD});
-client.on('error', err => console.log(`Redis error: ${err}`));
-client.on('ready', err => console.log('Redis ready'));
+client.on('error', err => log.error({ err }, 'redis error'));
+client.on('ready', () => log.info('redis ready'));
 client.on('connect', () => {
-    console.log('Redis connect');
+    log.info('redis connect');
     client.config('SET', 'maxmemory', '100mb');
     client.config('SET', 'maxmemory-policy', 'allkeys-lru');
 });
