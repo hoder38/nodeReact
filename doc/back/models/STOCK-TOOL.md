@@ -132,7 +132,7 @@ let stringSent = 0;                // WebSocket message counter
 `stock-tool.js` uses structured logging via the project's **pino**-based logger (see `src/back/util/logger.js` and [OUTLINE.md §3.6](../../OUTLINE.md)):
 
 ```javascript
-import createLogger from '../../util/logger.js';
+import createLogger from '../util/logger.js';
 const log = createLogger('stock');
 
 log.debug({ item }, 'stock status item');
@@ -724,6 +724,12 @@ const mockPredictWarp = {
 3. Separates TWSE and USSE positions
 4. Returns portfolio object
 
+**Profit Mechanism** (shared with `stockStatus` repricing loop):
+- **Cash basis**: `v.amount = (v.mul ? v.orig * v.mul : v.orig) + (v.profit || 0)` — remaining deployable capital equals the (possibly market-cap-scaled) original allocation plus any realized profit accumulated by the broker modules.
+- **Lifetime P/L**: `p = (v.profit || 0) + v.price * v.count` — realized profit plus current market value of the held position. This replaced the older `p = current + v.amount - orig` formula which double-counted realized profit already folded into `amount`.
+- **Day-over-day change**: `y = v.previousPrice ? (v.price - v.previousPrice) * v.count : 0` — aggregated into per-exchange totals for the summary row.
+- **Summary row**: `remain = profit / (totalPrice + remain) * 100` — daily return percentage based on total held value plus cash.
+
 **Returns**: Portfolio with holdings array and cash positions
 
 ---
@@ -793,11 +799,21 @@ const mockPredictWarp = {
 **Logic Flow**:
 1. Queries `TOTALDB` for records missing `sType` (legacy selector used by live portfolio rows)
 2. Loads current positions/orders from both brokerage paths: Shioaji (TWSE) and TDAmeritrade (USSE)
-3. Reprices each holding, rebuilds `orig` / `amount` / `count` / `pl` / `order`, and resolves `newMid` stack state before calling `stockProcess()`
+3. Reprices each holding, rebuilds `orig` / `amount` / `count` / `order`, and resolves `newMid` stack state before calling `stockProcess()`
 4. Applies normal position-control adjustments and persists refreshed `suggestionData`
 5. **§9a Kelly Criterion sizing boost**: after position control, if `item.metrics` exists with `winRate > 0` and `avgLoss > 0`, computes `kelly = p - (1-p)/b` where `p = winRate / 100` and `b = avgWin / avgLoss`; when `kelly > 0.5`, it increments `bCount` for active buys and `sCount` for active sells
 6. **§6c Conviction-weighted newOrder sorting**: downstream Shioaji/TDAmeritrade execution paths now push all candidates first, then use `Array.sort()` on `newOrder` with a 50/50 composite score of invested market value (`|count| × price`) and conviction (`1 / extrem`). Smaller `extrem` values therefore rank earlier.
 7. Applies the emergency-stop fake-order guard when too many active holdings have active `newMid` stacks (items with `clear = true` or `ing = 2` are excluded), then writes updated state back to `TOTALDB`
+
+**Profit / Position Rebuilding** (per holding):
+```
+item.orig += item.profit            // fold realized profit into bankroll
+item.orig += position.amount * price  // add mark-to-market value of held shares
+item.count = position.amount          // share count from broker
+item.amount = item.orig               // deployable capital for stockProcess()
+```
+- Realized profit (`item.profit`) is recorded by the broker modules: TWSE Shioaji decodes `o.profit`/`o.ptime` packed strings from fill orders, while USSE TDAmeritrade uses `revenue` from `executionLegs`. Buy fills subtract cost (`item.profit -= revenue`), sell fills add proceeds after fees (`item.profit += revenue * (1 - fee)`).
+- The older approach (commented out) used `item.pricecost` / `item.pl` from broker positions; current code uses `position.amount * livePrice` for the unrealized component, which is simpler and avoids stale cost-basis issues.
 
 **Returns**: Promise resolving after holdings are refreshed; execution candidates are exposed through `suggestionData` / downstream broker order queues
 

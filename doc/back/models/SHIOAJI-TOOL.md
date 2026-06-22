@@ -35,6 +35,7 @@
 | `stock-tool.js` | Internal model | `getSuggestionData('twse')` for live price suggestions |
 | `utility.js` | Internal util | `handleError()`, `HoError` |
 | `mongo-tool.js` | Internal model | MongoDB CRUD wrapper |
+| `logger.js` | Internal util | Structured logging via pino (`createLogger('shioaji')`) |
 
 ### Exports
 

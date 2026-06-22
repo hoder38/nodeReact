@@ -72,7 +72,7 @@ import Redis from '../models/redis-tool.js'            // Redis wrapper
 import Api from './api-tool.js'                        // HTTP API client
 import { handleError, HoError, isValidString, findTag } from '../util/utility.js'
 import sendWs from '../util/sendWs.js'                 // WebSocket notification system
-import createLogger from '../../util/logger.js'        // Structured logging (pino)
+import createLogger from '../util/logger.js'         // Structured logging (pino)
 ```
 
 ### Constants (from `constants.js`)
@@ -142,6 +142,28 @@ let position = {}        // { [userID]: { [pair]: positionData } }
 - **Memory Leak Risk**: No automatic cleanup of disconnected users → potential memory growth
 - **Race Conditions**: Multiple concurrent WebSocket updates may cause state inconsistency
 - **No Locking**: Global state mutations not thread-safe (Node.js single-threaded mitigates this)
+
+### Profit Mechanism
+
+The module tracks realized profit on margin-trading items in `TOTALDB.profit` and mirrors it into the `margin[uid][type][index]` runtime cache for UI display.
+
+**Fill-order accounting** (in `processFilledOrder`):
+- **Buy fill**: `item.profit -= amount * price` — `amount` is negative (short-cover) or positive (long open); cost subtracted from running total.
+- **Sell fill**: `item.profit -= amount * price * (1 - BITFINEX_FEE)` — `amount` is negative so net effect adds proceeds minus trading fee.
+- Fake orders (simulation mode) update `previous` ladder state but do **not** touch `item.profit`.
+
+**Position-close path** (commented out but logged):
+- When a WS position update removes a tracked position (`position[id][symbol].splice`), the closed P/L (`lastP[0].pl`) would be added to `items[0].profit` and persisted. This path is currently disabled pending data consistency review.
+
+**Bankroll rebuilding** (in `calWeb` / `startStatus` inner loop):
+```
+margin[id][current.type][item.index] = item.profit   // cache for UI
+item.orig += item.profit                              // fold realized into bankroll
+item.orig += position.amount * priceData.lastPrice    // add mark-to-market value
+item.count += position.amount
+item.amount = item.orig                               // deployable capital for stockProcess()
+```
+- Old approach (commented out): added `v.pl` (unrealized P/L from Bitfinex position object) directly to `item.orig`. Current approach uses `amount * lastPrice` for the unrealized component, avoiding reliance on Bitfinex's incremental `pl` field which can arrive as `null` on partial updates.
 
 ---
 

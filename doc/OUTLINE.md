@@ -198,6 +198,7 @@
 
 - **§6c Conviction-weighted `newOrder` sorting (2026-05-26)**: `bitfinex-tool.js`, `shioaji-tool.js`, and `tdameritrade-tool.js` now sort `newOrder` by a 50/50 blend of normalized invested market value (`|count| × price`) and conviction (`1 / extrem`), so lower-`extrem` / more stable positions are submitted first. This replaces the older invested-amount insertion sort.
 - **Sizing note (2026-05-26)**: `stock-tool.js` and `bitfinex-tool.js` now consume TOTALDB `metrics` / `extrem` data for Kelly-based trade-count boosts and volatility-aware position sizing.
+- **Structured logging (2026-06-22)**: All trading modules (`stock-tool.js`, `bitfinex-tool.js`, `shioaji-tool.js`, `tdameritrade-tool.js`) now use `createLogger` from `util/logger.js` (pino) instead of `console.log`. Each module creates a child logger with its own `module` tag (e.g., `createLogger('shioaji')`). Log levels: `debug` for data dumps, `info` for operational flow, `warn` for skipped/expired orders, `error` for failures.
 
 ### 3.5 Utilities
 

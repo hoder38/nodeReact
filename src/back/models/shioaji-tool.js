@@ -6,6 +6,9 @@ import Child_process from 'child_process'
 import { getSuggestionData } from '../models/stock-tool.js'
 import { handleError, HoError } from '../util/utility.js'
 import Mongo from '../models/mongo-tool.js'
+import createLogger from '../util/logger.js'
+
+const log = createLogger('shioaji')
 
 let updateTime = {book: 0, trade: 0};
 let available = 0;
@@ -40,25 +43,20 @@ export const twseShioajiInit = (force = false) => {
         const now = Math.round(new Date().getTime() / 1000);
         if (force || (now - updateTime['book']) > UPDATE_ORDER) {
             updateTime['book'] = now;
-            console.log(updateTime['book']);
+            log.info({ bookTime: updateTime['book'] }, 'book refresh')
             return getShioajiData(false).catch(err => {
                 if (force === true) {
                     updateTime['trade'] = updateTime['trade'] < 1 ? 0 : updateTime['trade'] - 1;
                 }
-                console.log(err);
+                log.error({ err }, 'shioaji python error')
                 return handleError(new HoError('Shioaji python error!!!'));
             }).then(ret => {
-                //console.log(ret);
-                //console.log(available);
-                //console.log(order);
-                //console.log(position);
                 const twseSuggestion = getSuggestionData('twse');
-                console.log('fakeOrder shioaji');
-                console.log(fakeOrder);
+                log.debug({ fakeOrder }, 'fakeOrder shioaji')
                 fakeOrder.forEach(o => {
                     if (!o.done && o.type === 'buy' && twseSuggestion[o.symbol].price && twseSuggestion[o.symbol].price <= o.price) {
                         o.done = true;
-                        console.log('fake order close');
+                        log.info('fake order close')
                         ret.fill_order.push({
                             price: o.price,
                             time: o.time,
@@ -69,7 +67,7 @@ export const twseShioajiInit = (force = false) => {
                         });
                     } else if (!o.done && o.type === 'sell' && twseSuggestion[o.symbol].price && twseSuggestion[o.symbol].price >= o.price) {
                         o.done = true;
-                        console.log('fake order close');
+                        log.info('fake order close')
                         ret.fill_order.push({
                             price: o.price,
                             time: o.time,
@@ -85,13 +83,13 @@ export const twseShioajiInit = (force = false) => {
                         return Promise.resolve();
                     } else {
                         const o = ret.fill_order[index];
-                        console.log(o);
+                        log.debug({ order: o }, 'processing fill order')
                         if (o.price <= 0) {
                             return fill_order_recur(index + 1);
                         }
                         return Mongo('find', TOTALDB, {setype: 'twse', index: o.symbol}).then(items => {
                             if (items.length < 1) {
-                                console.log(`miss ${o.symbol}`);
+                                log.warn({ symbol: o.symbol }, 'symbol not found in TOTALDB')
                                 return fill_order_recur(index + 1);
                             }
                             const item = items[0];
@@ -99,7 +97,7 @@ export const twseShioajiInit = (force = false) => {
                                 let is_insert = false;
                                 for (let k = 0; k < item.previous.buy.length; k++) {
                                     if (item.previous.buy[k].time === o.time && item.previous.buy[k].price === o.price) {
-                                        console.log('s order duplicate');
+                                        log.warn('order duplicate skipped')
                                         return fill_order_recur(index + 1);
                                     } else if (o.price < item.previous.buy[k].price) {
                                         item.previous.buy.splice(k, 0, {
@@ -164,17 +162,18 @@ export const twseShioajiInit = (force = false) => {
                                         }
                                     }
                                 } else {
-                                    console.log('s out of time');
-                                    console.log(o.starttime);
-                                    console.log(o.starttime + TWSE_ORDER_INTERVAL);
-                                    console.log(Math.round(new Date().getTime() / 1000));
+                                    log.warn({
+                                        starttime: o.starttime,
+                                        deadline: o.starttime + TWSE_ORDER_INTERVAL,
+                                        now: Math.round(new Date().getTime() / 1000),
+                                    }, 'buy order out of time')
                                     item.previous.buy = item.previous.buy.filter(v => (o.time - v.time < RANGE_INTERVAL) ? true : false);
                                 }
                             } else {
                                 let is_insert = false;
                                 for (let k = 0; k < item.previous.sell.length; k++) {
                                     if (item.previous.sell[k].time === o.time && item.previous.sell[k].price === o.price) {
-                                        console.log('s order duplicate');
+                                        log.warn('order duplicate skipped')
                                         return fill_order_recur(index + 1);
                                     } else if (o.price > item.previous.sell[k].price) {
                                         item.previous.sell.splice(k, 0, {
@@ -239,14 +238,15 @@ export const twseShioajiInit = (force = false) => {
                                         }
                                     }
                                 } else {
-                                    console.log('s out of time');
-                                    console.log(o.starttime);
-                                    console.log(o.starttime + TWSE_ORDER_INTERVAL);
-                                    console.log(Math.round(new Date().getTime() / 1000));
+                                    log.warn({
+                                        starttime: o.starttime,
+                                        deadline: o.starttime + TWSE_ORDER_INTERVAL,
+                                        now: Math.round(new Date().getTime() / 1000),
+                                    }, 'sell order out of time')
                                     item.previous.sell = item.previous.sell.filter(v => (o.time - v.time < RANGE_INTERVAL) ? true : false);
                                 }
                             }
-                            console.log(item.previous);
+                            log.debug({ previous: item.previous }, 'updated previous state')
                             return Mongo('update', TOTALDB, {_id: item._id}, {$set: Object.assign({previous: item.previous, profit: item.profit}, o.hasOwnProperty("quantity") ? (o.type === 'Buy') ? {bquantity: o.quantity} : {squantity: o.quantity} : (o.type === 'Buy') ? {boddquantity: o.oddquantity} : {soddquantity: o.oddquantity})}).then(() => fill_order_recur(index + 1));
                         });
                     }
@@ -254,17 +254,17 @@ export const twseShioajiInit = (force = false) => {
                 return fill_order_recur(0);
             });
         } else {
-            console.log('Shioaji no new');
+            log.debug('no new fill orders')
             return Promise.resolve();
         }
     }
     return initialBook().then(() => {
         updateTime['trade']++;
-        console.log(`shioaji ${updateTime['trade']}`);
+        log.info({ tradeCount: updateTime['trade'] }, 'trade cycle tick')
         if (updateTime['trade'] % (Math.ceil(TWSE_ORDER_INTERVAL / PRICE_INTERVAL) - 3) !== 3) {
             return Promise.resolve();
         } else {
-            console.log('twse time');
+            log.info('entering TWSE order submission window')
             //避開交易時間
             const hour = new Date().getHours();
             if (_TWSE_MARKET_TIME[0] > _TWSE_MARKET_TIME[1]) {
@@ -280,7 +280,7 @@ export const twseShioajiInit = (force = false) => {
         return Mongo('find', TOTALDB, {setype: 'twse', sType: {$exists: false}}).then(items => {
             const newOrder = [];
             const twseSuggestion = getSuggestionData('twse');
-            console.log(twseSuggestion);
+            log.debug({ twseSuggestion }, 'suggestion data')
             let isSubmit = false;
             const recur_status = index => {
                 if (index >= items.length) {
@@ -296,7 +296,7 @@ export const twseShioajiInit = (force = false) => {
                         item.orig = item.orig * item.mul;
                         item.times = Math.floor(item.times * item.mul);
                     }
-                    console.log(item);
+                    log.debug({ item }, 'evaluating stock item')
                     const startStatus = () => {
                         isSubmit = true;
                         if (twseSuggestion[item.index]) {
@@ -308,7 +308,7 @@ export const twseShioajiInit = (force = false) => {
                         const delTotal = () => Mongo('deleteMany', TOTALDB, {_id: item._id}).then(() => recur_status(index + 1));
                         return sellallShioajiOrder(item.index, false).catch(err => {
                             updateTime['trade'] = updateTime['trade'] < 1 ? 0 : updateTime['trade'] - 1;
-                            console.log(err);
+                            log.error({ err }, 'sellall shioaji error')
                             return handleError(new HoError('Shioaji python error!!!'));
                         }).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), API_WAIT * 2000)).then(() => delTotal()));
                     } else if (item.ing === 1) {
@@ -329,8 +329,7 @@ export const twseShioajiInit = (force = false) => {
                                 }
                             });
                         } else {
-                            console.log('enter_mid: price above 1σ');
-                            console.log(`price=${price} sigma1Up=${sigma1Up} mid=${item.mid}`);
+                            log.debug({ price, sigma1Up, mid: item.mid }, 'enter_mid: price above 1σ')
                             return recur_status(index + 1);
                         }
                     }
@@ -353,7 +352,7 @@ export const twseShioajiInit = (force = false) => {
                     }
                     return submitShioajiOrder(newOrder, false).catch(err => {
                         updateTime['trade'] = updateTime['trade'] < 1 ? 0 : updateTime['trade'] - 1;
-                        console.log(err);
+                        log.error({ err }, 'submit shioaji order error')
                         return handleError(new HoError('Shioaji python error!!!'));
                     });
                 } else {
@@ -369,9 +368,9 @@ const getShioajiData = (simulation = true) => {
     const id = simulation ? 'PAPIUSER02' : SHIOAJI_APIKEY;
     const pw = simulation ? '2222' : SHIOAJI_APISECRET;
     return new Promise((resolve, reject) => Child_process.exec(`${PathJoin(__dirname, 'util/twse.py')} ${id} ${pw}`, (err, output) => err ? reject(err) : resolve(output))).then(output => {
-        console.log(output);
+        log.debug({ output }, 'shioaji python raw output')
         const result = output.split('\n');
-        console.log(result);
+        log.debug({ result }, 'parsed result lines')
         let start_result = 0;
         const ret = {};
         for (let i = 0; i < result.length; i++) {
@@ -396,10 +395,6 @@ const getShioajiData = (simulation = true) => {
                 break;
             }
         }
-        //console.log(cash);
-        //console.log(position);
-        //console.log(order);
-        //console.log(fill_order);
         return ret;
     });
 }
@@ -434,9 +429,9 @@ const submitShioajiOrder = (submitList, simulation = true) => {
             });
         }
     });
-    console.log(list);
+    log.info({ list }, 'submitting shioaji order')
     return new Promise((resolve, reject) => Child_process.exec(`${PathJoin(__dirname, 'util/twse.py')} ${id} ${pw} submit ${ca} ${capw} ${TRADE_FEE} ${list}`, (err, output) => err ? reject(err) : resolve(output))).then(output => {
-        console.log(output);
+        log.debug({ output }, 'submit order output')
     });
 }
 
@@ -446,7 +441,7 @@ const sellallShioajiOrder = (index, simulation = true) => {
     const ca = simulation ? '2222' : SHIOAJI_CA;
     const capw = simulation ? '2222' : SHIOAJI_CAPW;
     return new Promise((resolve, reject) => Child_process.exec(`${PathJoin(__dirname, 'util/twse.py')} ${id} ${pw} sellall ${ca} ${capw} ${index}`, (err, output) => err ? reject(err) : resolve(output))).then(output => {
-        console.log(output);
+        log.debug({ output }, 'sellall order output')
     });
 }
 
@@ -471,7 +466,7 @@ export const getTwsePosition = () => {
 export const getTwseOrder = () => order;
 
 export const resetShioaji = () => {
-    console.log('Shioaji reset');
+    log.info('shioaji state reset')
     const trade_count = updateTime['trade'];
     updateTime = {};
     updateTime['book'] = 0;

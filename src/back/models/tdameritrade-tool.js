@@ -6,6 +6,9 @@ import { handleError, HoError } from '../util/utility.js'
 import Mongo from '../models/mongo-tool.js'
 import { getSuggestionData } from '../models/stock-tool.js'
 import sendWs from '../util/sendWs.js'
+import createLogger from '../util/logger.js'
+
+const log = createLogger('tdameritrade')
 
 let tokens = {};
 let encryptedId = null;
@@ -15,7 +18,6 @@ let order = [];
 let position = [];
 let fakeOrder = [];
 
-//export const generateAuthUrl = () => `${TD_AUTH_URL}response_type=code&redirect_uri=${GOOGLE_REDIRECT}&client_id=${TDAMERITRADE_KEY}%40AMER.OAUTHAP`;
 export const generateAuthUrl = () => `${TD_AUTH_URL}redirect_uri=${GOOGLE_REDIRECT}&client_id=${TDAMERITRADE_KEY}`;
 
 export const getToken = code => {
@@ -24,7 +26,7 @@ export const getToken = code => {
         if (codeM) {
             code = codeM[1];
         }
-        console.log(code);
+        log.debug({ code }, 'auth code received');
     }
     const qspost = code ? QStringify({
         grant_type: 'authorization_code',
@@ -64,16 +66,16 @@ export const getToken = code => {
                 sendWs(`TD AMERITRADE: Please refresh token in 3 days`, 0, 0, true);
             }
         }
-        console.log(token);
+        log.debug({ token }, 'token response');
         return Mongo('find', 'accessToken', {api: 'tdameritrade'}).then(items => {
             if (items.length > 0) {
-                return Mongo('update', 'accessToken', {api: 'tdameritrade'}, {$set: token}).then(_n => {
-                    console.log(_n);
+                return Mongo('update', 'accessToken', {api: 'tdameritrade'}, {$set: token}).then(() => {
+                    log.debug('token updated in DB');
                     Object.assign(tokens, token);
                 });
             } else {
                 return Mongo('insert', 'accessToken', Object.assign({api: 'tdameritrade'}, token)).then(item => {
-                    console.log(item);
+                    log.debug('token inserted in DB');
                     tokens = item[0];
                 });
             }
@@ -85,9 +87,8 @@ const checkOauth = () => (!tokens.access_token || !tokens.expiry_date) ? Mongo('
     if (token.length === 0) {
         return handleError(new HoError('can not find token'));
     }
-    console.log('td first');
     tokens = token[0];
-    console.log(tokens);
+    log.info({ tokens }, 'loaded tokens from DB');
 }).then(() => getToken()) : getToken();
 
 const cancelTDOrder = id => {
@@ -121,15 +122,14 @@ const submitTDOrder = (id, price, count) => {
         ]
     //}, price === 'MARKET' ? {orderType: "MARKET", session: "NORMAL",} : {orderType: 'LIMIT', price, session: "SEAMLESS"}));
     }, price === 'MARKET' ? {orderType: "MARKET", session: "NORMAL",} : {orderType: 'LIMIT', price, session: "NORMAL"}));
-    console.log(Math.abs(count));
+    log.info({ quantity: Math.abs(count) }, 'submitting TD order');
     return checkOauth().then(() => Fetch(`https://api.schwabapi.com/trader/v1/accounts/${encryptedId}/orders`, {headers: {
         Authorization: `Bearer ${tokens.access_token}`,
         'Content-Type': 'application/json',
     }, method: 'POST', body: qspost,}).then(res => {
         if (!res.ok) {
             updateTime['trade'] = updateTime['trade'] < 1 ? 0 : updateTime['trade'] - 1;
-            console.log(id);
-            console.log(price);
+            log.warn({ id, price }, 'TD order submission failed');
             return res.json().then(err => handleError(new HoError(err.message)))
         }
     })).catch(err => {
@@ -148,8 +148,7 @@ const processFilledOrder = (o, lastP, currentPosition, order_recur, nextIndex) =
     let price = o.fake ? o.price : 0;
     let revenue = 0;
     if (!o.fake) {
-        console.log(o);
-        console.log(o.orderActivityCollection[0].executionLegs[0]);
+        log.debug({ order: o, firstLeg: o.orderActivityCollection[0].executionLegs[0] }, 'processing filled order');
         o.orderActivityCollection.forEach(oac => oac.executionLegs.forEach(oace => {
             time = Math.round(new Date(oace.time).getTime() / 1000);
             price = oace.price;
@@ -161,17 +160,13 @@ const processFilledOrder = (o, lastP, currentPosition, order_recur, nextIndex) =
             });*/
         }));
     }
-    console.log(symbol);
-    console.log(type);
-    console.log(time);
-    console.log(price);
-    console.log(revenue);
+    log.debug({ symbol, type, time, price, revenue }, 'fill order details');
     if (price <= 0) {
         return order_recur(nextIndex);
     }
     return Mongo('find', TOTALDB, {setype: 'usse', index: symbol}).then(items => {
         if (items.length < 1) {
-            console.log(`miss ${symbol}`);
+            log.warn({ symbol }, 'symbol not found in TOTALDB');
             return order_recur(nextIndex);
         }
         const item = items[0];
@@ -179,7 +174,7 @@ const processFilledOrder = (o, lastP, currentPosition, order_recur, nextIndex) =
             let isDup = false;
             for (let k = 0; k < item.previous.buy.length; k++) {
                 if (item.previous.buy[k].price === price && item.previous.buy[k].time === time) {
-                    console.log('t order duplicate');
+                    log.warn('order duplicate skipped');
                     return order_recur(nextIndex);
                 } else if (price < item.previous.buy[k].price) {
                     item.previous.buy.splice(k, 0, {price, time});
@@ -211,17 +206,18 @@ const processFilledOrder = (o, lastP, currentPosition, order_recur, nextIndex) =
                     }
                 }
             } else {
-                console.log('t out of time');
-                console.log(new Date(o.enteredTime).getTime() / 1000);
-                console.log(new Date(o.enteredTime).getTime() / 1000 + USSE_ORDER_INTERVAL + USSE_ORDER_INTERVAL);
-                console.log(Math.round(new Date().getTime() / 1000));
+                log.warn({
+                    enteredTime: new Date(o.enteredTime).getTime() / 1000,
+                    deadline: new Date(o.enteredTime).getTime() / 1000 + USSE_ORDER_INTERVAL + USSE_ORDER_INTERVAL,
+                    now: Math.round(new Date().getTime() / 1000),
+                }, 'buy order out of time');
                 item.previous.buy = item.previous.buy.filter(v => (time - v.time < RANGE_INTERVAL) ? true : false);
             }
         } else {
             let isDup = false;
             for (let k = 0; k < item.previous.sell.length; k++) {
                 if (item.previous.sell[k].price === price && item.previous.sell[k].time === time) {
-                    console.log('t order duplicate');
+                    log.warn('order duplicate skipped');
                     return order_recur(nextIndex);
                 } else if (price > item.previous.sell[k].price) {
                     item.previous.sell.splice(k, 0, {price, time});
@@ -254,10 +250,11 @@ const processFilledOrder = (o, lastP, currentPosition, order_recur, nextIndex) =
                     }
                 }
             } else {
-                console.log('t out of time');
-                console.log(new Date(o.enteredTime).getTime() / 1000);
-                console.log(new Date(o.enteredTime).getTime() / 1000 + USSE_ORDER_INTERVAL + USSE_ORDER_INTERVAL);
-                console.log(Math.round(new Date().getTime() / 1000));
+                log.warn({
+                    enteredTime: new Date(o.enteredTime).getTime() / 1000,
+                    deadline: new Date(o.enteredTime).getTime() / 1000 + USSE_ORDER_INTERVAL + USSE_ORDER_INTERVAL,
+                    now: Math.round(new Date().getTime() / 1000),
+                }, 'sell order out of time');
                 item.previous.sell = item.previous.sell.filter(v => (time - v.time < RANGE_INTERVAL) ? true : false);
             }
             // Calculate profit from position delta
@@ -309,7 +306,7 @@ const processFilledOrder = (o, lastP, currentPosition, order_recur, nextIndex) =
             }*/
         }
         //item.profit = item.profit ? item.profit + profit : profit;
-        console.log(item.previous);
+        log.debug({ previous: item.previous }, 'updated previous state');
         return Mongo('update', TOTALDB, {_id: item._id}, {$set: {previous: item.previous, profit: item.profit}}).then(() => order_recur(nextIndex));
     });
 };
@@ -335,9 +332,8 @@ export const usseTDInit = () => checkOauth().then(() => {
         const now = Math.round(new Date().getTime() / 1000);
         if (force || (now - updateTime['book']) > UPDATE_ORDER) {
             updateTime['book'] = now;
-            console.log(updateTime['book']);
+            log.info({ bookTime: updateTime['book'] }, 'book refresh');
             return Fetch(`https://api.schwabapi.com/trader/v1/accounts/${encryptedId}?fields=positions`, {headers: {Authorization: `Bearer ${tokens.access_token}`}}).then(res => res.json()).then(result => {
-                //console.log(result);
                 if (result['message']) {
                     if (force === true) {
                         updateTime['trade'] = updateTime['trade'] < 1 ? 0 : updateTime['trade'] - 1;
@@ -369,12 +365,11 @@ export const usseTDInit = () => checkOauth().then(() => {
                 }
                 order = [];
                 const usseSuggestion = getSuggestionData('usse');
-                console.log('fakeOrder td');
-                console.log(fakeOrder);
+                log.debug({ fakeOrder }, 'fakeOrder td');
                 fakeOrder.forEach(o => {
                     if (!o.done && o.type === 'buy' && usseSuggestion[o.symbol] && usseSuggestion[o.symbol].price && usseSuggestion[o.symbol].price <= o.price) {
                         o.done = true;
-                        console.log('fake order close');
+                        log.info('fake order close');
                         if (!result['securitiesAccount']['orderStrategies']) {
                             result['securitiesAccount']['orderStrategies'] = [];
                         }
@@ -389,7 +384,7 @@ export const usseTDInit = () => checkOauth().then(() => {
                         });
                     } else if (!o.done && o.type === 'sell' && usseSuggestion[o.symbol] && usseSuggestion[o.symbol].price && usseSuggestion[o.symbol].price >= o.price) {
                         o.done = true;
-                        console.log('fake order close');
+                        log.info('fake order close');
                         if (!result['securitiesAccount']['orderStrategies']) {
                             result['securitiesAccount']['orderStrategies'] = [];
                         }
@@ -415,13 +410,12 @@ export const usseTDInit = () => checkOauth().then(() => {
                         }
                         return handleError(new HoError(result['error']));
                     }
-                    console.log(result.length);
+                    log.debug({ count: result.length }, 'orders fetched');
                     const order_recur = index => {
                         if (index >= result.length) {
                             return Promise.resolve();
                         } else {
                             const o = result[index];
-                            //console.log(o);
                             if (o.cancelable) {
                                 order.push({
                                     id: o.orderId,
@@ -449,13 +443,13 @@ export const usseTDInit = () => checkOauth().then(() => {
                 });
             });
         } else {
-            console.log('TD no new');
+            log.debug('no new orders');
             return Promise.resolve();
         }
     }
     return initWs().then(() => initialBook()).then(() => {
         updateTime['trade']++;
-        console.log(`td ${updateTime['trade']}`);
+        log.info({ tradeCount: updateTime['trade'] }, 'trade cycle tick');
         if (updateTime['trade'] % (Math.ceil(USSE_ORDER_INTERVAL / PRICE_INTERVAL) - 3) !== 3) {
             return Promise.resolve();
         } else {
@@ -475,7 +469,7 @@ export const usseTDInit = () => checkOauth().then(() => {
             fakeOrder = [];
             const newOrder = [];
             const usseSuggestion = getSuggestionData('usse');
-            console.log(usseSuggestion);
+            log.debug({ usseSuggestion }, 'suggestion data');
             const recur_status = index => {
                 if (index >= items.length) {
                     return Promise.resolve();
@@ -490,7 +484,7 @@ export const usseTDInit = () => checkOauth().then(() => {
                         item.times = Math.floor(item.times * item.mul);
                     }
                     const price = usseSuggestion[item.index].price;
-                    console.log(item);
+                    log.debug({ item }, 'evaluating stock item');
                     const cancelOrder = rest => initialBook(true).then(() => {
                         const real_id = order.filter(v => (v.symbol === item.index));
                         const real_delete = index => {
@@ -498,7 +492,7 @@ export const usseTDInit = () => checkOauth().then(() => {
                                 return rest ? rest() : Promise.resolve();
                             }
                             return real_id[index].partial ? real_delete(index + 1) : cancelTDOrder(real_id[index].id).catch(err => {
-                                console.log(order);
+                                log.warn({ order }, 'cancel order failed, current orders');
                                 sendWs(`${real_id[index].id} TD cancelOrder Error: ${err.message||err.msg}`, 0, 0, true);
                                 handleError(err, `${real_id[index].id} TDcancelOrder Error`);
                             }).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), API_WAIT * 2000)).then(() => real_delete(index + 1)));
@@ -548,8 +542,7 @@ export const usseTDInit = () => checkOauth().then(() => {
                                 }
                             });
                         } else {
-                            console.log('enter_mid: price above 1σ');
-                            console.log(`price=${price} sigma1Up=${sigma1Up} mid=${item.mid}`);
+                            log.debug({ price, sigma1Up, mid: item.mid }, 'enter_mid: price above 1σ');
                             return recur_status(index + 1);
                         }
                     }
@@ -563,7 +556,7 @@ export const usseTDInit = () => checkOauth().then(() => {
                     const suggestion = newOrder[index].suggestion;
                     const submitBuy = () => {
                         return initialBook(true).then(() => {
-                            console.log(available);
+                            log.debug({ available }, 'checking available balance');
                             const order_avail = (available.tradable > 300) ? available.tradable - 300 : 0;
                             if (order_avail < suggestion.bCount * suggestion.buy * 4 / 3) {
                                 if (order_avail < suggestion.bCount * suggestion.buy * 2 / 3) {
@@ -574,7 +567,7 @@ export const usseTDInit = () => checkOauth().then(() => {
                                 }
                             }
                             if (suggestion.bCount > 0 && suggestion.buy) {
-                                console.log(`buy ${item.index} ${suggestion.bCount} ${suggestion.buy}`);
+                                log.info({ symbol: item.index, count: suggestion.bCount, price: suggestion.buy }, 'submitting buy order');
                                 return submitTDOrder(item.index, suggestion.buy, suggestion.bCount).catch(err => {
                                         const msg = err.message || err.msg;
                                         if (msg.includes('oversold/overbought position in your account')) {
@@ -601,7 +594,7 @@ export const usseTDInit = () => checkOauth().then(() => {
                         });
                     }
                     if (suggestion.sCount > 0 && suggestion.sell) {
-                        console.log(`sell ${item.index} ${suggestion.sCount} ${suggestion.sell}`);
+                        log.info({ symbol: item.index, count: suggestion.sCount, price: suggestion.sell }, 'submitting sell order');
                         return submitTDOrder(item.index, suggestion.sell, -suggestion.sCount).catch(err => {
                             const msg = err.message || err.msg;
                             if (msg.includes('oversold/overbought position in your account')) {
@@ -642,7 +635,7 @@ export const usseTDInit = () => checkOauth().then(() => {
                     });
                 }
                 for (let i = 0; i < newOrder.length; i++) {
-                    console.log(`${newOrder[i].item.index} ${newOrder[i].item.amount}`);
+                    log.debug({ symbol: newOrder[i].item.index, amount: newOrder[i].item.amount }, 'order queue item');
                 }
                 return recur_NewOrder(0);
             });
@@ -672,7 +665,7 @@ export const getUssePosition = () => {
 export const getUsseOrder = () => order;
 
 export const resetTD = (update=false) => {
-    console.log('TD reset');
+    log.info('TD state reset');
     const trade_count = updateTime['trade'];
     updateTime = {};
     updateTime['book'] = 0;

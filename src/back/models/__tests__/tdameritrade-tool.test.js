@@ -27,6 +27,16 @@ jest.unstable_mockModule('../stock-tool.js', () => ({ getSuggestionData: mockGet
 const mockSendWs = jest.fn();
 jest.unstable_mockModule('../../util/sendWs.js', () => ({ default: mockSendWs }));
 
+const mockLog = {
+    debug: jest.fn(),
+    info: jest.fn(),
+    warn: jest.fn(),
+    error: jest.fn(),
+};
+jest.unstable_mockModule('../../util/logger.js', () => ({
+    default: () => mockLog,
+}));
+
 class MockHoError extends Error {
     constructor(msg) { super(msg); this.name = 'HoError'; }
 }
@@ -74,6 +84,10 @@ beforeAll(async () => {
 let consoleSpy;
 beforeEach(() => {
     jest.clearAllMocks();
+    mockLog.debug.mockClear();
+    mockLog.info.mockClear();
+    mockLog.warn.mockClear();
+    mockLog.error.mockClear();
     consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
 });
 afterEach(() => { consoleSpy.mockRestore(); });
@@ -90,6 +104,10 @@ function jsonRes(data) {
 function okRes() { return { ok: true }; }
 function errRes(msg) {
     return { ok: false, json: () => Promise.resolve({ message: msg }) };
+}
+
+function getTradeTickLogs() {
+    return mockLog.info.mock.calls.filter(c => c[1] === 'trade cycle tick');
 }
 
 /** Standard token from Schwab API */
@@ -156,12 +174,12 @@ describe('getUsseOrder (initial)', () => {
 describe('resetTD', () => {
     test('resets book to 0 and preserves trade count', () => {
         resetTD();
-        expect(consoleSpy).toHaveBeenCalledWith('TD reset');
+        expect(mockLog.info).toHaveBeenCalledWith('TD state reset');
     });
 
     test('default parameter works', () => {
         resetTD(false);
-        expect(consoleSpy).toHaveBeenCalledWith('TD reset');
+        expect(mockLog.info).toHaveBeenCalledWith('TD state reset');
     });
 });
 
@@ -392,7 +410,7 @@ describe('usseTDInit', () => {
             mockGetSuggestionData.mockReturnValue({});
 
             await usseTDInit();
-            expect(consoleSpy).toHaveBeenCalledWith('td first');
+            expect(mockLog.info).toHaveBeenCalledWith(expect.objectContaining({}), 'loaded tokens from DB');
             // tokens and encryptedId are now set for subsequent tests
         });
 
@@ -504,7 +522,7 @@ describe('usseTDInit', () => {
             mockGetSuggestionData.mockReturnValue({});
 
             await usseTDInit();
-            expect(consoleSpy).toHaveBeenCalledWith('TD no new');
+            expect(mockLog.debug).toHaveBeenCalledWith('no new orders');
         });
 
         test('with positions and projectedBalances', async () => {
@@ -1183,7 +1201,7 @@ describe('usseTDInit', () => {
             mockGetSuggestionData.mockReturnValue({});
 
             await usseTDInit();
-            expect(consoleSpy).toHaveBeenCalledWith('miss MISS');
+            expect(mockLog.warn).toHaveBeenCalledWith(expect.objectContaining({ symbol: 'MISS' }), 'symbol not found in TOTALDB');
         });
 
         test('cancelable not filled → skip (order_recur continues)', async () => {
@@ -1546,7 +1564,7 @@ describe('usseTDInit', () => {
             mockGetSuggestionData.mockReturnValue({});
 
             await usseTDInit();
-            expect(consoleSpy).toHaveBeenCalledWith('miss MISS2');
+            expect(mockLog.warn).toHaveBeenCalledWith(expect.objectContaining({ symbol: 'MISS2' }), 'symbol not found in TOTALDB');
         });
 
         test('non-cancelable FILL → duplicate in buy → skip', async () => {
@@ -1584,7 +1602,7 @@ describe('usseTDInit', () => {
             mockGetSuggestionData.mockReturnValue({});
 
             await usseTDInit();
-            expect(consoleSpy).toHaveBeenCalledWith('t order duplicate');
+            expect(mockLog.warn).toHaveBeenCalledWith('order duplicate skipped');
         });
 
         test('non-cancelable FILL → duplicate in sell → skip', async () => {
@@ -1622,7 +1640,7 @@ describe('usseTDInit', () => {
             mockGetSuggestionData.mockReturnValue({});
 
             await usseTDInit();
-            expect(consoleSpy).toHaveBeenCalledWith('t order duplicate');
+            expect(mockLog.warn).toHaveBeenCalledWith('order duplicate skipped');
         });
 
         test('non-cancelable, not filled, not fake → skip', async () => {
@@ -1682,7 +1700,7 @@ describe('usseTDInit', () => {
             mockGetSuggestionData.mockReturnValue({});
 
             await usseTDInit();
-            expect(consoleSpy).toHaveBeenCalledWith('t out of time');
+            expect(mockLog.warn).toHaveBeenCalledWith(expect.objectContaining({}), expect.stringMatching(/order out of time/));
         });
 
         test('non-cancelable SELL → old order (outside interval)', async () => {
@@ -1720,7 +1738,7 @@ describe('usseTDInit', () => {
             mockGetSuggestionData.mockReturnValue({});
 
             await usseTDInit();
-            expect(consoleSpy).toHaveBeenCalledWith('t out of time');
+            expect(mockLog.warn).toHaveBeenCalledWith(expect.objectContaining({}), expect.stringMatching(/order out of time/));
         });
 
         // --- Fake orders in orders API response (o.fake=true from fakeOrder.forEach push) ---
@@ -1895,7 +1913,7 @@ describe('usseTDInit', () => {
             mockGetSuggestionData.mockReturnValue({});
 
             await usseTDInit();
-            expect(consoleSpy).toHaveBeenCalledWith('miss FAKEMISS');
+            expect(mockLog.warn).toHaveBeenCalledWith(expect.objectContaining({ symbol: 'FAKEMISS' }), 'symbol not found in TOTALDB');
         });
 
         test('fake order → duplicate in buy → skip', async () => {
@@ -1990,7 +2008,7 @@ describe('usseTDInit', () => {
             mockGetSuggestionData.mockReturnValue({});
 
             await usseTDInit();
-            expect(consoleSpy).toHaveBeenCalledWith('t out of time');
+            expect(mockLog.warn).toHaveBeenCalledWith(expect.objectContaining({}), expect.stringMatching(/order out of time/));
         });
 
         test('non-cancelable BUY → sorted insert (price < existing)', async () => {
@@ -2128,7 +2146,7 @@ describe('usseTDInit', () => {
             mockGetSuggestionData.mockReturnValue({});
 
             await usseTDInit();
-            expect(consoleSpy).toHaveBeenCalledWith('t out of time');
+            expect(mockLog.warn).toHaveBeenCalledWith(expect.objectContaining({}), expect.stringMatching(/order out of time/));
         });
     });
 
@@ -2143,11 +2161,9 @@ describe('usseTDInit', () => {
 
             await usseTDInit();
 
-            const tradeLogs = consoleSpy.mock.calls.filter(c =>
-                typeof c[0] === 'string' && c[0].startsWith('td ')
-            );
+            const tradeLogs = getTradeTickLogs();
             if (tradeLogs.length > 0) {
-                const tradeVal = parseInt(tradeLogs[0][0].replace('td ', ''));
+                const tradeVal = tradeLogs[0][0].tradeCount;
                 if (tradeVal % 141 === 2) return;
             }
         }
@@ -2224,7 +2240,7 @@ describe('usseTDInit', () => {
                 FOT1: { price: 90 }, // 90 <= 95 → triggers buy
             });
             await usseTDInit();
-            expect(consoleSpy).toHaveBeenCalledWith('fake order close');
+            expect(mockLog.info).toHaveBeenCalledWith('fake order close');
         });
 
         test('fakeOrder sell triggered when suggestion.price >= sell price', async () => {
@@ -2265,7 +2281,7 @@ describe('usseTDInit', () => {
                 FOT2: { price: 115 }, // 115 >= 110 → triggers sell
             });
             await usseTDInit();
-            expect(consoleSpy).toHaveBeenCalledWith('fake order close');
+            expect(mockLog.info).toHaveBeenCalledWith('fake order close');
         });
     });
 
@@ -2323,11 +2339,9 @@ describe('usseTDInit', () => {
                 await usseTDInit();
 
                 // Check if we logged the trade message with value divisible by 141 offset 3
-                const tradeLogs = consoleSpy.mock.calls.filter(c =>
-                    typeof c[0] === 'string' && c[0].startsWith('td ')
-                );
+                const tradeLogs = getTradeTickLogs();
                 if (tradeLogs.length > 0) {
-                    const tradeVal = parseInt(tradeLogs[0][0].replace('td ', ''));
+                    const tradeVal = tradeLogs[0][0].tradeCount;
                     if (tradeVal % 141 === 3) {
                         hitTrade = true;
                     }
@@ -2356,11 +2370,9 @@ describe('usseTDInit', () => {
 
                 await usseTDInit();
 
-                const tradeLogs = consoleSpy.mock.calls.filter(c =>
-                    typeof c[0] === 'string' && c[0].startsWith('td ')
-                );
+                const tradeLogs = getTradeTickLogs();
                 if (tradeLogs.length > 0) {
-                    const tradeVal = parseInt(tradeLogs[0][0].replace('td ', ''));
+                    const tradeVal = tradeLogs[0][0].tradeCount;
                     if (tradeVal % 141 === 3) {
                         hitTrade = true;
                     }
@@ -2387,11 +2399,9 @@ describe('usseTDInit', () => {
 
                 await usseTDInit();
 
-                const tradeLogs = consoleSpy.mock.calls.filter(c =>
-                    typeof c[0] === 'string' && c[0].startsWith('td ')
-                );
+                const tradeLogs = getTradeTickLogs();
                 if (tradeLogs.length > 0) {
-                    const tradeVal = parseInt(tradeLogs[0][0].replace('td ', ''));
+                    const tradeVal = tradeLogs[0][0].tradeCount;
                     if (tradeVal % 141 === 3) hitTrade = true;
                 }
                 hourSpy.mockRestore();
@@ -2422,11 +2432,9 @@ describe('usseTDInit', () => {
 
                 await usseTDInit();
 
-                const tradeLogs = consoleSpy.mock.calls.filter(c =>
-                    typeof c[0] === 'string' && c[0].startsWith('td ')
-                );
+                const tradeLogs = getTradeTickLogs();
                 if (tradeLogs.length > 0) {
-                    const tradeVal = parseInt(tradeLogs[0][0].replace('td ', ''));
+                    const tradeVal = tradeLogs[0][0].tradeCount;
                     if (tradeVal % 141 === 3) hitTrade = true;
                 }
                 hourSpy.mockRestore();
@@ -2459,13 +2467,13 @@ describe('usseTDInit', () => {
                 [{ _id: 'mul1', index: 'MUL', setype: 'usse', ing: 0, amount: 1000, orig: 500, mid: 100, times: 5, mul: 2, web: [-130, -120, -110, -100, -91, -83, -76] }],
                 { MUL: { price: 250 } } // price=250 > sigma1Up=110 → enter_mid fail
             );
-            expect(consoleSpy).toHaveBeenCalledWith('enter_mid: price above 1σ');
+            expect(mockLog.debug).toHaveBeenCalledWith(expect.objectContaining({}), 'enter_mid: price above 1σ');
             await alignTradeCounter();
             await runTradeLogic(
                 [{ _id: 'ent0', index: 'ENT', setype: 'usse', ing: 0, amount: 1000, orig: 1000, mid: 100, times: 10, web: [-130, -120, -110, -100, -91, -83, -76] }],
                 { ENT: { price: 250 } } // price=250 > sigma1Up=110 → skip
             );
-            expect(consoleSpy).toHaveBeenCalledWith('enter_mid: price above 1σ');
+            expect(mockLog.debug).toHaveBeenCalledWith(expect.objectContaining({}), 'enter_mid: price above 1σ');
         });
 
         test('recur_status: ing === 0, enter_mid met, price exists → startStatus', async () => {
@@ -3062,11 +3070,11 @@ describe('resetTD (state verification)', () => {
     test('resets book, preserves trade', () => {
         resetTD();
         // After reset, book=0, trade=previous value
-        expect(consoleSpy).toHaveBeenCalledWith('TD reset');
+        expect(mockLog.info).toHaveBeenCalledWith('TD state reset');
     });
 
     test('with update parameter', () => {
         resetTD(true);
-        expect(consoleSpy).toHaveBeenCalledWith('TD reset');
+        expect(mockLog.info).toHaveBeenCalledWith('TD state reset');
     });
 });

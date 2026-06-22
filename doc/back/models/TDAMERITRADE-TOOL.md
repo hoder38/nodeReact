@@ -57,6 +57,7 @@ This module integrates with the **Schwab API** (formerly TD Ameritrade) to manag
 | `utility.js` | `handleError`, `HoError` error handling |
 | `ver.js` | `TDAMERITRADE_KEY`, `TDAMERITRADE_SECRET`, `GOOGLE_REDIRECT` |
 | `constants.js` | `TD_AUTH_URL`, `TD_TOKEN_URL`, `TOTALDB`, interval/fee constants |
+| `logger.js` | Structured logging via pino (`createLogger('tdameritrade')`) |
 
 ### 1.4 Key Constants
 
