@@ -7,7 +7,7 @@ import { FILE_ZINDEX } from '../constants.js'
 class BitfinexInfo extends React.Component {
     constructor(props) {
         super(props);
-        this._input = new UserInput.Input(['key', 'secret', 'riskLimit', 'waitTime', 'amountLimit', 'miniRate', 'dynamic', 'keepAmount', 'keepAmountRate1', 'keepAmountMoney1', 'dynamicRate1', 'dynamicDay1', 'dynamicRate2', 'dynamicDay2', 'amount', 'enter_mid', 'rate_ratio', 'pair', 'clear'], this._handleSubmit, this._handleChange);
+        this._input = new UserInput.Input(['key', 'secret', 'riskLimit', 'waitTime', 'amountLimit', 'miniRate', 'dynamic', 'keepAmount', 'keepAmountRate1', 'keepAmountMoney1', 'dynamicRate1', 'dynamicDay1', 'dynamicRate2', 'dynamicDay2', 'amount', 'rate_ratio', 'pair', 'clear'], this._handleSubmit, this._handleChange);
         this._diff = null;
         this._active = null;
         this._advanced = null;
@@ -99,7 +99,6 @@ class BitfinexInfo extends React.Component {
             checkInput('dynamic', this.state, this.props.addalert, item.dynamic, 'zeroint'),
             checkInput('keepAmount', this.state, this.props.addalert, item.keepAmount, 'zeroint'),
             checkInput('amount', this.state, this.props.addalert, item.amount, 'zeroint'),
-            checkInput('enter_mid', this.state, this.props.addalert, item.enter_mid, 'number'),
             checkInput('rate_ratio', this.state, this.props.addalert, item.rate_ratio, 'number'),
             (item.pair && !this.state['pair']) ? {pair: ''} : checkInput('pair', this.state, this.props.addalert, item.pair, 'name'),
             (item.pair && !this.state['clear']) ? {clear: ''} : checkInput('clear', this.state, this.props.addalert, item.clear, 'name'),
@@ -368,15 +367,6 @@ class BitfinexInfo extends React.Component {
                                         placeholder="最大交易金額">
                                         <tr style={tradeDisplay}>
                                             <td key={0}>Trade Amount:</td>
-                                            <td key={1} />
-                                        </tr>
-                                    </UserInput>
-                                    <UserInput
-                                        val={this.state.enter_mid}
-                                        getinput={this._input.getInput('enter_mid')}
-                                        placeholder="入場的Mid趴數">
-                                        <tr style={tradeDisplay}>
-                                            <td key={0}>Enter Mid:</td>
                                             <td key={1} />
                                         </tr>
                                     </UserInput>

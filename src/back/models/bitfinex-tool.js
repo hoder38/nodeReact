@@ -1504,16 +1504,17 @@ export const _recur_status = async ({ id, uid, current, userRest, items }) => {
                 await startStatus();
             }
         } else {
-            // ing=0 waits for the enter_mid gate before the strategy is allowed to start trading.
-            current.enter_mid = current.enter_mid ? current.enter_mid : 0;
-            if ((+priceData[item.index].lastPrice - item.mid) / item.mid * 100 < current.enter_mid) {
+            // ing=0 waits for price to be below 1σ before the strategy is allowed to start trading.
+            const negBounds = item.web.filter(v => v < 0);
+            const sigma1Up = negBounds.length >= 3 ? -negBounds[2] : item.mid * 2;
+            if (+priceData[item.index].lastPrice < sigma1Up) {
                 await Mongo('update', TOTALDB, {_id: item._id}, {$set : {ing: 1}});
                 if (+priceData[item.index].lastPrice) {
                     await cancelOrder();
                     await startStatus();
                 }
             } else {
-                log.debug({ pctFromMid: (+priceData[item.index].lastPrice - item.mid) / item.mid * 100 }, 'enter_mid');
+                log.debug({ price: +priceData[item.index].lastPrice, sigma1Up, mid: item.mid }, 'enter_mid: price above 1σ');
             }
         }
     }
@@ -2808,13 +2809,6 @@ export default {
                     return handleError(new HoError('Trade Amount is not valid'));
                 }
                 data['amount'] = amount;
-            }
-            if (set.enter_mid) {
-                const enter_mid = Number(set.enter_mid);
-                if (isNaN(enter_mid)) {
-                    return handleError(new HoError('Enter Mid is not valid'));
-                }
-                data['enter_mid'] = enter_mid;
             }
             if (set.rate_ratio) {
                 const rate_ratio = Number(set.rate_ratio);

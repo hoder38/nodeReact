@@ -607,23 +607,16 @@ describe('default.updateBot validation', () => {
             return Promise.resolve([]);
         });
         await defaultExport.updateBot('u1', {
-            type: 'fUSD', trade: true, amount: 5000, enter_mid: -2.5, rate_ratio: 1.5,
+            type: 'fUSD', trade: true, amount: 5000, rate_ratio: 1.5,
         }, 'u1').catch(() => {});
         expect(savedBot[0].isTrade).toBe(true);
         expect(savedBot[0].amount).toBe(5000);
-        expect(savedBot[0].enter_mid).toBe(-2.5);
         expect(savedBot[0].rate_ratio).toBe(1.5);
     });
 
     test('invalid amount → rejects', async () => {
         await expect(defaultExport.updateBot('u1', {
             type: 'fUSD', amount: 'abc',
-        }, 'u1')).rejects.toBeDefined();
-    });
-
-    test('invalid enter_mid → rejects', async () => {
-        await expect(defaultExport.updateBot('u1', {
-            type: 'fUSD', enter_mid: 'NaN',
         }, 'u1')).rejects.toBeDefined();
     });
 
@@ -2076,13 +2069,6 @@ describe('updateBot — valid field assignments cover all data[...] writes', () 
         expect(s.value[0].amount).toBe(1000);
     });
 
-    test('enter_mid → data.enter_mid set', async () => {
-        const s = {};
-        setupMongo(s);
-        await defaultExport.updateBot('u1', { type: 'fUSD', enter_mid: '5.5' }, 'u1').catch(() => {});
-        expect(s.value[0].enter_mid).toBe(5.5);
-    });
-
     test('rate_ratio → data.rate_ratio set', async () => {
         const s = {};
         setupMongo(s);
@@ -2140,10 +2126,6 @@ describe('updateBot — valid field assignments cover all data[...] writes', () 
     });
     test('invalid amount (NaN) → rejects', async () => {
         await expect(defaultExport.updateBot('u1', { type: 'fUSD', amount: 'abc' }, 'u1'))
-            .rejects.toBeDefined();
-    });
-    test('invalid enter_mid (NaN) → rejects', async () => {
-        await expect(defaultExport.updateBot('u1', { type: 'fUSD', enter_mid: 'abc' }, 'u1'))
             .rejects.toBeDefined();
     });
     test('invalid rate_ratio (NaN) → rejects', async () => {
@@ -3418,7 +3400,7 @@ describe('recur_status + recur_NewOrder paths', () => {
         isActive: true, riskLimit: 0, waitTime: 0, amountLimit: 0,
         key: 'k', secret: 's', type: 'fUSD',
         isTrade: true, pair: [{ type: 'tBTCUSD', amount: 1000 }],
-        amount: 5000, rate_ratio: 0, enter_mid: 0,
+        amount: 5000, rate_ratio: 0,
         clear: {},
         ...extra,
     }];
@@ -3442,7 +3424,7 @@ describe('recur_status + recur_NewOrder paths', () => {
         jest.useRealTimers();
     });
 
-    test('recur_status: ing=0, enter_mid condition met → sets ing=1, runs startStatus', async () => {
+    test('recur_status: ing=0, price below 1σ → sets ing=1, runs startStatus', async () => {
         const id = 'RS1';
         seedTradeStatusUser(id, {
             priceData: { tBTCUSD: { lastPrice: 60000, dailyChange: 0, time: FROZEN_SEC, str: '', str2: '' } },
@@ -3460,7 +3442,7 @@ describe('recur_status + recur_NewOrder paths', () => {
                 return Promise.resolve([{
                     _id: 'item1', index: 'tBTCUSD', type: 'fUSD', ing: 0,
                     orig: 1000, amount: 1000, times: 1, mid: 50000, count: 0, pricecost: 0, pl: 0,
-                    web: [48000, 49000, 50000, 51000, 52000], wType: 0,
+                    web: [48000, -49000, -50000, -70000], wType: 0,
                     newMid: [], tmpPT: { price: 0, time: 0, type: '', tprice: 0 },
                     previous: { buy: [], sell: [], price: '', time: 0, type: '', tprice: 0 },
                 }]);
@@ -3469,7 +3451,7 @@ describe('recur_status + recur_NewOrder paths', () => {
                 return Promise.resolve([{
                     _id: 'item1', index: 'tBTCUSD', type: 'fUSD', ing: 1,
                     orig: 1000, amount: 1000, times: 1, mid: 50000, count: 0, pricecost: 0, pl: 0,
-                    web: [48000, 49000, 50000, 51000, 52000], wType: 0,
+                    web: [48000, -49000, -50000, -70000], wType: 0,
                     newMid: [], tmpPT: { price: 0, time: 0, type: '', tprice: 0 },
                     previous: { buy: [], sell: [], price: '', time: 0, type: '', tprice: 0 },
                 }]);
@@ -3480,17 +3462,17 @@ describe('recur_status + recur_NewOrder paths', () => {
         mockRest.wallets.mockResolvedValue([]);
         mockRest.accountTrades.mockResolvedValue([]);
 
-        const p = setWsOffer(id, statusCurArr({ enter_mid: 50 }), id);
+        const p = setWsOffer(id, statusCurArr(), id);
         await flushTimers();
         await p.catch(() => {});
 
-        // ing=0, enter_mid=50 → (60000-50000)/50000*100 = 20 < 50 → set ing=1
+        // ing=0, negBounds=[-49000,-50000,-70000], sigma1Up=-(-70000)=70000, price=60000 < 70000 → set ing=1
         expect(mockMongo).toHaveBeenCalledWith(
             'update', expect.anything(), { _id: 'item1' }, { $set: { ing: 1 } }
         );
     });
 
-    test('recur_status: ing=0, enter_mid not met → skips item', async () => {
+    test('recur_status: ing=0, price above 1σ → skips item', async () => {
         const id = 'RS2';
         seedTradeStatusUser(id, {
             priceData: { tBTCUSD: { lastPrice: 60000, dailyChange: 0, time: FROZEN_SEC, str: '', str2: '' } },
@@ -3503,7 +3485,7 @@ describe('recur_status + recur_NewOrder paths', () => {
                 return Promise.resolve([{
                     _id: 'item2', index: 'tBTCUSD', type: 'fUSD', ing: 0,
                     orig: 1000, amount: 1000, times: 1, mid: 50000, count: 0, pricecost: 0, pl: 0,
-                    web: [48000, 49000, 50000, 51000, 52000], wType: 0,
+                    web: [48000, -49000, -50000, -55000], wType: 0,
                     newMid: [], tmpPT: { price: 0, time: 0, type: '', tprice: 0 },
                     previous: { buy: [], sell: [], price: '', time: 0, type: '', tprice: 0 },
                 }]);
@@ -3513,12 +3495,12 @@ describe('recur_status + recur_NewOrder paths', () => {
         mockRest.wallets.mockResolvedValue([]);
         mockRest.accountTrades.mockResolvedValue([]);
 
-        const p = setWsOffer(id, statusCurArr({ enter_mid: -100 }), id);
+        const p = setWsOffer(id, statusCurArr(), id);
         await flushTimers();
         await p.catch(() => {});
 
-        // enter_mid=-100 → (60000-50000)/50000*100=20 > -100 → skip, log 'enter_mid'
-        expect(mockLog.debug).toHaveBeenCalledWith(expect.objectContaining({ pctFromMid: expect.any(Number) }), 'enter_mid');
+        // negBounds=[-49000,-50000,-55000], sigma1Up=-(-55000)=55000, price=60000 >= 55000 → skip
+        expect(mockLog.debug).toHaveBeenCalledWith(expect.objectContaining({ price: 60000, sigma1Up: 55000, mid: 50000 }), 'enter_mid: price above 1σ');
     });
 
     test('recur_status: ing=1, valid lastPrice → runs cancelOrder + startStatus with stockProcess', async () => {
@@ -4528,7 +4510,7 @@ describe('recur_status + recur_NewOrder paths', () => {
                 return Promise.resolve([{
                     _id: 'item29', index: 'tBTCUSD', type: 'fUSD', ing: 0,
                     orig: 1000, amount: 1000, times: 1, mid: 50000, count: 0, pricecost: 0, pl: 0,
-                    web: [48000, 49000, 50000, 51000, 52000], wType: 0,
+                    web: [48000, -49000, -50000, -70000], wType: 0,
                     newMid: [], tmpPT: { price: 0, time: 0, type: '', tprice: 0 },
                     previous: { buy: [], sell: [], price: '', time: 0, type: '', tprice: 0 },
                 }]);
@@ -4539,11 +4521,11 @@ describe('recur_status + recur_NewOrder paths', () => {
         mockRest.wallets.mockResolvedValue([]);
         mockRest.accountTrades.mockResolvedValue([]);
 
-        const p = setWsOffer(id, statusCurArr({ enter_mid: 50 }), id);
+        const p = setWsOffer(id, statusCurArr(), id);
         await flushTimers();
         await p.catch(() => {});
 
-        // (0-50000)/50000*100 = -100 < 50 → sets ing=1
+        // lastPrice=0 < sigma1Up=70000 → sets ing=1
         // But then lastPrice=0 → recur_status skips (L2230 path)
         expect(mockStockProcess).not.toHaveBeenCalled();
     });
@@ -5156,7 +5138,7 @@ describe('_recur_status — direct tests', () => {
     };
 
     const mkCtx = (id, overrides = {}) => {
-        const current = { type: 'fUSD', clear: {}, enter_mid: 0, ...overrides.current };
+        const current = { type: 'fUSD', clear: {}, ...overrides.current };
         _setState({
             priceData: { tBTCUSD: { lastPrice: 50000 } },
             margin: { [id]: { fUSD: {} } },
@@ -5229,10 +5211,10 @@ describe('_recur_status — direct tests', () => {
         expect(mockMongo).toHaveBeenCalledWith('deleteMany', expect.anything(), { _id: 'item3' });
     });
 
-    test('ing=0 below enter_mid → sets ing=1 then processes', async () => {
+    test('ing=0 below 1σ → sets ing=1 then processes', async () => {
         const item = {
             _id: 'item4', index: 'tBTCUSD', ing: 0, mul: 0, profit: 0,
-            orig: 10000, mid: 60000, web: [100, -100], wType: 0, times: 1,
+            orig: 10000, mid: 60000, web: [100, -100, -200, -60000], wType: 0, times: 1,
             newMid: [], tmpPT: { price: 0, time: 0, type: '', tprice: 0 },
             previous: { price: '', time: 0, type: '', tprice: 0 },
         };
@@ -5243,23 +5225,23 @@ describe('_recur_status — direct tests', () => {
 
         const ctx = mkCtx('rs_i4', {
             items: [item],
-            current: { type: 'fUSD', clear: {}, enter_mid: 0 },
+            current: { type: 'fUSD', clear: {} },
         });
         const result = await runWithFlush(() => _recur_status_fn(ctx));
         expect(mockMongo).toHaveBeenCalledWith('update', expect.anything(), { _id: 'item4' }, { $set: { ing: 1 } });
         expect(result.length).toBe(1);
     });
 
-    test('ing=0 above enter_mid → skips item', async () => {
+    test('ing=0 above 1σ → skips item', async () => {
         const item = {
             _id: 'item5', index: 'tBTCUSD', ing: 0, mul: 0, profit: 0,
-            orig: 10000, mid: 40000, web: [100], wType: 0, times: 1,
+            orig: 10000, mid: 40000, web: [100, -100, -200, -40000], wType: 0, times: 1,
             newMid: [], tmpPT: { price: 0, time: 0, type: '', tprice: 0 },
             previous: { price: '', time: 0, type: '', tprice: 0 },
         };
         const ctx = mkCtx('rs_i5', {
             items: [item],
-            current: { type: 'fUSD', clear: {}, enter_mid: -100 },
+            current: { type: 'fUSD', clear: {} },
         });
         const result = await runWithFlush(() => _recur_status_fn(ctx));
         expect(result).toEqual([]);
@@ -6759,7 +6741,7 @@ describe('_recur_status — emergency stop (§6d)', () => {
         });
         const ctx = {
             id: 'em', uid: 'em',
-            current: { type: 'fUSD', clear: {}, enter_mid: 0 },
+            current: { type: 'fUSD', clear: {} },
             userRest: mockRest,
             items,
         };
@@ -6794,7 +6776,7 @@ describe('_recur_status — emergency stop (§6d)', () => {
         });
         const ctx = {
             id: 'em2', uid: 'em2',
-            current: { type: 'fUSD', clear: {}, enter_mid: 0 },
+            current: { type: 'fUSD', clear: {} },
             userRest: mockRest,
             items,
         };
@@ -6827,7 +6809,7 @@ describe('_recur_status — emergency stop (§6d)', () => {
         });
         const ctx = {
             id: 'em3', uid: 'em3',
-            current: { type: 'fUSD', clear: {}, enter_mid: 0 },
+            current: { type: 'fUSD', clear: {} },
             userRest: mockRest,
             items,
         };
@@ -6860,7 +6842,7 @@ describe('_recur_status — emergency stop (§6d)', () => {
         });
         const ctx = {
             id: 'em4', uid: 'em4',
-            current: { type: 'fUSD', clear: { tBTCUSD: true }, enter_mid: 0 },
+            current: { type: 'fUSD', clear: { tBTCUSD: true } },
             userRest: mockRest,
             items,
         };

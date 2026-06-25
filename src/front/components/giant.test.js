@@ -145,7 +145,7 @@ function makeBitfinexList() {
       keepAmountRate1: 0.03, keepAmountMoney1: 200,
       dynamicRate1: 0.04, dynamicDay1: 7,
       dynamicRate2: 0.06, dynamicDay2: 14,
-      amount: 500, enter_mid: 0.5, rate_ratio: 1.2, pair: 'tBTCUSD', clear: 'tBTCUSD',
+      amount: 500, rate_ratio: 1.2, pair: 'tBTCUSD', clear: 'tBTCUSD',
     },
     {
       type: '_BTC', key: 'k2', secret: 's2', riskLimit: 3, waitTime: 5,
@@ -154,7 +154,7 @@ function makeBitfinexList() {
       keepAmountRate1: null, keepAmountMoney1: null,
       dynamicRate1: null, dynamicDay1: null,
       dynamicRate2: null, dynamicDay2: null,
-      amount: 200, enter_mid: 0.3, rate_ratio: 0.8, pair: '', clear: '',
+      amount: 200, rate_ratio: 0.8, pair: '', clear: '',
     },
   ];
 }
