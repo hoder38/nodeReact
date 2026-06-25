@@ -2480,7 +2480,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                             } else {
                                 closeCredit[id].push(credit[id][current.type][index].id);
                             }
-                        } else if ((currentRate[current.type].frr > 0 && credit[id][current.type][index].rate * BITFINEX_EXP > currentRate[current.type].frr && credit[id][current.type][index].rate > current.miniRate / 100 * 2) || credit[id][current.type][index].period > 5) {
+                        } else if ((currentRate[current.type].frr > 0 && credit[id][current.type][index].rate * BITFINEX_EXP > currentRate[current.type].frr && credit[id][current.type][index].rate > current.miniRate / 100 * 2) || credit[id][current.type][index].period > 2) {
                             if (!closeCredit[id]) {
                                 closeCredit[id] = [credit[id][current.type][index].id];
                             } else {
