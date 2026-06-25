@@ -150,7 +150,11 @@ export const twseShioajiInit = (force = false) => {
                                                     break;
                                                 }
                                             }
-                                            item.profit -= profit;
+                                            if (item.profit) {
+                                                item.profit -= profit;
+                                            } else {
+                                                item.profit = -profit;
+                                            }
                                         }
                                         item.previous = {
                                             price: o.price,
@@ -226,7 +230,11 @@ export const twseShioajiInit = (force = false) => {
                                                     break;
                                                 }
                                             }
-                                            item.profit += profit * (1 - TRADE_FEE);
+                                            if (item.profit) {
+                                                item.profit += profit * (1 - TRADE_FEE);
+                                            } else {
+                                                item.profit = -profit * (1 - TRADE_FEE);
+                                            }
                                         }
                                         item.previous = {
                                             price: o.price,

@@ -493,7 +493,11 @@ export const processOrderRest = (amount, price, oid, time, item, fake) => {
                 sell: item.previous.sell,
             }
         } else {
-            item.profit -= amount * price;
+            if (item.profit) {
+                item.profit -= amount * price;
+            } else {
+                item.profit = -amount * price;
+            }
             item.previous = {
                 price,
                 time,
@@ -529,7 +533,11 @@ export const processOrderRest = (amount, price, oid, time, item, fake) => {
                 buy: item.previous.buy,
             }
         } else {
-            item.profit -= amount * price * (1 - BITFINEX_FEE);
+            if (item.profit) {
+                item.profit -= amount * price * (1 - BITFINEX_FEE);
+            } else {
+                item.profit = -amount * price * (1 - BITFINEX_FEE);
+            }
             item.previous = {
                 price,
                 time,
@@ -2472,7 +2480,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                             } else {
                                 closeCredit[id].push(credit[id][current.type][index].id);
                             }
-                        } else if ((currentRate[current.type].frr > 0 && credit[id][current.type][index].rate * BITFINEX_EXP > currentRate[current.type].frr && credit[id][current.type][index].rate > current.miniRate / 100 * 2) || credit[id][current.type][index].period > 2) {
+                        } else if ((currentRate[current.type].frr > 0 && credit[id][current.type][index].rate * BITFINEX_EXP > currentRate[current.type].frr && credit[id][current.type][index].rate > current.miniRate / 100 * 2) || credit[id][current.type][index].period > 5) {
                             if (!closeCredit[id]) {
                                 closeCredit[id] = [credit[id][current.type][index].id];
                             } else {

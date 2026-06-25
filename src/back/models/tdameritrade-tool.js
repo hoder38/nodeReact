@@ -196,7 +196,11 @@ const processFilledOrder = (o, lastP, currentPosition, order_recur, nextIndex) =
                         sell: item.previous.sell,
                     }
                 } else {
-                    item.profit -= revenue;
+                    if (item.profit) {
+                        item.profit -= revenue;
+                    } else {
+                        item.profit = -revenue;
+                    }
                     item.previous = {
                         price,
                         time,
@@ -239,7 +243,11 @@ const processFilledOrder = (o, lastP, currentPosition, order_recur, nextIndex) =
                         buy: item.previous.buy,
                     }
                 } else {
-                    item.profit += revenue * (1 - USSE_FEE);
+                    if (item.profit) {
+                        item.profit += revenue * (1 - USSE_FEE);
+                    } else {
+                        item.profit = revenue * (1 - USSE_FEE);
+                    }
                     item.previous = {
                         price,
                         time,
