@@ -9,6 +9,7 @@ import Child_process from 'child_process'
 import TorrentStream from 'torrent-stream'
 import Mkdirp from 'mkdirp'
 //import OpenSubtitle from 'opensubtitles-api'
+import { Mutex } from 'async-mutex'
 import Mongo from '../models/mongo-tool.js'
 import MediaHandleTool, { errorMedia } from '../models/mediaHandle-tool.js'
 import { handleError, HoError, getFileLocation, checkAdmin, deleteFolderRecursive, sortList } from '../util/utility.js'
@@ -19,71 +20,30 @@ import sendWs from '../util/sendWs.js'
 let torrent_pool = [];
 let zip_pool = [];
 let mega_pool = [];
-let torrent_lock = false;
-let zip_lock = false;
-let mega_lock = false;
+const torrentMutex = new Mutex();
+const zipMutex = new Mutex();
+const megaMutex = new Mutex();
 
 // Test helpers — expose pool state for white-box testing without jest.resetModules()
 export function _resetPools() {
     torrent_pool = [];
     zip_pool = [];
     mega_pool = [];
-    torrent_lock = false;
-    zip_lock = false;
-    mega_lock = false;
 }
 export function _getPools() {
     return {
         torrent_pool: torrent_pool.map(p => ({ ...p })),
         zip_pool: zip_pool.map(p => ({ ...p })),
         mega_pool: mega_pool.map(p => ({ ...p })),
-        torrent_lock,
-        zip_lock,
-        mega_lock,
     };
 }
 export function _setPools(overrides) {
     if ('torrent_pool' in overrides) torrent_pool = overrides.torrent_pool;
     if ('zip_pool' in overrides) zip_pool = overrides.zip_pool;
     if ('mega_pool' in overrides) mega_pool = overrides.mega_pool;
-    if ('torrent_lock' in overrides) torrent_lock = overrides.torrent_lock;
-    if ('zip_lock' in overrides) zip_lock = overrides.zip_lock;
-    if ('mega_lock' in overrides) mega_lock = overrides.mega_lock;
 }
 
-const setLock = type => {
-    const tryAcquire = () => {
-        switch (type) {
-            case 'torrent':
-            console.log(torrent_lock);
-            if (torrent_lock) return false;
-            torrent_lock = true;
-            return true;
-            case 'zip':
-            console.log(zip_lock);
-            if (zip_lock) return false;
-            zip_lock = true;
-            return true;
-            case 'mega':
-            console.log(mega_lock);
-            if (mega_lock) return false;
-            mega_lock = true;
-            return true;
-            default:
-            console.log('unknown lock');
-            return null;
-        }
-    };
-    const result = tryAcquire();
-    if (result === null) return Promise.resolve(false);
-    if (result) return Promise.resolve(true);
-    return new Promise(resolve => setTimeout(() => resolve(setLock(type)), 500));
-}
-
-const megaGet = (rest=null) => setLock('mega').then(go => {
-    if (!go) {
-        return Promise.resolve();
-    }
+const megaGet = (rest=null) => megaMutex.runExclusive(() => {
     console.log('mega get');
     const afterRest = (rest && typeof rest === 'function')
         ? rest().catch(err => { handleError(err, 'Mega api rest'); })
@@ -105,7 +65,6 @@ const megaGet = (rest=null) => setLock('mega').then(go => {
     console.log(choose);
     console.log(time);
     if (!time) {
-        mega_lock = false;
         return Promise.resolve();
     }
     let runNum = 0;
@@ -122,19 +81,14 @@ const megaGet = (rest=null) => setLock('mega').then(go => {
         const runUrl = mega_pool[choose].url;
         const runPath= mega_pool[choose].filePath;
         const runData= mega_pool[choose].data;
-        mega_lock = false;
         return startMega(runUser, runUrl, runPath, runData).catch(err => handle_err(err, runUser, 'Mega api')).then(rest => megaGet(rest));
     } else {
-        mega_lock = false;
         return Promise.resolve();
     }
     });
 });
 
-const zipGet = () => setLock('zip').then(go => {
-    if (!go) {
-        return Promise.resolve();
-    }
+const zipGet = () => zipMutex.runExclusive(() => {
     console.log('zip get');
     let time = 0;
     let choose = -1;
@@ -152,7 +106,6 @@ const zipGet = () => setLock('zip').then(go => {
     console.log(choose);
     console.log(time);
     if (!time) {
-        zip_lock = false;
         return Promise.resolve();
     }
     let runNum = 0;
@@ -172,18 +125,13 @@ const zipGet = () => setLock('zip').then(go => {
         const runPwd = zip_pool[choose].pwd;
         const runType = zip_pool[choose].type;
         const runUser = zip_pool[choose].user;
-        zip_lock = false;
         return startZip(runUser, runIndex, runId, runOwner, runName, runPwd, runType).catch(err => handle_err(err, runUser, 'Zip api', runId)).then(() => zipGet());
     } else {
-        zip_lock = false;
         return Promise.resolve();
     }
 });
 
-const torrentGet = () => setLock('torrent').then(go => {
-    if (!go) {
-        return Promise.resolve();
-    }
+const torrentGet = () => torrentMutex.runExclusive(() => {
     console.log('torrent get');
     let pri = 0;
     let time = 0;
@@ -216,7 +164,6 @@ const torrentGet = () => setLock('torrent').then(go => {
     console.log(time);
     console.log(hash);
     if (!hash) {
-        torrent_lock = false;
         return Promise.resolve();
     }
     let runNum = 0;
@@ -243,7 +190,6 @@ const torrentGet = () => setLock('torrent').then(go => {
                 const runOwner = torrent_pool[i].fileOwner;
                 const runHash = torrent_pool[i].hash;
                 const runUser = torrent_pool[i].user;
-                torrent_lock = false;
                 const startEngine = index => engine ? (engine.files && engine.files.length > 0) ? startTorrent(runUser, runId, runOwner, index, runHash, engine) : new Promise((resolve, reject) => engine.on('ready', () => {
                     console.log('torrent ready');
                     return resolve(startTorrent(runUser, runId, runOwner, index, runHash, engine));
@@ -252,7 +198,6 @@ const torrentGet = () => setLock('torrent').then(go => {
             }
         }
     } else {
-        torrent_lock = false;
         return Promise.resolve();
     }
 });
@@ -308,17 +253,13 @@ const startMega = (user, url, filePath, data) => {
         console.log(cmdline);
         return new Promise((resolve, reject) => {
             const chp = Child_process.exec(cmdline, (err, output) => err ? megaComplete().then(() => reject(err)) : resolve(output));
-            return setLock('mega').then(go => {
-                if (!go) {
-                    return Promise.resolve();
-                }
+            return megaMutex.runExclusive(() => {
                 for (let i in mega_pool) {
                     if (url === mega_pool[i].url) {
                         mega_pool[i].chp = chp;
                         break;
                     }
                 }
-                mega_lock = false;
             }).then(() => chp);
         }).then(output => {
             let playList = [];
@@ -390,10 +331,7 @@ const startMega = (user, url, filePath, data) => {
         });
     });
     function megaComplete(is_success=false) {
-        return setLock('mega').then(go => {
-            if (!go) {
-                return Promise.resolve();
-            }
+        return megaMutex.runExclusive(() => {
             console.log('mega kill');
             for (let i in mega_pool) {
                 if (url === mega_pool[i].url) {
@@ -408,16 +346,12 @@ const startMega = (user, url, filePath, data) => {
                     break;
                 }
             }
-            mega_lock = false;
             return Promise.resolve();
         });
     }
 }
 
-const megaAdd = (user, url, filePath, data={})  => setLock('mega').then(go => {
-    if (!go) {
-        return Promise.resolve();
-    }
+const megaAdd = (user, url, filePath, data={})  => megaMutex.runExclusive(() => {
     let is_queue = false;
     let runNum = 0;
     for (let i of mega_pool) {
@@ -469,7 +403,6 @@ const megaAdd = (user, url, filePath, data={})  => setLock('mega').then(go => {
             run: true,
         } : {run: false}));
     }
-    mega_lock = false;
     return is_run ? startMega(user, url, filePath, data) : Promise.resolve();
 });
 
@@ -497,17 +430,13 @@ const startZip = (user, index, id, owner, name, pwd, zip_type) => Mongo('update'
         const unReal = () => FsExistsSync(realName) ? new Promise((resolve, reject) => FsUnlink(realName, err => err ? zipComplete().then(() => reject(err)) : resolve())) : Promise.resolve();
         return unReal().then(() => new Promise((resolve, reject) => {
             const chp = Child_process.exec(cmdline, (err, output) => err ? zipComplete().then(() => reject(err)) : resolve(output));
-            return setLock('zip').then(go => {
-                if (!go) {
-                    return Promise.resolve();
-                }
+            return zipMutex.runExclusive(() => {
                 for (let i in zip_pool) {
                     if (id.equals(zip_pool[i].fileId) && zip_pool[i].index === index) {
                         zip_pool[i].chp = chp;
                         break;
                     }
                 }
-                zip_lock = false;
             }).then(() => chp);
         })).then(output => new Promise((resolve, reject) => {
             const stream = FsCreateReadStream(realName);
@@ -517,10 +446,7 @@ const startZip = (user, index, id, owner, name, pwd, zip_type) => Mongo('update'
         }));
     }
     function zipComplete(is_success=false) {
-        return setLock('zip').then(go => {
-            if (!go) {
-                return Promise.resolve();
-            }
+        return zipMutex.runExclusive(() => {
             console.log('zip complete');
             for (let i in zip_pool) {
                 if (id.equals(zip_pool[i].fileId) && zip_pool[i].index === index) {
@@ -531,7 +457,6 @@ const startZip = (user, index, id, owner, name, pwd, zip_type) => Mongo('update'
                     break;
                 }
             }
-            zip_lock = false;
             if (is_success) {
                 if (isVideo(name) || isDoc(name) || isZipbook(name)) {
                     return MediaHandleTool.handleTag(is_success, {}, PathBasename(name), '', 0, false).then(([mediaType, mediaTag, DBdata]) => {
@@ -555,10 +480,7 @@ function zipAdd(user, index, id, owner, name, pwd='') {
     if (!zip_type) {
         return handleError(new HoError('not zip'));
     }
-    return setLock('zip').then(go => {
-        if (!go) {
-            return Promise.resolve();
-        }
+    return zipMutex.runExclusive(() => {
         let is_queue = false;
         let runNum = 0;
         for (let i of zip_pool) {
@@ -595,7 +517,6 @@ function zipAdd(user, index, id, owner, name, pwd='') {
                 run: true,
             } : {run: false}));
         }
-        zip_lock = false;
         return is_run ? startZip(user, index, id, owner, name, pwd, zip_type) : Promise.resolve();
     });
 }
@@ -699,10 +620,7 @@ const startTorrent = (user, id, owner, index, hash, engine) => Mongo('update', S
         }
     }
     function torrentComplete(is_success=false, exitPath=bufferPath) {
-        return setLock('torrent').then(go => {
-            if (!go) {
-                return Promise.resolve();
-            }
+        return torrentMutex.runExclusive(() => {
             console.log('torrent complete');
             for (let i in torrent_pool) {
                 if (torrent_pool[i].hash === hash) {
@@ -719,7 +637,6 @@ const startTorrent = (user, id, owner, index, hash, engine) => Mongo('update', S
                     break;
                 }
             }
-            torrent_lock = false;
             if (is_success) {
                 FsRenameSync(bufferPath, comPath);
                 if (isVideo(exitPath) || isDoc(exitPath) || isZipbook(exitPath)) {
@@ -749,10 +666,7 @@ function torrentAdd(user, torrent, fileIndex, id, owner, pType=0) {
     let bufferPath = `${filePath}/${fileIndex}`;
     let is_queue = false;
     let engine = null;
-    return setLock('torrent').then(go => {
-        if (!go) {
-            return Promise.resolve();
-        }
+    return torrentMutex.runExclusive(() => {
         for (let i in torrent_pool) {
             if (torrent_pool[i].hash === shortTorrent) {
                 is_queue = true;
@@ -809,7 +723,6 @@ function torrentAdd(user, torrent, fileIndex, id, owner, pType=0) {
                             }
                         }
                     }
-                    torrent_lock = false;
                     return Promise.resolve();
                 }
                 break;
@@ -821,7 +734,6 @@ function torrentAdd(user, torrent, fileIndex, id, owner, pType=0) {
             return resolve(startTorrent(user, id, owner, index, shortTorrent, engine));
         })) : Promise.resolve();
         if (engine){
-            torrent_lock = false;
             console.log('torrent go');
             return startEngine(fileIndex);
         } else {
@@ -849,10 +761,7 @@ function torrentAdd(user, torrent, fileIndex, id, owner, pType=0) {
                     trackers: BEST_TRACKER_LIST,
                 });
                 console.log('new engine');
-                const rest = () => setLock('torrent').then(go => {
-                    if (!go) {
-                        return Promise.resolve();
-                    }
+                const rest = () => torrentMutex.runExclusive(() => {
                     //剔除超過的
                     runNum = 0;
                     torrent_pool.forEach(v => {
@@ -884,7 +793,6 @@ function torrentAdd(user, torrent, fileIndex, id, owner, pType=0) {
                             }
                         }
                     }
-                    torrent_lock = false;
                     return Promise.resolve(true);
                 });
                 if (!is_queue) {
@@ -900,7 +808,6 @@ function torrentAdd(user, torrent, fileIndex, id, owner, pType=0) {
                         start: Math.round(new Date().getTime() / 1000),
                         engine,
                     });
-                    torrent_lock = false;
                     return startEngine(fileIndex).then(() => rest());
                 } else {
                     console.log('torrent old');
@@ -908,11 +815,9 @@ function torrentAdd(user, torrent, fileIndex, id, owner, pType=0) {
                         if (torrent_pool[i].hash === shortTorrent) {
                             torrent_pool[i].engine = engine;
                             const runIndex = torrent_pool[i].index;
-                            torrent_lock = false;
                             return Promise.all(runIndex.map(v => startEngine(v))).then(() => rest());
                         }
                     }
-                    torrent_lock = false;
                 }
             } else {
                 console.log('torrent wait');
@@ -929,7 +834,6 @@ function torrentAdd(user, torrent, fileIndex, id, owner, pType=0) {
                         engine: null,
                     });
                 }
-                torrent_lock = false;
                 return Promise.resolve(false);
             }
         }

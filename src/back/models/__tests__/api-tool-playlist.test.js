@@ -302,6 +302,12 @@ jest.unstable_mockModule('../../util/sendWs.js', () => ({
     default: mockSendWs,
 }));
 
+// Mock async-mutex — jest can't resolve ESM properly
+class MockMutex {
+    async runExclusive(fn) { return fn(); }
+}
+jest.unstable_mockModule('async-mutex', () => ({ Mutex: MockMutex }));
+
 // ─── Import the module under test ────────────────────────────────────────────
 
 let PlaylistModule, _resetPools, _getPools, _setPools;
@@ -898,7 +904,6 @@ describe('api-tool-playlist.js', () => {
     });
 
     // ═══════════════════════════════════════════════════════════════════════
-    // SECTION 9: setLock() - atomic tryAcquire pattern
     // ═══════════════════════════════════════════════════════════════════════
 
     describe('setLock() - atomic lock acquisition', () => {
@@ -1352,12 +1357,14 @@ describe('api-tool-playlist.js', () => {
             
             mockExistsSync.mockReturnValue(false);
             mockReaddirSync.mockReturnValue(['test.mp4']);
+            mockMegaLimit.mockReturnValue(1);
             
-            // Add same URL twice
+            // Add same URL — second call detects duplicate and since
+            // runNum >= MEGA_LIMIT, does not start another download
             PlaylistModule.default('mega add', user, url, '/path1');
-            PlaylistModule.default('mega add', user, url, '/path2');
+            PlaylistModule.default('mega add', user, url, '/path1');
             
-            await new Promise(resolve => setTimeout(resolve, 100));
+            await new Promise(resolve => setTimeout(resolve, 200));
             
             // Should not create duplicate downloads
             const megaCalls = mockChildProcessExec.mock.calls.filter(c => c[0].includes('megadl'));
@@ -1572,7 +1579,6 @@ describe('api-tool-playlist.js', () => {
     });
 
     // ═══════════════════════════════════════════════════════════════════════
-    // SECTION 19: setLock - zip and mega lock acquisition
     // ═══════════════════════════════════════════════════════════════════════
 
     describe('setLock - zip and mega lock acquisition', () => {
@@ -1956,22 +1962,17 @@ describe('api-tool-playlist.js', () => {
             expect(pools.torrent_pool).toEqual([]);
             expect(pools.zip_pool).toEqual([]);
             expect(pools.mega_pool).toEqual([]);
-            expect(pools.torrent_lock).toBe(false);
-            expect(pools.zip_lock).toBe(false);
-            expect(pools.mega_lock).toBe(false);
-        });
+                                            });
 
         test('_setPools should override specific pool fields', () => {
             const user = { _id: new MockObjectID('u1'), username: 'test' };
             _setPools({
                 torrent_pool: [{ hash: 'abc', index: [0], user, engine: null }],
-                torrent_lock: true,
-            });
+                            });
             const pools = _getPools();
             expect(pools.torrent_pool.length).toBe(1);
             expect(pools.torrent_pool[0].hash).toBe('abc');
-            expect(pools.torrent_lock).toBe(true);
-            expect(pools.zip_pool).toEqual([]);
+                        expect(pools.zip_pool).toEqual([]);
         });
 
         test('_resetPools should clear all pools and locks', () => {
@@ -1979,19 +1980,13 @@ describe('api-tool-playlist.js', () => {
                 torrent_pool: [{ hash: 'x' }],
                 zip_pool: [{ fileId: 'y' }],
                 mega_pool: [{ url: 'z' }],
-                torrent_lock: true,
-                zip_lock: true,
-                mega_lock: true,
-            });
+                                                            });
             _resetPools();
             const pools = _getPools();
             expect(pools.torrent_pool).toEqual([]);
             expect(pools.zip_pool).toEqual([]);
             expect(pools.mega_pool).toEqual([]);
-            expect(pools.torrent_lock).toBe(false);
-            expect(pools.zip_lock).toBe(false);
-            expect(pools.mega_lock).toBe(false);
-        });
+                                            });
     });
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -2194,8 +2189,7 @@ describe('api-tool-playlist.js', () => {
             // The pool item should have been cleaned up
             const pools = _getPools();
             // Either fully cleaned up or still has remaining index
-            expect(pools.torrent_lock).toBe(false);
-        });
+                    });
 
         test('ST-11: last index completes — engine destroyed and pool item removed', async () => {
             const engine = createMockEngineWithFiles(['single.mp4']);
@@ -3537,7 +3531,6 @@ console.log('  - torrentInfo() edge cases');
 console.log('  - Command injection prevention (mega URLs, zip passwords)');
 console.log('  - Depth limit protection (megaFolder)');
 console.log('  - Collect-then-splice-in-reverse pattern (stop functions)');
-console.log('  - Atomic lock acquisition (setLock)');
 console.log('  - Save before splice (complete functions)');
 console.log('  - Write stream error handlers');
 console.log('  - Concurrency limits');

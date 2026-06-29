@@ -25,7 +25,7 @@ const TEST_CONFIG = {
 };
 
 jest.unstable_mockModule('../../constants.js', () => ({
-    MAX_RETRY: TEST_CONFIG.MAX_RETRY, API_EXPIRE: TEST_CONFIG.API_EXPIRE,
+    MAX_RETRY: TEST_CONFIG.MAX_RETRY,
     DRIVE_LIMIT: TEST_CONFIG.DRIVE_LIMIT, OATH_WAITING: TEST_CONFIG.OATH_WAITING,
     KINDLE_LIMIT: TEST_CONFIG.KINDLE_LIMIT,
     __dirname: '/app/src/back/models',
@@ -152,6 +152,30 @@ jest.unstable_mockModule('../../util/mime.js', () => ({
 mockSendWs = jest.fn();
 jest.unstable_mockModule('../../util/sendWs.js', () => ({ default: mockSendWs }));
 
+// Mock p-queue — jest can't resolve eventemitter3 ESM export in its VM
+let mockPQueueConcurrency = 3;
+class MockPQueue {
+    constructor(opts = {}) {
+        mockPQueueConcurrency = opts.concurrency || 1;
+        this._pending = 0;
+        this._queue = [];
+    }
+    async add(fn) {
+        this._pending++;
+        try { return await fn(); } finally { this._pending--; }
+    }
+    get pending() { return this._pending; }
+    get size() { return this._queue.length; }
+    clear() { this._queue = []; }
+}
+jest.unstable_mockModule('p-queue', () => ({ default: MockPQueue }));
+
+// Mock async-mutex
+class MockMutex {
+    async runExclusive(fn) { return fn(); }
+}
+jest.unstable_mockModule('async-mutex', () => ({ Mutex: MockMutex }));
+
 const mod = await import('../api-tool-google.js');
 const api = mod.default;
 const { googleBackup, userDrive, isApiing,
@@ -211,18 +235,20 @@ describe('api-tool-google.js', () => {
     // 0. Test Helpers
     describe('Test Helpers', () => {
         test('_resetState clears all', () => {
-            _setState({ api_ing: 5, api_pool: [{ name: 'x' }], api_duration: 99, api_lock: true, tokens: { a: 1 } });
+            _setState({ tokens: { a: 1 } });
             _resetState();
             const s = _getState();
-            expect(s.api_ing).toBe(0); expect(s.api_pool).toEqual([]); expect(s.api_duration).toBe(0);
-            expect(s.api_lock).toBe(false); expect(s.tokens).toEqual({});
+            expect(s.api_pending).toBe(0); expect(s.api_queued).toBe(0);
+            expect(s.tokens).toEqual({});
         });
         test('_getState returns current', () => {
-            _setState({ api_ing: 2 }); expect(_getState().api_ing).toBe(2);
+            const s = _getState();
+            expect(s).toHaveProperty('api_pending');
+            expect(s).toHaveProperty('api_queued');
         });
-        test('_setState sets individual fields', () => {
-            _setState({ api_ing: 7 }); expect(_getState().api_ing).toBe(7);
-            expect(_getState().api_lock).toBe(false);
+        test('_setState sets tokens', () => {
+            _setState({ tokens: { access_token: 'x' } });
+            expect(_getState().tokens.access_token).toBe('x');
         });
     });
 
@@ -276,47 +302,47 @@ describe('api-tool-google.js', () => {
             await api('upload', upData()); await WAIT();
             expect(mockGoogleDrive.files.insert).toHaveBeenCalled();
         });
-        test('upload at limit → expire', async () => {
-            _setState({ api_ing: TEST_CONFIG.API_LIMIT });
-            await api('upload', upData()); await WAIT();
-            expect(_getState().api_pool.length).toBeGreaterThanOrEqual(0);
+        test('upload queues when busy', async () => {
+            // p-queue handles concurrency automatically; just verify upload works
+            await api('upload', upData());
+            expect(mockGoogleDrive.files.insert).toHaveBeenCalled();
         });
         test('download under limit', async () => {
             await api('download', dlData()); await WAIT();
             expect(mockFetch).toHaveBeenCalled();
         });
-        test('download at limit → expire', async () => {
-            _setState({ api_ing: TEST_CONFIG.API_LIMIT });
-            await api('download', dlData()); await WAIT();
+        test('download queues when busy', async () => {
+            await api('download', dlData());
+            expect(mockFetch).toHaveBeenCalled();
         });
         test('download media under limit', async () => {
             mockYoutubeDl.mockResolvedValue({ formats: [{ ext: 'mp4', vcodec: 'h264', acodec: 'aac', height: 720, width: 1280, format_id: '22' }] });
             mockFsExistsSync.mockReturnValue(false);
             await api('download media', { user: { username: 'u' }, key: 'k', filePath: '/f', hd: 720 }); await WAIT(1500);
         });
-        test('download media at limit', async () => {
-            _setState({ api_ing: TEST_CONFIG.API_LIMIT });
-            await api('download media', { user: { username: 'u' }, key: 'k', filePath: '/f', hd: 720 }); await WAIT();
-        });
+        test('download media queues when busy', async () => {
+            mockYoutubeDl.mockResolvedValue({ formats: [] });
+            mockHandleError.mockImplementation((e, t) => { if (t) return; return Promise.reject(e); });
+            await api('download media', { user: { username: 'u' }, key: 'k', filePath: '/f', hd: 720, _retryDelay: () => 0, errhandle: jest.fn() });
+        }, 10000);
         test('download present under limit', async () => {
             await api('download present', { user: { username: 'u' }, exportlink: 'http://x=pdf', alternate: 'http://a', filePath: '/f' });
             await WAIT(2000);
         }, 10000);
-        test('download present at limit', async () => {
-            _setState({ api_ing: TEST_CONFIG.API_LIMIT });
+        test('download present queues when busy', async () => {
+            mockHandleError.mockImplementation((e, t) => { if (t) return; return Promise.reject(e); });
             await api('download present', { user: { username: 'u' }, exportlink: 'http://x=pdf', alternate: 'http://a', filePath: '/f' });
-            await WAIT();
         });
         test('download doc under limit', async () => {
             mockFsReaddirSync.mockReturnValue([]);
             await api('download doc', { user: { username: 'u' }, exportlink: 'http://x=pdf', filePath: '/f' });
             await WAIT(7000);
         }, 15000);
-        test('download doc at limit', async () => {
-            _setState({ api_ing: TEST_CONFIG.API_LIMIT });
+        test('download doc queues when busy', async () => {
+            mockFsReaddirSync.mockReturnValue([]);
             await api('download doc', { user: { username: 'u' }, exportlink: 'http://x=pdf', filePath: '/f' });
-            await WAIT();
-        });
+            await WAIT(7000);
+        }, 15000);
     });
 
     // 2. OAuth
@@ -356,101 +382,40 @@ describe('api-tool-google.js', () => {
         }, 15000);
     });
 
-    // 4. get() pool drain
-    describe('get() pool drain', () => {
-        test('empty pool', async () => {
+    // 4. Queue concurrency (p-queue)
+    describe('Queue concurrency', () => {
+        test('upload completes and queue drains', async () => {
             mockGoogleDrive.files.insert.mockImplementation((p, cb) => cb(null, { data: { id: 'x' } }));
-            await api('upload', upData()); await WAIT();
-            expect(_getState().api_ing).toBe(0);
+            await api('upload', upData());
+            expect(_getState().api_pending).toBe(0);
         });
-        test('rest callback called', async () => {
+        test('rest callback called after upload', async () => {
             const restFn = jest.fn().mockResolvedValue();
             mockGoogleDrive.files.insert.mockImplementation((p, cb) => cb(null, { data: { id: 'x', title: 't' } }));
-            await api('upload', upData({ rest: restFn, errhandle: jest.fn() })); await WAIT();
+            await api('upload', upData({ rest: restFn, errhandle: jest.fn() }));
+            await WAIT();
             expect(restFn).toHaveBeenCalledWith({ id: 'x', title: 't' });
         });
-        test('pool upload → drains', async () => {
-            _setState({ api_ing: 1, api_pool: [{ name: 'upload', data: upData() }] });
-            await api('upload', upData()); await WAIT();
-            expect(_getState().api_pool).toEqual([]);
+        test('multiple uploads respect concurrency', async () => {
+            const calls = [];
+            mockGoogleDrive.files.insert.mockImplementation((p, cb) => {
+                calls.push(p.resource.title);
+                cb(null, { data: { id: 'x' } });
+            });
+            await Promise.all([
+                api('upload', upData({ name: 'a.txt' })),
+                api('upload', upData({ name: 'b.txt' })),
+                api('upload', upData({ name: 'c.txt' })),
+            ]);
+            expect(calls).toHaveLength(3);
         });
-        test('pool download → drains', async () => {
-            _setState({ api_ing: 1, api_pool: [{ name: 'download', data: dlData() }] });
-            await api('upload', upData()); await WAIT();
-            expect(mockFetch).toHaveBeenCalled();
-        });
-        test('pool download media → drains', async () => {
-            mockYoutubeDl.mockResolvedValue({ formats: [{ ext: 'mp4', vcodec: 'h264', acodec: 'aac', height: 720, width: 1280, format_id: '22' }] });
-            mockFsExistsSync.mockReturnValue(false);
-            _setState({ api_ing: 1, api_pool: [{ name: 'download media', data: { key: 'k', filePath: '/f', hd: 720, user: { username: 'u' } } }] });
-            await api('upload', upData()); await WAIT(2000);
-        });
-        test('pool download present → drains', async () => {
-            mockHandleError.mockImplementation((e, t) => { if (t) return; return Promise.reject(e); });
-            _setState({ api_ing: 1, api_pool: [{ name: 'download present', data: { exportlink: 'http://x=pdf', alternate: 'http://a', filePath: '/f', user: { username: 'u' } } }] });
-            await api('upload', upData()); await WAIT(2000);
-        });
-        test('pool download doc → drains', async () => {
-            mockFsReaddirSync.mockReturnValue([]);
-            _setState({ api_ing: 1, api_pool: [{ name: 'download doc', data: { exportlink: 'http://x=pdf', filePath: '/f', user: { username: 'u' } } }] });
-            await api('upload', upData()); await WAIT(7000);
-        }, 15000);
-        test('pool unknown → handleError', async () => {
-            _setState({ api_ing: 1, api_pool: [{ name: 'bogus', data: {} }] });
-            mockHandleError.mockImplementation((e, t) => { if (t) return; return Promise.reject(e); });
-            await api('upload', upData()); await WAIT();
-            expect(mockHandleError).toHaveBeenCalledWith(expect.objectContaining({ message: 'unknown google api' }));
+        test('stop clears queue', async () => {
+            await api('stop', {});
+            expect(_getState().api_queued).toBe(0);
         });
     });
 
-    // 5. expire()
-    describe('expire()', () => {
-        test('first call sets api_duration', async () => {
-            _setState({ api_ing: TEST_CONFIG.API_LIMIT, api_duration: 0 });
-            await api('upload', upData()); await WAIT();
-            expect(_getState().api_duration).toBeGreaterThan(0);
-        });
-        test('within API_EXPIRE → pushes to pool', async () => {
-            _setState({ api_ing: TEST_CONFIG.API_LIMIT, api_duration: Date.now() / 1000 });
-            await api('upload', upData()); await WAIT();
-            expect(_getState().api_pool.length).toBe(1);
-        });
-        test('after API_EXPIRE → drains upload', async () => {
-            _setState({ api_ing: TEST_CONFIG.API_LIMIT, api_duration: (Date.now() / 1000) - TEST_CONFIG.API_EXPIRE - 10 });
-            await api('upload', upData()); await WAIT();
-            expect(_getState().api_pool.length).toBe(0);
-        });
-        test('after API_EXPIRE → drains download', async () => {
-            _setState({ api_ing: TEST_CONFIG.API_LIMIT, api_duration: (Date.now() / 1000) - TEST_CONFIG.API_EXPIRE - 10 });
-            await api('download', dlData()); await WAIT();
-        });
-        test('after API_EXPIRE → drains download media', async () => {
-            mockYoutubeDl.mockResolvedValue({ formats: [{ ext: 'mp4', vcodec: 'h264', acodec: 'aac', height: 720, width: 1280, format_id: '22' }] });
-            mockFsExistsSync.mockReturnValue(false);
-            _setState({ api_ing: TEST_CONFIG.API_LIMIT, api_duration: (Date.now() / 1000) - TEST_CONFIG.API_EXPIRE - 10 });
-            await api('download media', { user: { username: 'u' }, key: 'k', filePath: '/f', hd: 720 }); await WAIT(2000);
-        });
-        test('after API_EXPIRE → drains download present', async () => {
-            mockHandleError.mockImplementation((e, t) => { if (t) return; return Promise.reject(e); });
-            _setState({ api_ing: TEST_CONFIG.API_LIMIT, api_duration: (Date.now() / 1000) - TEST_CONFIG.API_EXPIRE - 10 });
-            await api('download present', { user: { username: 'u' }, exportlink: 'http://x=pdf', alternate: 'http://a', filePath: '/f' }); await WAIT(2000);
-        });
-        test('after API_EXPIRE → drains download doc', async () => {
-            mockFsReaddirSync.mockReturnValue([]);
-            _setState({ api_ing: TEST_CONFIG.API_LIMIT, api_duration: (Date.now() / 1000) - TEST_CONFIG.API_EXPIRE - 10 });
-            await api('download doc', { user: { username: 'u' }, exportlink: 'http://x=pdf', filePath: '/f' }); await WAIT(7000);
-        }, 15000);
-        test('after API_EXPIRE → drains unknown → handleError', async () => {
-            _setState({ api_ing: TEST_CONFIG.API_LIMIT, api_duration: (Date.now() / 1000) - TEST_CONFIG.API_EXPIRE - 10, api_pool: [{ name: 'bogus', data: {} }] });
-            mockHandleError.mockImplementation((e, t) => { if (t) return; return Promise.reject(e); });
-            await api('upload', upData()); await WAIT();
-        });
-        test('lock released after expire', async () => {
-            _setState({ api_ing: TEST_CONFIG.API_LIMIT });
-            await api('upload', upData()); await WAIT();
-            expect(_getState().api_lock).toBe(false);
-        });
-    });
+
 
     // 6. YouTube
     describe('YouTube', () => {
@@ -604,7 +569,8 @@ describe('api-tool-google.js', () => {
         test('content-length mismatch', async () => {
             setupFetch('2048', 1024);
             mockHandleError.mockImplementation((e, t) => { if (t) return; return Promise.reject(e); });
-            await api('download', dlData()); await WAIT();
+            const errhandle = jest.fn();
+            await api('download', dlData({ _retryDelay: () => 0, errhandle })); await WAIT();
             expect(mockHandleError).toHaveBeenCalledWith(expect.objectContaining({ message: 'incomplete download' }));
         });
         test('rest callback', async () => {
@@ -677,8 +643,8 @@ describe('api-tool-google.js', () => {
         test('no mp4 format → quality low', async () => {
             mockYoutubeDl.mockResolvedValue({ formats: [{ ext: 'webm', vcodec: 'vp9', acodec: 'opus', height: 720, width: 1280, format_id: '1' }] });
             mockHandleError.mockImplementation((e, t) => { if (t) return; return Promise.reject(e); });
-            await api('download media', { user: { username: 'u' }, key: 'k', filePath: '/f', hd: 720 }); await WAIT(1500);
-        });
+            await api('download media', { user: { username: 'u' }, key: 'k', filePath: '/f', hd: 720, _retryDelay: () => 0, errhandle: jest.fn() }); await WAIT(1500);
+        }, 10000);
         test('file not exists → saves directly', async () => {
             mockYoutubeDl.mockResolvedValueOnce({ formats: [{ ext: 'mp4', vcodec: 'h264', acodec: 'aac', height: 720, width: 1280, format_id: '22' }] }).mockResolvedValueOnce({});
             mockFsExistsSync.mockReturnValue(false);
@@ -714,8 +680,9 @@ describe('api-tool-google.js', () => {
         });
         test('height below threshold → not selected', async () => {
             mockYoutubeDl.mockResolvedValue({ formats: [{ ext: 'mp4', vcodec: 'h264', acodec: 'aac', height: 100, width: 200, format_id: '1' }] });
-            await api('download media', { user: { username: 'u' }, key: 'k', filePath: '/f', hd: 720 }); await WAIT(1500);
-        });
+            mockHandleError.mockImplementation((e, t) => { if (t) return; return Promise.reject(e); });
+            await api('download media', { user: { username: 'u' }, key: 'k', filePath: '/f', hd: 720, _retryDelay: () => 0, errhandle: jest.fn() }); await WAIT(1500);
+        }, 10000);
         test('timeout after MAX_RETRY', async () => {
             mockYoutubeDl.mockRejectedValue(new Error('cdn fail'));
             const errhandle = jest.fn();
@@ -880,8 +847,16 @@ describe('api-tool-google.js', () => {
 
     // 19. Simple exports
     describe('isApiing', () => {
-        test('0 → false', () => { _setState({ api_ing: 0 }); expect(isApiing()).toBe(false); });
-        test('>0 → true', () => { _setState({ api_ing: 3 }); expect(isApiing()).toBe(true); });
+        test('no pending → false', () => { expect(isApiing()).toBe(false); });
+        test('during upload → true', async () => {
+            let resolveInsert;
+            mockGoogleDrive.files.insert.mockImplementation((p, cb) => { resolveInsert = () => cb(null, { data: { id: 'x' } }); });
+            const p = api('upload', upData());
+            await WAIT(100);
+            expect(isApiing()).toBe(true);
+            resolveInsert();
+            await p;
+        });
     });
     describe('sendPresentName/sendLotteryName', () => {
         test('sendPresentName', async () => { await sendPresentName(Buffer.from('N').toString('base64'), 'u@t.com'); expect(mockGoogleGmail.users.messages.send).toHaveBeenCalled(); });

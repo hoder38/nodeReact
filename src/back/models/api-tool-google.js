@@ -1,4 +1,4 @@
-import { MAX_RETRY, API_EXPIRE, DRIVE_LIMIT, OATH_WAITING, KINDLE_LIMIT, __dirname } from '../constants.js'
+import { MAX_RETRY, DRIVE_LIMIT, OATH_WAITING, KINDLE_LIMIT, __dirname } from '../constants.js'
 import { ENV_TYPE, GOOGLE_ID, GOOGLE_SECRET, GOOGLE_REDIRECT, ROOT_USER } from '../../../ver.js'
 import { GOOGLE_MEDIA_FOLDER, GOOGLE_BACKUP_FOLDER, API_LIMIT, NAS_TMP, GOOGLE_DB_BACKUP_FOLDER, BACKUP_PATH } from '../config.js'
 import googleapisModule from 'googleapis'
@@ -11,6 +11,8 @@ import Child_process from 'child_process'
 import Mkdirp from 'mkdirp'
 import fsModule from 'fs'
 const { existsSync: FsExistsSync, createReadStream: FsCreateReadStream, unlink: FsUnlink, renameSync: FsRenameSync, createWriteStream: FsCreateWriteStream, statSync: FsStatSync, readdirSync: FsReaddirSync, lstatSync: FsLstatSync, writeFile: FsWriteFile } = fsModule
+import PQueue from 'p-queue'
+import { Mutex } from 'async-mutex'
 import Mongo from '../models/mongo-tool.js'
 import MediaHandleTool from '../models/mediaHandle-tool.js'
 import { handleError, HoError, isValidString } from '../util/utility.js'
@@ -20,33 +22,20 @@ import sendWs from '../util/sendWs.js'
 const OAuth2 = googleapis.auth.OAuth2;
 const oauth2Client = new OAuth2(GOOGLE_ID, GOOGLE_SECRET, GOOGLE_REDIRECT);
 let tokens = {};
-let api_ing = 0;
-let api_pool = [];
-let api_duration = 0;
-let api_lock = false;
+const oauthMutex = new Mutex();
+let apiQueue = new PQueue({ concurrency: API_LIMIT(ENV_TYPE) });
 
 // Test helpers — expose internal state for white-box testing
 export function _resetState() {
     tokens = {};
-    api_ing = 0;
-    api_pool = [];
-    api_duration = 0;
-    api_lock = false;
+    apiQueue.clear();
+    apiQueue = new PQueue({ concurrency: API_LIMIT(ENV_TYPE) });
 }
 export function _getState() {
-    return { tokens: { ...tokens }, api_ing, api_pool: [...api_pool], api_duration, api_lock };
+    return { tokens: { ...tokens }, api_pending: apiQueue.pending, api_queued: apiQueue.size };
 }
 export function _setState(overrides) {
     if ('tokens' in overrides) tokens = overrides.tokens;
-    if ('api_ing' in overrides) api_ing = overrides.api_ing;
-    if ('api_pool' in overrides) api_pool = overrides.api_pool;
-    if ('api_duration' in overrides) api_duration = overrides.api_duration;
-    if ('api_lock' in overrides) api_lock = overrides.api_lock;
-}
-
-const setLock = () => {
-    console.log(api_lock);
-    return api_lock ? new Promise((resolve, reject) => setTimeout(() => resolve(setLock()), 500)) : Promise.resolve(api_lock = true);
 }
 
 export default function api(name, data) {
@@ -78,55 +67,15 @@ export default function api(name, data) {
             case 'send name':
             return sendName(data);
             case 'upload':
-            if (api_ing >= API_LIMIT(ENV_TYPE)) {
-                console.log(`reach limit ${api_ing} ${api_pool.length}`);
-                expire(name, data).catch(err => handleError(err, 'Google api'));
-            } else {
-                api_ing++;
-                console.log(`go ${api_ing} ${api_pool.length}`);
-                upload(data).catch(err => handle_err(err, data.user)).then(rest => get(rest)).catch(err => handleError(err, 'Google api'));
-            }
-            return new Promise((resolve, reject) => setTimeout(() => resolve(), 500));
+            return apiQueue.add(() => upload(data).then(rest => { if (rest && typeof rest === 'function') rest().catch(err => handleError(err, 'Google api rest')); })).catch(err => handle_err(err, data.user));
             case 'download':
-            if (api_ing >= API_LIMIT(ENV_TYPE)) {
-                console.log(`reach limit ${api_ing} ${api_pool.length}`);
-                expire(name, data).catch(err => handleError(err, 'Google api'));
-            } else {
-                api_ing++;
-                console.log(`go ${api_ing} ${api_pool.length}`);
-                download(data).catch(err => handle_err(err, data.user)).then(rest => get(rest)).catch(err => handleError(err, 'Google api'));
-            }
-            return new Promise((resolve, reject) => setTimeout(() => resolve(), 500));
+            return apiQueue.add(() => download(data).then(rest => { if (rest && typeof rest === 'function') rest().catch(err => handleError(err, 'Google api rest')); })).catch(err => handle_err(err, data.user));
             case 'download media':
-            if (api_ing >= API_LIMIT(ENV_TYPE)) {
-                console.log(`reach limit ${api_ing} ${api_pool.length}`);
-                expire(name, data).catch(err => handleError(err, 'Google api'));
-            } else {
-                api_ing++;
-                console.log(`go ${api_ing} ${api_pool.length}`);
-                downloadMedia(data).catch(err => handle_err(err, data.user)).then(rest => get(rest)).catch(err => handleError(err, 'Google api'));
-            }
-            return new Promise((resolve, reject) => setTimeout(() => resolve(), 500));
+            return apiQueue.add(() => downloadMedia(data).then(rest => { if (rest && typeof rest === 'function') rest().catch(err => handleError(err, 'Google api rest')); })).catch(err => handle_err(err, data.user));
             case 'download present':
-            if (api_ing >= API_LIMIT(ENV_TYPE)) {
-                console.log(`reach limit ${api_ing} ${api_pool.length}`);
-                expire(name, data).catch(err => handleError(err, 'Google api'));
-            } else {
-                api_ing++;
-                console.log(`go ${api_ing} ${api_pool.length}`);
-                downloadPresent(data).catch(err => handle_err(err, data.user)).then(rest => get(rest)).catch(err => handleError(err, 'Google api'));
-            }
-            return new Promise((resolve, reject) => setTimeout(() => resolve(), 500));
+            return apiQueue.add(() => downloadPresent(data).then(rest => { if (rest && typeof rest === 'function') rest().catch(err => handleError(err, 'Google api rest')); })).catch(err => handle_err(err, data.user));
             case 'download doc':
-            if (api_ing >= API_LIMIT(ENV_TYPE)) {
-                console.log(`reach limit ${api_ing} ${api_pool.length}`);
-                expire(name, data).catch(err => handleError(err, 'Google api'));
-            } else {
-                api_ing++;
-                console.log(`go ${api_ing} ${api_pool.length}`);
-                downloadDoc(data).catch(err => handle_err(err, data.user)).then(rest => get(rest)).catch(err => handleError(err, 'Google api'));
-            }
-            return new Promise((resolve, reject) => setTimeout(() => resolve(), 500));
+            return apiQueue.add(() => downloadDoc(data).then(rest => { if (rest && typeof rest === 'function') rest().catch(err => handleError(err, 'Google api rest')); })).catch(err => handle_err(err, data.user));
             default:
             return handleError(new HoError('unknown api'));
         }
@@ -140,86 +89,24 @@ function handle_err(err, user) {
         data: `Google api fail: ${err.message}`,
     }, 0);
 }
-
-function get(rest=null) {
-    api_duration = 0;
-    if (api_ing > 0) {
-        api_ing--;
-    }
-    console.log(`get google ${api_ing} ${api_pool.length}`);
-    if (rest && typeof rest === 'function') {
-        rest().catch(err => handleError(err, 'Google api rest'));
-    }
-    if (api_pool.length > 0) {
-        const fun = api_pool.splice(0, 1)[0];
-        if (fun) {
-            switch (fun.name) {
-                case 'upload':
-                return upload(fun.data).catch(err => handle_err(err, fun.data.user)).then(rest => get(rest));
-                case 'download':
-                return download(fun.data).catch(err => handle_err(err, fun.data.user)).then(rest => get(rest));
-                case 'download media':
-                return downloadMedia(fun.data).catch(err => handle_err(err, fun.data.user)).then(rest => get(rest));
-                case 'download present':
-                return downloadPresent(fun.data).catch(err => handle_err(err, fun.data.user)).then(rest => get(rest));
-                case 'download doc':
-                return downloadDoc(fun.data).catch(err => handle_err(err, fun.data.user)).then(rest => get(rest));
-                default:
-                return handleError(new HoError('unknown google api')).catch(err => handleError(err, 'Google api')).then(rest => get(rest));
-            }
-        }
-    }
-    console.log(`empty google ${api_ing} ${api_pool.length}`);
-    return Promise.resolve();
+function stopApi() {
+	apiQueue.clear();
+	return Promise.resolve();
 }
 
-function expire(name, data) {
-    console.log(`expire google ${api_ing} ${api_pool.length}`);
-    return setLock().then(go => {
-        api_pool.push({
-            name,
-            data,
-        });
-        const now = new Date().getTime()/1000;
-        if (!api_duration) {
-            api_duration = now;
-        } else if ((now - api_duration) > API_EXPIRE) {
-            api_duration = 0;
-            if (api_pool.length > 0) {
-                const fun = api_pool.splice(0, 1)[0];
-                if (fun) {
-                    api_lock = false;
-                    switch (fun.name) {
-                        case 'upload':
-                        return upload(fun.data).catch(err => handle_err(err, fun.data.user)).then(rest => get(rest));
-                        case 'download':
-                        return download(fun.data).catch(err => handle_err(err, fun.data.user)).then(rest => get(rest));
-                        case 'download media':
-                        return downloadMedia(fun.data).catch(err => handle_err(err, fun.data.user)).then(rest => get(rest));
-                        case 'download present':
-                        return downloadPresent(fun.data).catch(err => handle_err(err, fun.data.user)).then(rest => get(rest));
-                        case 'download doc':
-                        return downloadDoc(fun.data).catch(err => handle_err(err, fun.data.user)).then(rest => get(rest));
-                        default:
-                        return handleError(new HoError('unknown google api')).catch(err => handleError(err, 'Google api')).then(rest => get(rest));
-                    }
-                }
-            }
-        }
-        api_lock = false;
-        console.log(`empty google ${api_ing} ${api_pool.length}`);
-        return Promise.resolve();
-    });
-}
-
-const checkOauth = () => (!tokens.access_token || !tokens.expiry_date) ? Mongo('find', 'accessToken', {api: 'google'}, {limit: 1}).then(token => {
-    if (token.length === 0) {
-        return handleError(new HoError('can not find token'));
-    }
-    console.log('first');
-    tokens = token[0];
-    console.log(tokens);
-}).then(() => setToken()) : setToken();
+const checkOauth = () => oauthMutex.runExclusive(() => {
+	if (!tokens.access_token || !tokens.expiry_date) {
+		return Mongo('find', 'accessToken', {api: 'google'}, {limit: 1}).then(token => {
+			if (token.length === 0) {
+				return handleError(new HoError('can not find token'));
+			}
+			console.log('first');
+			tokens = token[0];
+			console.log(tokens);
+		}).then(() => setToken());
+	}
+	return setToken();
+});
 
 const setToken = () => {
     oauth2Client.setCredentials(tokens);
@@ -495,11 +382,6 @@ function upload(data) {
         return new Promise((resolve, reject) => setTimeout(() => resolve(checkOauth()), index * 1000)).then(() => proc());
     });
     return proc();
-}
-
-function stopApi() {
-    api_ing = 0;
-    return Promise.resolve();
 }
 
 function list(data) {
@@ -898,7 +780,7 @@ export function userDrive(userlist, index, drive_batch=DRIVE_LIMIT) {
 }
 
 
-export const isApiing = () => (api_ing > 0) ? true : false;
+export const isApiing = () => apiQueue.pending > 0 || apiQueue.size > 0;
 
 export const sendPresentName = (text, mail, append=null) => api('send name', {title: 'Christmas Presents Exchange', text, mail, append});
 
