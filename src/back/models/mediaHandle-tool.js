@@ -4,7 +4,7 @@ import fsModule from 'fs'
 const { existsSync: FsExistsSync, readdirSync: FsReaddirSync, lstatSync: FsLstatSync, renameSync: FsRenameSync, statSync: FsStatSync } = fsModule
 import pathModule from 'path'
 const { join: PathJoin, dirname: PathDirname } = pathModule;
-import Child_process from 'child_process'
+import { execSafe, appendFile } from '../util/exec-safe.js'
 import Ffmpeg from 'ffmpeg'
 import Mongo, { objectID } from '../models/mongo-tool.js'
 import GoogleApi, { isApiing } from '../models/api-tool-google.js'
@@ -241,8 +241,7 @@ export default {
             const pdfPath = `${filePath}_pdf`;
             console.log(pdfPath);
             deleteFolderRecursive(pdfPath);
-            // qpdf exit code 3 means "succeeded with warnings" — treat it as success
-            return Mkdirp(pdfPath).then(() => new Promise((resolve, reject) => Child_process.exec(`qpdf ${comPath} --split-pages=1 -- ${pdfPath}/%d.pdf`, (err, output) => (err && err.code !== 3) ? reject(err) : resolve(output)))).then(() => {
+            return Mkdirp(pdfPath).then(() => execSafe('qpdf', [comPath, '--split-pages=1', '--', `${pdfPath}/%d.pdf`], { allowExitCode: [3] })).then(() => {
                 const files = FsReaddirSync(pdfPath)
                     .filter(f => f.endsWith('.pdf'))
                     .sort((a, b) => parseInt(a) - parseInt(b));
@@ -278,9 +277,9 @@ export default {
                 } else if (FsExistsSync(`${filePath}_7z_c`)) {
                     zipPath = `${filePath}_7z_c`;
                 }
-                const cmdline = (mediaType['ext'] === 'rar' || mediaType['ext'] === 'cbr') ? `7za x ${zipPath} -o${tempPath}  -p123` : (mediaType['ext'] === '7z') ? `7za x ${zipPath} -o${tempPath}  -p123` : `${PathJoin(__dirname, 'util/myuzip.py')} ${zipPath} ${tempPath} '123'`;
-                console.log(cmdline);
-                return new Promise((resolve, reject) => Child_process.exec(cmdline, (err, output) => err ? reject(err) : resolve(output))).then(output => {
+                const [extractCmd, extractArgs] = (mediaType['ext'] === 'rar' || mediaType['ext'] === 'cbr') ? ['7za', ['x', zipPath, `-o${tempPath}`, '-p123']] : (mediaType['ext'] === '7z') ? ['7za', ['x', zipPath, `-o${tempPath}`, '-p123']] : [PathJoin(__dirname, 'util/myuzip.py'), [zipPath, tempPath, '123']];
+                console.log(extractCmd, extractArgs);
+                return execSafe(extractCmd, extractArgs).then(output => {
                     let zip_arr = [];
                     const recurFolder = (indexFolder, initFolder, preFolder) => {
                         FsReaddirSync(initFolder).forEach((file,index) => {
@@ -324,7 +323,7 @@ export default {
                 });
             });
         } else if (mediaType['type'] === 'zip') {
-            let cmdline = (mediaType['ext'] === 'rar' || mediaType['ext'] === 'cbr') ? `7za l ${filePath}` : (mediaType['ext'] === '7z') ? `7za l ${filePath}` : `${PathJoin(__dirname, 'util/myuzip.py')} ${filePath}`;
+            const is7za = (mediaType['ext'] === 'rar' || mediaType['ext'] === 'cbr' || mediaType['ext'] === '7z');
             const zip_type = (mediaType['ext'] === 'rar' || mediaType['ext'] === 'cbr') ? 2 : (mediaType['ext'] === '7z') ? 3 : 1;
             let is_processed = false;
             let append = '';
@@ -343,9 +342,10 @@ export default {
             } else if (FsExistsSync(`${filePath}_7z_c`)) {
                 append = '_7z_c';
             }
-            cmdline = `${cmdline}${append}`;
-            console.log(cmdline);
-            return new Promise((resolve, reject) => Child_process.exec(cmdline, (err, output) => err ? reject(err) : resolve(output))).then(output => {
+            const archivePath = `${filePath}${append}`;
+            const [listCmd, listArgs] = is7za ? ['7za', ['l', archivePath]] : [PathJoin(__dirname, 'util/myuzip.py'), [archivePath]];
+            console.log(listCmd, listArgs);
+            return execSafe(listCmd, listArgs).then(output => {
                 const tmplist = output.match(/[^\r\n]+/g);
                 if (!tmplist) {
                     return handleError(new HoError('is not zip'));
@@ -431,13 +431,11 @@ export default {
             }
             const addNoise = () => {
                 if (add_noise && mediaType['type'] === 'video') {
-                    const cmdline = `cat ${STATIC_PATH}/noise >> "${uploadPath}"`;
-                    console.log(cmdline);
-                    return new Promise((resolve, reject) => Child_process.exec(cmdline, (err, output) => err ? reject(err) : resolve(output))).then(output => GoogleApi('delete', {fileId: add_noise}));
+                    console.log(`appendFile ${STATIC_PATH}/noise >> "${uploadPath}"`);
+                    return appendFile(`${STATIC_PATH}/noise`, uploadPath).then(() => GoogleApi('delete', {fileId: add_noise}));
                 } else if (mediaType['type'] === 'video' && FsStatSync(uploadPath).size > NOISE_SIZE) {
-                    const cmdline = `cat ${STATIC_PATH}/noise >> "${uploadPath}"`;
-                    console.log(cmdline);
-                    return new Promise((resolve, reject) => Child_process.exec(cmdline, (err, output) => err ? reject(err) : resolve(output)));
+                    console.log(`appendFile ${STATIC_PATH}/noise >> "${uploadPath}"`);
+                    return appendFile(`${STATIC_PATH}/noise`, uploadPath);
                 } else {
                     return Promise.resolve();
                 }

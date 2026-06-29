@@ -1,7 +1,6 @@
 import { ENV_TYPE } from '../../../ver.js'
 import { AUTO_UPLOAD, CHECK_MEDIA/*, UPDATE_EXTERNAL*/, UPDATE_STOCK, /*STOCK_MODE, STOCK_DATE, */STOCK_FILTER, DB_BACKUP, CHECK_STOCK, BITFINEX_LOAN, BITFINEX_FILTER, USSE_TICKER, TWSE_TICKER, BACKUP_PATH } from '../config.js'
 import { DRIVE_INTERVAL, USERDB, MEDIA_INTERVAL, DOC_INTERVAL, BACKUP_COLLECTION, BACKUP_INTERVAL, PRICE_INTERVAL, RATE_INTERVAL, FUSD_SYM, SUPPORT_COIN, SUPPORT_PAIR, MAX_RETRY } from '../constants.js'
-import Child_process from 'child_process'
 import Mongo from '../models/mongo-tool.js'
 import StockTool, { getStockListV2, stockStatus } from '../models/stock-tool.js'
 import MediaHandleTool from '../models/mediaHandle-tool.js'

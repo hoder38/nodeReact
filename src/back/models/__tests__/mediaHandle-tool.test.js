@@ -55,10 +55,14 @@ jest.unstable_mockModule('mkdirp', () => ({
   default: mockMkdirp,
 }));
 
-// --- child_process ---
-const mockExec = jest.fn();
-jest.unstable_mockModule('child_process', () => ({
-  default: { exec: mockExec },
+// --- exec-safe ---
+const mockExecSafe = jest.fn();
+const mockAppendFile = jest.fn();
+jest.unstable_mockModule('../../util/exec-safe.js', () => ({
+  execSafe: mockExecSafe,
+  execFileWithHandle: jest.fn(),
+  concatFiles: jest.fn(),
+  appendFile: mockAppendFile,
 }));
 
 // --- ffmpeg ---
@@ -697,18 +701,18 @@ describe('handleMediaUpload', () => {
   });
 
   test('PDF type → qpdf split + completeMedia', async () => {
-    mockExec.mockImplementation((cmd, cb) => cb(null, 'ok'));
+    mockExecSafe.mockResolvedValue('ok');
     mockReaddirSync.mockReturnValue(['1.pdf', '2.pdf', '3.pdf']);
     mockMongo.mockResolvedValueOnce({}).mockResolvedValueOnce([makeItem()]); // completeMedia
     const mt = { type: 'pdf', ext: 'pdf' };
     await MediaHandleTool.handleMediaUpload(mt, '/f', 'fid', makeUser());
-    expect(mockExec).toHaveBeenCalled();
-    expect(mockExec.mock.calls[0][0]).toContain('qpdf');
+    expect(mockExecSafe).toHaveBeenCalled();
+    expect(mockExecSafe.mock.calls[0][0]).toContain('qpdf');
     expect(mockMongo).toHaveBeenCalled();
   });
 
   test('PDF type → renames qpdf output to zero-padded names', async () => {
-    mockExec.mockImplementation((cmd, cb) => cb(null, 'ok'));
+    mockExecSafe.mockResolvedValue('ok');
     mockReaddirSync.mockReturnValue(['1.pdf', '2.pdf', '10.pdf']);
     mockMongo.mockResolvedValueOnce({}).mockResolvedValueOnce([makeItem()]);
     const mt = { type: 'pdf', ext: 'pdf' };
@@ -721,7 +725,7 @@ describe('handleMediaUpload', () => {
 
   test('PDF type → qpdf exits with code 3 (warnings) → treated as success', async () => {
     const warnErr = Object.assign(new Error('qpdf warnings'), { code: 3 });
-    mockExec.mockImplementation((cmd, cb) => cb(warnErr, ''));
+    mockExecSafe.mockResolvedValue('');
     mockReaddirSync.mockReturnValue(['1.pdf', '2.pdf']);
     mockMongo.mockResolvedValueOnce({}).mockResolvedValueOnce([makeItem()]);
     const mt = { type: 'pdf', ext: 'pdf' };
@@ -730,16 +734,16 @@ describe('handleMediaUpload', () => {
   });
 
   test('PDF with realPath → uses fileIndex path', async () => {
-    mockExec.mockImplementation((cmd, cb) => cb(null, 'ok'));
+    mockExecSafe.mockResolvedValue('ok');
     mockReaddirSync.mockReturnValue(['1.pdf']);
     mockMongo.mockResolvedValueOnce({}).mockResolvedValueOnce([makeItem()]);
     const mt = { type: 'pdf', ext: 'pdf', realPath: 'rp', fileIndex: 2 };
     await MediaHandleTool.handleMediaUpload(mt, '/f', 'fid', makeUser());
-    expect(mockExec.mock.calls[0][0]).toContain('/f/2_complete');
+    expect(mockExecSafe.mock.calls[0][1]).toContain('/f/2_complete');
   });
 
   test('zipbook type (rar) → 7za extract + Google upload', async () => {
-    mockExec.mockImplementation((cmd, cb) => cb(null, 'ok'));
+    mockExecSafe.mockResolvedValue('ok');
     mockReaddirSync.mockReturnValue(['img1.jpg', 'img2.jpg']);
     mockLstatSync.mockReturnValue({ isDirectory: () => false });
     mockIsImage.mockReturnValue('jpg');
@@ -753,11 +757,12 @@ describe('handleMediaUpload', () => {
     mockMongo.mockResolvedValue({});
     const mt = { type: 'zipbook', ext: 'rar' };
     await MediaHandleTool.handleMediaUpload(mt, '/f', 'fid', makeUser());
-    expect(mockExec.mock.calls[0][0]).toContain('7za x');
+    expect(mockExecSafe.mock.calls[0][0]).toBe('7za');
+    expect(mockExecSafe.mock.calls[0][1]).toContain('x');
   });
 
   test('zipbook — empty zip after extract → rejects', async () => {
-    mockExec.mockImplementation((cmd, cb) => cb(null, 'ok'));
+    mockExecSafe.mockResolvedValue('ok');
     mockReaddirSync.mockReturnValue([]);
     mockIsImage.mockReturnValue(false);
     const mt = { type: 'zipbook', ext: 'zip' };
@@ -765,7 +770,7 @@ describe('handleMediaUpload', () => {
   });
 
   test('zipbook — no thumbnailLink → rejects', async () => {
-    mockExec.mockImplementation((cmd, cb) => cb(null, 'ok'));
+    mockExecSafe.mockResolvedValue('ok');
     mockReaddirSync.mockReturnValue(['img1.jpg']);
     mockLstatSync.mockReturnValue({ isDirectory: () => false });
     mockIsImage.mockReturnValue('jpg');
@@ -780,7 +785,7 @@ describe('handleMediaUpload', () => {
   });
 
   test('zipbook — already processed (_zip exists) → skips rename', async () => {
-    mockExec.mockImplementation((cmd, cb) => cb(null, 'ok'));
+    mockExecSafe.mockResolvedValue('ok');
     mockReaddirSync.mockReturnValue(['img1.jpg']);
     mockLstatSync.mockReturnValue({ isDirectory: () => false });
     mockIsImage.mockReturnValue('jpg');
@@ -800,7 +805,7 @@ describe('handleMediaUpload', () => {
   });
 
   test('zipbook with .1.rar exists → uses that path', async () => {
-    mockExec.mockImplementation((cmd, cb) => cb(null, 'ok'));
+    mockExecSafe.mockResolvedValue('ok');
     mockReaddirSync.mockReturnValue(['img.png']);
     mockLstatSync.mockReturnValue({ isDirectory: () => false });
     mockIsImage.mockReturnValue('png');
@@ -814,11 +819,11 @@ describe('handleMediaUpload', () => {
     mockMongo.mockResolvedValue({});
     const mt = { type: 'zipbook', ext: 'rar' };
     await MediaHandleTool.handleMediaUpload(mt, '/f', 'fid', makeUser());
-    expect(mockExec.mock.calls[0][0]).toContain('.1.rar');
+    expect(mockExecSafe.mock.calls[0][1].join(' ')).toContain('.1.rar');
   });
 
   test('zipbook with _7z exists', async () => {
-    mockExec.mockImplementation((cmd, cb) => cb(null, 'ok'));
+    mockExecSafe.mockResolvedValue('ok');
     mockReaddirSync.mockReturnValue(['img.png']);
     mockLstatSync.mockReturnValue({ isDirectory: () => false });
     mockIsImage.mockReturnValue('png');
@@ -832,11 +837,11 @@ describe('handleMediaUpload', () => {
     mockMongo.mockResolvedValue({});
     const mt = { type: 'zipbook', ext: '7z' };
     await MediaHandleTool.handleMediaUpload(mt, '/f', 'fid', makeUser());
-    expect(mockExec.mock.calls[0][0]).toContain('_7z');
+    expect(mockExecSafe.mock.calls[0][1].join(' ')).toContain('_7z');
   });
 
   test('zipbook with _zip_c (password copy)', async () => {
-    mockExec.mockImplementation((cmd, cb) => cb(null, 'ok'));
+    mockExecSafe.mockResolvedValue('ok');
     mockReaddirSync.mockReturnValue(['img.png']);
     mockLstatSync.mockReturnValue({ isDirectory: () => false });
     mockIsImage.mockReturnValue('png');
@@ -850,11 +855,11 @@ describe('handleMediaUpload', () => {
     mockMongo.mockResolvedValue({});
     const mt = { type: 'zipbook', ext: 'zip' };
     await MediaHandleTool.handleMediaUpload(mt, '/f', 'fid', makeUser());
-    expect(mockExec.mock.calls[0][0]).toContain('_zip_c');
+    expect(mockExecSafe.mock.calls[0][1].join(' ')).toContain('_zip_c');
   });
 
   test('zipbook with _7z_c (password 7z)', async () => {
-    mockExec.mockImplementation((cmd, cb) => cb(null, 'ok'));
+    mockExecSafe.mockResolvedValue('ok');
     mockReaddirSync.mockReturnValue(['img.png']);
     mockLstatSync.mockReturnValue({ isDirectory: () => false });
     mockIsImage.mockReturnValue('png');
@@ -871,7 +876,7 @@ describe('handleMediaUpload', () => {
     mockMongo.mockResolvedValue({});
     const mt = { type: 'zipbook', ext: '7z' };
     await MediaHandleTool.handleMediaUpload(mt, '/f', 'fid', makeUser());
-    expect(mockExec.mock.calls[0][0]).toContain('_7z_c');
+    expect(mockExecSafe.mock.calls[0][1].join(' ')).toContain('_7z_c');
   });
 
   test('zipbook — nested directories, max depth 4', async () => {
@@ -885,7 +890,7 @@ describe('handleMediaUpload', () => {
       isDirectory: () => !p.includes('img.jpg'),
     }));
     mockIsImage.mockImplementation((f) => f.endsWith('.jpg') ? 'jpg' : false);
-    mockExec.mockImplementation((cmd, cb) => cb(null, 'ok'));
+    mockExecSafe.mockResolvedValue('ok');
     mockGoogleApi.mockImplementation((action, opts) => {
       if (action === 'upload' && opts.rest) {
         return opts.rest({ thumbnailLink: 'http://t', id: 'gid' });
@@ -900,7 +905,7 @@ describe('handleMediaUpload', () => {
   });
 
   test('zipbook with realPath → uses fileIndex path', async () => {
-    mockExec.mockImplementation((cmd, cb) => cb(null, 'ok'));
+    mockExecSafe.mockResolvedValue('ok');
     mockReaddirSync.mockReturnValue(['img.jpg']);
     mockLstatSync.mockReturnValue({ isDirectory: () => false });
     mockIsImage.mockReturnValue('jpg');
@@ -921,20 +926,21 @@ describe('handleMediaUpload', () => {
   // --- ZIP type ---
   test('zip (rar) → 7za l, parse playlist', async () => {
     const output = '------- ---- ---\n-----------\n50%  2024-01-01 12:00 12345 file1.txt\n0%  2024-01-01 12:00 12345 dir/\n-----------\n';
-    mockExec.mockImplementation((cmd, cb) => cb(null, output));
+    mockExecSafe.mockResolvedValue(output);
     mockExtType.mockReturnValue({ type: 'zip', ext: 'rar' });
     mockExtTag.mockReturnValue({ def: ['ztag'], opt: [] });
     mockMongo.mockResolvedValueOnce([makeItem({ tags: ['t1'], user123: ['t1'] })]).mockResolvedValueOnce({}).mockResolvedValueOnce({}).mockResolvedValueOnce([makeItem()]);
     const mt = { type: 'zip', ext: 'rar' };
     await MediaHandleTool.handleMediaUpload(mt, '/f', 'fid', makeUser());
-    expect(mockExec.mock.calls[0][0]).toContain('7za l');
+    expect(mockExecSafe.mock.calls[0][0]).toBe('7za');
+    expect(mockExecSafe.mock.calls[0][1]).toContain('l');
   });
 
   test('zip (7z) → 7za l, column format parse', async () => {
     const line38 = ' '.repeat(30) + '12345678';
     const filename = ' '.repeat(53) + 'file1.txt';
     const output = `Header\n-------------------\n${line38.substr(0, 38)}${filename.substr(53)}\n-------------------\nFooter\n`;
-    mockExec.mockImplementation((cmd, cb) => cb(null, output));
+    mockExecSafe.mockResolvedValue(output);
     mockMongo.mockResolvedValueOnce([makeItem({ tags: [], user123: [] })]).mockResolvedValueOnce({}).mockResolvedValueOnce({}).mockResolvedValueOnce([makeItem()]);
     const mt = { type: 'zip', ext: '7z' };
     await MediaHandleTool.handleMediaUpload(mt, '/f', 'fid', makeUser());
@@ -942,21 +948,21 @@ describe('handleMediaUpload', () => {
 
   test('zip (zip format) → myuzip.py, line parse', async () => {
     const output = 'zipinfo\nfile1.txt\nfile2.doc\nsubdir/\n';
-    mockExec.mockImplementation((cmd, cb) => cb(null, output));
+    mockExecSafe.mockResolvedValue(output);
     mockMongo.mockResolvedValueOnce([makeItem({ tags: [], user123: [] })]).mockResolvedValueOnce({}).mockResolvedValueOnce({}).mockResolvedValueOnce([makeItem()]);
     const mt = { type: 'zip', ext: 'zip' };
     await MediaHandleTool.handleMediaUpload(mt, '/f', 'fid', makeUser());
-    expect(mockExec.mock.calls[0][0]).toContain('myuzip.py');
+    expect(mockExecSafe.mock.calls[0][0]).toContain('myuzip.py');
   });
 
   test('zip — empty output → rejects "is not zip"', async () => {
-    mockExec.mockImplementation((cmd, cb) => cb(null, ''));
+    mockExecSafe.mockResolvedValue('');
     const mt = { type: 'zip', ext: 'zip' };
     await expect(MediaHandleTool.handleMediaUpload(mt, '/f', 'fid', makeUser())).rejects.toThrow('is not zip');
   });
 
   test('zip — all entries filtered → rejects "empty zip"', async () => {
-    mockExec.mockImplementation((cmd, cb) => cb(null, 'header\ndir/\n'));
+    mockExecSafe.mockResolvedValue('header\ndir/\n');
     mockMongo.mockResolvedValue([]);
     const mt = { type: 'zip', ext: 'zip' };
     await expect(MediaHandleTool.handleMediaUpload(mt, '/f', 'fid', makeUser())).rejects.toThrow('empty zip');
@@ -964,7 +970,7 @@ describe('handleMediaUpload', () => {
 
   test('zip — file not found in DB → rejects', async () => {
     const output = 'header\nfile1.txt\n';
-    mockExec.mockImplementation((cmd, cb) => cb(null, output));
+    mockExecSafe.mockResolvedValue(output);
     mockMongo.mockResolvedValueOnce([]); // find returns empty
     const mt = { type: 'zip', ext: 'zip' };
     await expect(MediaHandleTool.handleMediaUpload(mt, '/f', 'fid', makeUser())).rejects.toThrow('cannot find zip');
@@ -972,7 +978,7 @@ describe('handleMediaUpload', () => {
 
   test('zip — already processed (_zip exists) → skips rename', async () => {
     const output = 'header\nfile1.txt\n';
-    mockExec.mockImplementation((cmd, cb) => cb(null, output));
+    mockExecSafe.mockResolvedValue(output);
     mockExistsSync.mockImplementation((p) => p.endsWith('_zip'));
     mockMongo.mockResolvedValueOnce([makeItem({ tags: [], user123: [] })]).mockResolvedValueOnce({}).mockResolvedValueOnce({}).mockResolvedValueOnce([makeItem()]);
     const mt = { type: 'zip', ext: 'zip' };
@@ -984,7 +990,7 @@ describe('handleMediaUpload', () => {
 
   test('zip — not processed → renames + mkdirp', async () => {
     const output = 'header\nfile1.txt\n';
-    mockExec.mockImplementation((cmd, cb) => cb(null, output));
+    mockExecSafe.mockResolvedValue(output);
     mockExistsSync.mockReturnValue(false);
     mockMongo.mockResolvedValueOnce([makeItem({ tags: [], user123: [] })]).mockResolvedValueOnce({}).mockResolvedValueOnce({}).mockResolvedValueOnce([makeItem()]);
     const mt = { type: 'zip', ext: 'zip' };
@@ -1013,7 +1019,7 @@ describe('handleMediaUpload', () => {
 
   test('default — video with size > NOISE_SIZE → appends noise', async () => {
     mockStatSync.mockReturnValue({ size: 2000 }); // above NOISE_SIZE=1000
-    mockExec.mockImplementation((cmd, cb) => cb(null, 'ok'));
+    mockAppendFile.mockResolvedValue();
     mockGoogleApi.mockImplementation((action, opts) => {
       if (action === 'upload' && opts.rest) {
         return opts.rest({ alternateLink: 'http://alt', id: 'gid' });
@@ -1024,12 +1030,12 @@ describe('handleMediaUpload', () => {
     mockMongo.mockResolvedValueOnce({}).mockResolvedValueOnce({}).mockResolvedValueOnce([makeItem()]);
     const mt = { type: 'video', ext: 'mp4', time: 5000, hd: 720 };
     await MediaHandleTool.handleMediaUpload(mt, '/f', 'fid', makeUser());
-    expect(mockExec).toHaveBeenCalled();
-    expect(mockExec.mock.calls[0][0]).toContain('cat /static/noise');
+    expect(mockAppendFile).toHaveBeenCalled();
+    expect(mockAppendFile.mock.calls[0][0]).toContain('/static/noise');
   });
 
   test('default — video with add_noise=true → appends noise + deletes old Drive', async () => {
-    mockExec.mockImplementation((cmd, cb) => cb(null, 'ok'));
+    mockAppendFile.mockResolvedValue();
     mockGoogleApi.mockImplementation((action, opts) => {
       if (action === 'delete') return Promise.resolve();
       if (action === 'upload' && opts.rest) {
@@ -1041,7 +1047,7 @@ describe('handleMediaUpload', () => {
     mockMongo.mockResolvedValueOnce({}).mockResolvedValueOnce({}).mockResolvedValueOnce([makeItem()]);
     const mt = { type: 'video', ext: 'mp4', time: 5000, hd: 720 };
     await MediaHandleTool.handleMediaUpload(mt, '/f', 'fid', makeUser(), 'old-drive-id');
-    expect(mockExec).toHaveBeenCalled();
+    expect(mockAppendFile).toHaveBeenCalled();
     expect(mockGoogleApi).toHaveBeenCalledWith('delete', { fileId: 'old-drive-id' });
   });
 
@@ -1978,7 +1984,7 @@ describe('editFile — catch path (line 104)', () => {
 
 describe('zipbook — errhandle callback (line 317)', () => {
   test('zipbook upload errhandle → fires handleError with errorMedia', async () => {
-    mockExec.mockImplementation((cmd, cb) => cb(null, 'ok'));
+    mockExecSafe.mockResolvedValue('ok');
     mockReaddirSync.mockReturnValue(['img.jpg']);
     mockLstatSync.mockReturnValue({ isDirectory: () => false });
     mockIsImage.mockReturnValue('jpg');
@@ -1999,45 +2005,45 @@ describe('zip — processed file detection (lines 327-339)', () => {
   const zipZipOutput = 'header\nfile1.txt\n';
 
   test('zip with .1.rar exists → uses .1.rar path', async () => {
-    mockExec.mockImplementation((cmd, cb) => cb(null, zipRarOutput));
+    mockExecSafe.mockResolvedValue(zipRarOutput);
     mockExistsSync.mockImplementation((p) => p.endsWith('.1.rar'));
     mockMongo.mockResolvedValueOnce([makeItem({ tags: [], user123: [] })]).mockResolvedValueOnce({}).mockResolvedValueOnce({}).mockResolvedValueOnce([makeItem()]);
     const mt = { type: 'zip', ext: 'rar' };
     await MediaHandleTool.handleMediaUpload(mt, '/f', 'fid', makeUser());
-    expect(mockExec.mock.calls[0][0]).toContain('.1.rar');
+    expect(mockExecSafe.mock.calls[0][1].join(' ')).toContain('.1.rar');
   });
 
   test('zip with _7z exists → uses _7z path', async () => {
     const line38 = ' '.repeat(30) + '12345678';
     const filename = ' '.repeat(53) + 'file1.txt';
     const output7z = `Header\n-------------------\n${line38.substr(0, 38)}${filename.substr(53)}\n-------------------\nFooter\n`;
-    mockExec.mockImplementation((cmd, cb) => cb(null, output7z));
+    mockExecSafe.mockResolvedValue(output7z);
     mockExistsSync.mockImplementation((p) => p.endsWith('_7z') && !p.endsWith('_7z_c'));
     mockMongo.mockResolvedValueOnce([makeItem({ tags: [], user123: [] })]).mockResolvedValueOnce({}).mockResolvedValueOnce({}).mockResolvedValueOnce([makeItem()]);
     const mt = { type: 'zip', ext: '7z' };
     await MediaHandleTool.handleMediaUpload(mt, '/f', 'fid', makeUser());
-    expect(mockExec.mock.calls[0][0]).toContain('_7z');
+    expect(mockExecSafe.mock.calls[0][1].join(' ')).toContain('_7z');
   });
 
   test('zip with _zip_c exists → uses _zip_c path', async () => {
-    mockExec.mockImplementation((cmd, cb) => cb(null, zipZipOutput));
+    mockExecSafe.mockResolvedValue(zipZipOutput);
     mockExistsSync.mockImplementation((p) => p.endsWith('_zip_c'));
     mockMongo.mockResolvedValueOnce([makeItem({ tags: [], user123: [] })]).mockResolvedValueOnce({}).mockResolvedValueOnce({}).mockResolvedValueOnce([makeItem()]);
     const mt = { type: 'zip', ext: 'zip' };
     await MediaHandleTool.handleMediaUpload(mt, '/f', 'fid', makeUser());
-    expect(mockExec.mock.calls[0][0]).toContain('_zip_c');
+    expect(mockExecSafe.mock.calls[0][1].join(' ')).toContain('_zip_c');
   });
 
   test('zip with _7z_c exists → uses _7z_c path', async () => {
     const line38 = ' '.repeat(30) + '12345678';
     const filename = ' '.repeat(53) + 'file1.txt';
     const output7z = `Header\n-------------------\n${line38.substr(0, 38)}${filename.substr(53)}\n-------------------\nFooter\n`;
-    mockExec.mockImplementation((cmd, cb) => cb(null, output7z));
+    mockExecSafe.mockResolvedValue(output7z);
     mockExistsSync.mockImplementation((p) => p.endsWith('_7z_c'));
     mockMongo.mockResolvedValueOnce([makeItem({ tags: [], user123: [] })]).mockResolvedValueOnce({}).mockResolvedValueOnce({}).mockResolvedValueOnce([makeItem()]);
     const mt = { type: 'zip', ext: '7z' };
     await MediaHandleTool.handleMediaUpload(mt, '/f', 'fid', makeUser());
-    expect(mockExec.mock.calls[0][0]).toContain('_7z_c');
+    expect(mockExecSafe.mock.calls[0][1].join(' ')).toContain('_7z_c');
   });
 });
 

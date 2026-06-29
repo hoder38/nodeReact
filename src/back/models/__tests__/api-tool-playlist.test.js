@@ -199,19 +199,20 @@ jest.unstable_mockModule('path', () => ({
     dirname: (p) => p.split('/').slice(0, -1).join('/'),
 }));
 
-// Mock child_process
-mockChildProcessExec = jest.fn((cmd, cb) => {
+// Mock exec-safe
+const mockExecFileWithHandle = jest.fn(() => {
     const mockProc = {
         kill: jest.fn(),
     };
-    setTimeout(() => cb(null, 'mock output'), 10);
-    return mockProc;
+    return { chp: mockProc, promise: Promise.resolve('mock output') };
 });
+mockChildProcessExec = mockExecFileWithHandle;
 
-jest.unstable_mockModule('child_process', () => ({
-    default: {
-        exec: mockChildProcessExec,
-    },
+jest.unstable_mockModule('../../util/exec-safe.js', () => ({
+    execSafe: jest.fn().mockResolvedValue('ok'),
+    execFileWithHandle: mockExecFileWithHandle,
+    concatFiles: jest.fn().mockResolvedValue(),
+    appendFile: jest.fn().mockResolvedValue(),
 }));
 
 // Mock torrent-stream
@@ -555,7 +556,7 @@ describe('api-tool-playlist.js', () => {
     // ═══════════════════════════════════════════════════════════════════════
 
     describe('megaGet() - URL sanitization', () => {
-        test('should sanitize dangerous characters from MEGA URL', async () => {
+        test('should pass URL directly as argument (no shell interpretation)', async () => {
             const user = { _id: new MockObjectID(), username: 'testuser' };
             const dangerousUrl = 'https://mega.nz/file/test`whoami`$USER"test!danger';
             const filePath = '/mock/path';
@@ -568,13 +569,12 @@ describe('api-tool-playlist.js', () => {
             
             await new Promise(resolve => setTimeout(resolve, 100));
             
-            // Check that exec was called with sanitized URL (removes backticks, $, ", \, !)
+            // URL is passed as a separate argument — no shell escaping needed
             const execCalls = mockChildProcessExec.mock.calls;
             if (execCalls.length > 0) {
-                const cmdline = execCalls[0][0];
-                expect(cmdline).not.toContain('`');
-                expect(cmdline).not.toContain('$USER');
-                expect(cmdline).not.toContain('!danger');
+                const args = execCalls[0][1];
+                // URL is the last argument, passed raw (safe because no shell)
+                expect(args[args.length - 1]).toBe(dangerousUrl);
             }
         });
 
@@ -592,8 +592,9 @@ describe('api-tool-playlist.js', () => {
             
             const execCalls = mockChildProcessExec.mock.calls;
             if (execCalls.length > 0) {
-                const cmdline = execCalls[0][0];
-                expect(cmdline).not.toContain('\\escape');
+                const args = execCalls[0][1];
+                // URL preserved as-is (no shell to interpret backslashes)
+                expect(args[args.length - 1]).toBe(url);
             }
         });
 
@@ -611,8 +612,9 @@ describe('api-tool-playlist.js', () => {
             
             const execCalls = mockChildProcessExec.mock.calls;
             if (execCalls.length > 0) {
-                const cmdline = execCalls[0][0];
-                expect(cmdline).not.toContain('!');
+                const args = execCalls[0][1];
+                // URL preserved as-is including ! (safe because no shell)
+                expect(args[args.length - 1]).toBe(url);
             }
         });
     });
@@ -657,8 +659,8 @@ describe('api-tool-playlist.js', () => {
     // SECTION 5: zipAdd() - password sanitization
     // ═══════════════════════════════════════════════════════════════════════
 
-    describe('zipAdd() - password sanitization', () => {
-        test('should sanitize single quotes in password for shell safety', async () => {
+    describe('zipAdd() - password handling', () => {
+        test('should pass password directly as argument (no shell escaping needed)', async () => {
             const user = { _id: new MockObjectID(), username: 'testuser' };
             const index = 0;
             const id = new MockObjectID();
@@ -678,16 +680,16 @@ describe('api-tool-playlist.js', () => {
             
             await new Promise(resolve => setTimeout(resolve, 100));
             
-            // Check that password was escaped properly
+            // Password is passed as a direct argument — preserved as-is
             const execCalls = mockChildProcessExec.mock.calls;
             if (execCalls.length > 0) {
-                const cmdline = execCalls[0][0];
-                // Should contain escaped quotes: 'pass'\''word'\''with'\''quotes'
-                expect(cmdline).toContain("'\\'");
+                const args = execCalls[0][1];
+                // Password is passed directly without shell escaping
+                expect(args).toContain(pwd);
             }
         });
 
-        test('should handle empty password', async () => {
+        test('should use default password 123 when empty', async () => {
             const user = { _id: new MockObjectID(), username: 'testuser' };
             const index = 0;
             const id = new MockObjectID();
@@ -709,9 +711,9 @@ describe('api-tool-playlist.js', () => {
             
             const execCalls = mockChildProcessExec.mock.calls;
             if (execCalls.length > 0) {
-                const cmdline = execCalls[0][0];
+                const args = execCalls[0][1];
                 // Should use default password '123'
-                expect(cmdline).toContain("'123'");
+                expect(args).toContain('123');
             }
         });
     });
@@ -829,7 +831,7 @@ describe('api-tool-playlist.js', () => {
             const id = new MockObjectID('file1');
             
             const mockProc = { kill: jest.fn() };
-            mockChildProcessExec.mockReturnValue(mockProc);
+            mockChildProcessExec.mockReturnValue({ chp: mockProc, promise: new Promise(() => {}) });
             
             const filePath = `/mock/path/${id}`;
             mockExistsSync.mockImplementation((path) => {
@@ -887,7 +889,7 @@ describe('api-tool-playlist.js', () => {
             const filePath = '/mock/path';
             
             const mockProc = { kill: jest.fn() };
-            mockChildProcessExec.mockReturnValue(mockProc);
+            mockChildProcessExec.mockReturnValue({ chp: mockProc, promise: new Promise(() => {}) });
             mockExistsSync.mockReturnValue(false);
             mockReaddirSync.mockReturnValue(['test.mp4']);
             
@@ -1254,7 +1256,7 @@ describe('api-tool-playlist.js', () => {
             await new Promise(resolve => setTimeout(resolve, 100));
             
             // Should execute but not exceed limit
-            const megaCalls = mockChildProcessExec.mock.calls.filter(c => c[0].includes('megadl'));
+            const megaCalls = mockChildProcessExec.mock.calls.filter(c => c[0] === 'megadl');
             expect(megaCalls.length).toBeLessThanOrEqual(2);
         });
     });
@@ -1296,11 +1298,10 @@ describe('api-tool-playlist.js', () => {
             mockGetFileLocation.mockReturnValue(filePath);
             
             // Mock extraction failure
-            mockChildProcessExec.mockImplementation((cmd, cb) => {
-                const mockProc = { kill: jest.fn() };
-                setTimeout(() => cb(new Error('Extraction failed'), null), 10);
-                return mockProc;
-            });
+            mockChildProcessExec.mockImplementation(() => ({
+                chp: { kill: jest.fn() },
+                promise: Promise.reject(new Error('Extraction failed')),
+            }));
             
             PlaylistModule.default('zip add', user, 0, id, user._id, 'test.zip');
             
@@ -1319,11 +1320,10 @@ describe('api-tool-playlist.js', () => {
             mockExistsSync.mockReturnValue(false);
             
             // Mock download failure
-            mockChildProcessExec.mockImplementation((cmd, cb) => {
-                const mockProc = { kill: jest.fn() };
-                setTimeout(() => cb(new Error('Download failed'), null), 10);
-                return mockProc;
-            });
+            mockChildProcessExec.mockImplementation(() => ({
+                chp: { kill: jest.fn() },
+                promise: Promise.reject(new Error('Download failed')),
+            }));
             
             PlaylistModule.default('mega add', user, url, '/mock/path');
             
@@ -1367,7 +1367,7 @@ describe('api-tool-playlist.js', () => {
             await new Promise(resolve => setTimeout(resolve, 200));
             
             // Should not create duplicate downloads
-            const megaCalls = mockChildProcessExec.mock.calls.filter(c => c[0].includes('megadl'));
+            const megaCalls = mockChildProcessExec.mock.calls.filter(c => c[0] === 'megadl');
             expect(megaCalls.length).toBe(1);
         });
     });
@@ -1424,7 +1424,7 @@ describe('api-tool-playlist.js', () => {
             
             await new Promise(resolve => setTimeout(resolve, 100));
             
-            const cmd = mockChildProcessExec.mock.calls[0]?.[0] || '';
+            const cmd = mockChildProcessExec.mock.calls[0]?.[0] || ''; const cmdArgs = mockChildProcessExec.mock.calls[0]?.[1] || [];
             expect(cmd).toContain('myuzip.py');
         });
 
@@ -1446,9 +1446,9 @@ describe('api-tool-playlist.js', () => {
             
             await new Promise(resolve => setTimeout(resolve, 100));
             
-            const cmd = mockChildProcessExec.mock.calls[0]?.[0] || '';
+            const cmd = mockChildProcessExec.mock.calls[0]?.[0] || ''; const cmdArgs = mockChildProcessExec.mock.calls[0]?.[1] || [];
             expect(cmd).toContain('7za');
-            expect(cmd).toContain('.1.rar');
+            expect(cmdArgs.join(' ')).toContain('.1.rar');
         });
 
         test('should handle zip type 3 (7z)', async () => {
@@ -1469,9 +1469,9 @@ describe('api-tool-playlist.js', () => {
             
             await new Promise(resolve => setTimeout(resolve, 100));
             
-            const cmd = mockChildProcessExec.mock.calls[0]?.[0] || '';
+            const cmd = mockChildProcessExec.mock.calls[0]?.[0] || ''; const cmdArgs = mockChildProcessExec.mock.calls[0]?.[1] || [];
             expect(cmd).toContain('7za');
-            expect(cmd).toContain('_7z');
+            expect(cmdArgs.join(' ')).toContain('_7z');
         });
 
         test('should handle zip type 4 (zip_c)', async () => {
@@ -1492,9 +1492,9 @@ describe('api-tool-playlist.js', () => {
             
             await new Promise(resolve => setTimeout(resolve, 100));
             
-            const cmd = mockChildProcessExec.mock.calls[0]?.[0] || '';
+            const cmd = mockChildProcessExec.mock.calls[0]?.[0] || ''; const cmdArgs = mockChildProcessExec.mock.calls[0]?.[1] || [];
             expect(cmd).toContain('myuzip.py');
-            expect(cmd).toContain('_zip_c');
+            expect(cmdArgs.join(' ')).toContain('_zip_c');
         });
 
         test('should handle zip type 5 (7z_c)', async () => {
@@ -1515,9 +1515,9 @@ describe('api-tool-playlist.js', () => {
             
             await new Promise(resolve => setTimeout(resolve, 100));
             
-            const cmd = mockChildProcessExec.mock.calls[0]?.[0] || '';
+            const cmd = mockChildProcessExec.mock.calls[0]?.[0] || ''; const cmdArgs = mockChildProcessExec.mock.calls[0]?.[1] || [];
             expect(cmd).toContain('7za');
-            expect(cmd).toContain('_7z_c');
+            expect(cmdArgs.join(' ')).toContain('_7z_c');
         });
     });
 
@@ -1686,11 +1686,10 @@ describe('api-tool-playlist.js', () => {
             mockGetFileLocation.mockReturnValue(filePath);
 
             const extractionError = new Error('Extraction failed');
-            mockChildProcessExec.mockImplementation((cmd, cb) => {
-                const mockProc = { kill: jest.fn() };
-                setTimeout(() => cb(extractionError, null), 10);
-                return mockProc;
-            });
+            mockChildProcessExec.mockImplementation(() => ({
+                chp: { kill: jest.fn() },
+                promise: Promise.reject(extractionError),
+            }));
 
             PlaylistModule.default('zip add', user, 0, id, user._id, 'test.zip');
             await new Promise(resolve => setTimeout(resolve, 400));
@@ -1714,11 +1713,10 @@ describe('api-tool-playlist.js', () => {
             mockGetFileLocation.mockReturnValue(filePath);
 
             const extractionError = new Error('Extract fail msg');
-            mockChildProcessExec.mockImplementation((cmd, cb) => {
-                const mockProc = { kill: jest.fn() };
-                setTimeout(() => cb(extractionError, null), 10);
-                return mockProc;
-            });
+            mockChildProcessExec.mockImplementation(() => ({
+                chp: { kill: jest.fn() },
+                promise: Promise.reject(extractionError),
+            }));
 
             PlaylistModule.default('zip add', user, 0, id, user._id, 'test.zip');
             await new Promise(resolve => setTimeout(resolve, 400));
@@ -1748,11 +1746,10 @@ describe('api-tool-playlist.js', () => {
             mockGetFileLocation.mockReturnValue(filePath);
 
             const extractionError = new Error('zip err');
-            mockChildProcessExec.mockImplementation((cmd, cb) => {
-                const mockProc = { kill: jest.fn() };
-                setTimeout(() => cb(extractionError, null), 10);
-                return mockProc;
-            });
+            mockChildProcessExec.mockImplementation(() => ({
+                chp: { kill: jest.fn() },
+                promise: Promise.reject(extractionError),
+            }));
 
             PlaylistModule.default('zip add', user, 0, id, user._id, 'test.zip');
             await new Promise(resolve => setTimeout(resolve, 400));
@@ -1771,11 +1768,10 @@ describe('api-tool-playlist.js', () => {
             mockExistsSync.mockReturnValue(false);
 
             const downloadError = new Error('Download failed');
-            mockChildProcessExec.mockImplementation((cmd, cb) => {
-                const mockProc = { kill: jest.fn() };
-                setTimeout(() => cb(downloadError, null), 10);
-                return mockProc;
-            });
+            mockChildProcessExec.mockImplementation(() => ({
+                chp: { kill: jest.fn() },
+                promise: Promise.reject(downloadError),
+            }));
 
             PlaylistModule.default('mega add', user, 'https://mega.nz/bad', '/mock/path');
             await new Promise(resolve => setTimeout(resolve, 400));
@@ -1828,7 +1824,7 @@ describe('api-tool-playlist.js', () => {
             // Make Mongo never resolve so torrent/zip entries stay in pool
             mockMongoFn.mockImplementation(() => new Promise(() => {}));
             // Make exec never call callback so mega entries stay in pool
-            mockChildProcessExec.mockImplementation((cmd, cb) => ({ kill: jest.fn() }));
+            mockChildProcessExec.mockImplementation(() => ({ chp: { kill: jest.fn() }, promise: new Promise(() => {}) }));
 
             // Add torrent entry (needs engine to be kickable)
             const mockEngine = new MockTorrentEngine();
@@ -1887,11 +1883,10 @@ describe('api-tool-playlist.js', () => {
             const realPath = `${filePath}/real`;
 
             // Restore exec mock to success (may have been changed by prior tests)
-            mockChildProcessExec.mockImplementation((cmd, cb) => {
-                const mockProc = { kill: jest.fn() };
-                setTimeout(() => cb(null, 'mock output'), 10);
-                return mockProc;
-            });
+            mockChildProcessExec.mockImplementation(() => ({
+                chp: { kill: jest.fn() },
+                promise: Promise.resolve('mock output'),
+            }));
 
             mockReaddirSync.mockImplementation((path) => {
                 if (path === `${realPath}/`) return ['subdir'];
@@ -1925,11 +1920,10 @@ describe('api-tool-playlist.js', () => {
             const filePath = `/mock/path/${id}`;
 
             // Restore exec and Mongo mocks (may have been changed by prior tests)
-            mockChildProcessExec.mockImplementation((cmd, cb) => {
-                const mockProc = { kill: jest.fn() };
-                setTimeout(() => cb(null, 'mock output'), 10);
-                return mockProc;
-            });
+            mockChildProcessExec.mockImplementation(() => ({
+                chp: { kill: jest.fn() },
+                promise: Promise.resolve('mock output'),
+            }));
             mockMongoFn.mockImplementation(() => Promise.resolve({ _id: 'mock-id' }));
 
             mockExistsSync.mockImplementation((path) => {
@@ -2506,11 +2500,10 @@ describe('api-tool-playlist.js', () => {
             mockMegaLimit.mockReturnValue(2);
             mockMkdirp.mockResolvedValue();
             // Exec callback succeeds immediately, returns single file
-            mockChildProcessExec.mockImplementation((cmd, cb) => {
-                const proc = { kill: jest.fn() };
-                setTimeout(() => cb(null, 'ok'), 5);
-                return proc;
-            });
+            mockChildProcessExec.mockImplementation(() => ({
+                chp: { kill: jest.fn() },
+                promise: Promise.resolve('ok'),
+}));
             mockReaddirSync.mockReturnValue(['file.txt']);
             mockLstatSync.mockReturnValue({ isDirectory: () => false });
             mockSortList.mockImplementation(arr => [...arr].sort());
@@ -2531,7 +2524,7 @@ describe('api-tool-playlist.js', () => {
 
             // The older entry (time=100) should have been started — check exec was called with path2
             const execCalls = mockChildProcessExec.mock.calls;
-            const hasPath2 = execCalls.some(c => c[0].includes('/mock/path2'));
+            const hasPath2 = execCalls.some(c => c[1]?.includes('/mock/path2/real'));
             expect(hasPath2).toBe(true);
         });
 
@@ -2558,11 +2551,10 @@ describe('api-tool-playlist.js', () => {
                 ],
             });
 
-            mockChildProcessExec.mockImplementation((cmd, cb) => {
-                const proc = { kill: jest.fn() };
-                setTimeout(() => cb(null, 'ok'), 5);
-                return proc;
-            });
+            mockChildProcessExec.mockImplementation(() => ({
+                chp: { kill: jest.fn() },
+                promise: Promise.resolve('ok'),
+}));
             mockReaddirSync.mockReturnValue(['single.mp4']);
             mockLstatSync.mockReturnValue({ isDirectory: () => false });
             mockSortList.mockImplementation(arr => [...arr].sort());
@@ -2727,11 +2719,10 @@ describe('api-tool-playlist.js', () => {
 
             mockMegaLimit.mockReturnValue(2);
             mockMkdirp.mockResolvedValue();
-            mockChildProcessExec.mockImplementation((cmd, cb) => {
-                const proc = { kill: jest.fn() };
-                setTimeout(() => cb(null, 'ok'), 5);
-                return proc;
-            });
+            mockChildProcessExec.mockImplementation(() => ({
+                chp: { kill: jest.fn() },
+                promise: Promise.resolve('ok'),
+}));
             // Single file in mega download
             mockReaddirSync.mockReturnValue(['single_video.mp4']);
             mockLstatSync.mockReturnValue({ isDirectory: () => false });
@@ -2760,11 +2751,10 @@ describe('api-tool-playlist.js', () => {
 
             mockMegaLimit.mockReturnValue(2);
             mockMkdirp.mockResolvedValue();
-            mockChildProcessExec.mockImplementation((cmd, cb) => {
-                const proc = { kill: jest.fn() };
-                setTimeout(() => cb(null, 'ok'), 5);
-                return proc;
-            });
+            mockChildProcessExec.mockImplementation(() => ({
+                chp: { kill: jest.fn() },
+                promise: Promise.resolve('ok'),
+}));
             // Multiple files in mega download
             mockReaddirSync.mockReturnValue(['vid1.mp4', 'vid2.mp4']);
             mockLstatSync.mockReturnValue({ isDirectory: () => false });
@@ -3382,11 +3372,10 @@ describe('api-tool-playlist.js', () => {
 
             mockMegaLimit.mockReturnValue(2);
             mockMkdirp.mockResolvedValue();
-            mockChildProcessExec.mockImplementation((cmd, cb) => {
-                const proc = { kill: jest.fn() };
-                setTimeout(() => cb(null, 'ok'), 5);
-                return proc;
-            });
+            mockChildProcessExec.mockImplementation(() => ({
+                chp: { kill: jest.fn() },
+                promise: Promise.resolve('ok'),
+}));
             mockReaddirSync.mockReturnValue(['file1.mp4', 'file2.mp4']);
             mockLstatSync.mockReturnValue({ isDirectory: () => false });
             mockSortList.mockImplementation(arr => [...arr].sort());
@@ -3417,11 +3406,10 @@ describe('api-tool-playlist.js', () => {
 
             mockMegaLimit.mockReturnValue(2);
             mockMkdirp.mockResolvedValue();
-            mockChildProcessExec.mockImplementation((cmd, cb) => {
-                const proc = { kill: jest.fn() };
-                setTimeout(() => cb(null, 'ok'), 5);
-                return proc;
-            });
+            mockChildProcessExec.mockImplementation(() => ({
+                chp: { kill: jest.fn() },
+                promise: Promise.resolve('ok'),
+}));
             mockReaddirSync.mockReturnValue(['file1.mp4', 'file2.mp4']);
             mockLstatSync.mockReturnValue({ isDirectory: () => false });
             mockSortList.mockImplementation(arr => [...arr].sort());

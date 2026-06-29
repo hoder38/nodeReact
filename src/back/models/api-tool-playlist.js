@@ -5,7 +5,7 @@ import fsModule from 'fs'
 const { existsSync: FsExistsSync, unlink: FsUnlink, createReadStream: FsCreateReadStream, createWriteStream: FsCreateWriteStream, statSync: FsStatSync, renameSync: FsRenameSync, readdirSync: FsReaddirSync, lstatSync: FsLstatSync } = fsModule;
 import pathModule from 'path'
 const { basename: PathBasename, join: PathJoin, dirname: PathDirname } = pathModule
-import Child_process from 'child_process'
+import { execFileWithHandle } from '../util/exec-safe.js'
 import TorrentStream from 'torrent-stream'
 import Mkdirp from 'mkdirp'
 //import OpenSubtitle from 'opensubtitles-api'
@@ -248,20 +248,18 @@ const startMega = (user, url, filePath, data) => {
     const real = `${filePath}/real`;
     console.log(real);
     return Mkdirp(real).then(() => {
-        const safeUrl = url.replace(/["`$\\!]/g, '');
-        const cmdline = `megadl --no-progress --path "${real}" "${safeUrl}"`;
-        console.log(cmdline);
-        return new Promise((resolve, reject) => {
-            const chp = Child_process.exec(cmdline, (err, output) => err ? megaComplete().then(() => reject(err)) : resolve(output));
-            return megaMutex.runExclusive(() => {
-                for (let i in mega_pool) {
-                    if (url === mega_pool[i].url) {
-                        mega_pool[i].chp = chp;
-                        break;
-                    }
+        console.log('megadl', ['--no-progress', '--path', real, url]);
+        const { chp, promise } = execFileWithHandle('megadl', ['--no-progress', '--path', real, url]);
+        const wrappedPromise = promise.catch(err => megaComplete().then(() => Promise.reject(err)));
+        megaMutex.runExclusive(() => {
+            for (let i in mega_pool) {
+                if (url === mega_pool[i].url) {
+                    mega_pool[i].chp = chp;
+                    break;
                 }
-            }).then(() => chp);
-        }).then(output => {
+            }
+        });
+        return wrappedPromise.then(output => {
             let playList = [];
             const megaFolder = (previous, depth=0) => {
                 if (depth > 20) return;
@@ -413,32 +411,40 @@ const startZip = (user, index, id, owner, name, pwd, zip_type) => Mongo('update'
         return zipComplete();
     } else {
         const realPath = `${filePath}/real`;
-        const regName = name.replace(/"/g, '\\"');
-        const safePwd = pwd ? pwd.replace(/'/g, "'\\''") : null;
-        let cmdline = `${PathJoin(__dirname, 'util/myuzip.py')} ${filePath}_zip ${realPath}  "${regName}"${safePwd ? ` '${safePwd}'` : " '123'"}`;
+        const password = pwd || '123';
+        let extractCmd, extractArgs;
         if (zip_type === 2) {
-            cmdline = `7za x ${filePath}.1.rar -o${realPath} "${regName}"${safePwd ? ` -p'${safePwd}'` : ' -p123'}`;
+            extractCmd = '7za';
+            extractArgs = ['x', `${filePath}.1.rar`, `-o${realPath}`, name, `-p${password}`];
         } else if (zip_type === 3) {
-            cmdline = `7za x ${filePath}_7z -o${realPath} "${regName}"${safePwd ? ` -p'${safePwd}'` : ' -p123'}`;
+            extractCmd = '7za';
+            extractArgs = ['x', `${filePath}_7z`, `-o${realPath}`, name, `-p${password}`];
         } else if (zip_type === 4) {
-            cmdline = `${PathJoin(__dirname, 'util/myuzip.py')} ${filePath}_zip_c ${realPath} "${regName}"${safePwd ? ` '${safePwd}'` : " '123'"}`;
+            extractCmd = PathJoin(__dirname, 'util/myuzip.py');
+            extractArgs = [`${filePath}_zip_c`, realPath, name, password];
         } else if (zip_type === 5) {
-            cmdline = `7za x ${filePath}_7z_c -o${realPath} "${regName}"${safePwd ? ` -p'${safePwd}'` : ' -p123'}`;
+            extractCmd = '7za';
+            extractArgs = ['x', `${filePath}_7z_c`, `-o${realPath}`, name, `-p${password}`];
+        } else {
+            extractCmd = PathJoin(__dirname, 'util/myuzip.py');
+            extractArgs = [`${filePath}_zip`, realPath, name, password];
         }
-        console.log(cmdline);
+        console.log(extractCmd, extractArgs);
         const realName = `${realPath}/${name}`;
         const unReal = () => FsExistsSync(realName) ? new Promise((resolve, reject) => FsUnlink(realName, err => err ? zipComplete().then(() => reject(err)) : resolve())) : Promise.resolve();
-        return unReal().then(() => new Promise((resolve, reject) => {
-            const chp = Child_process.exec(cmdline, (err, output) => err ? zipComplete().then(() => reject(err)) : resolve(output));
-            return zipMutex.runExclusive(() => {
+        return unReal().then(() => {
+            const { chp, promise } = execFileWithHandle(extractCmd, extractArgs);
+            const wrappedPromise = promise.catch(err => zipComplete().then(() => Promise.reject(err)));
+            zipMutex.runExclusive(() => {
                 for (let i in zip_pool) {
                     if (id.equals(zip_pool[i].fileId) && zip_pool[i].index === index) {
                         zip_pool[i].chp = chp;
                         break;
                     }
                 }
-            }).then(() => chp);
-        })).then(output => new Promise((resolve, reject) => {
+            });
+            return wrappedPromise;
+        }).then(output => new Promise((resolve, reject) => {
             const stream = FsCreateReadStream(realName);
             stream.on('error', err => zipComplete().then(() => reject(err)));
             stream.on('close', () => resolve(zipComplete(realName)));

@@ -1,6 +1,6 @@
 import { STORAGEDB } from '../constants.js'
 import Express from 'express'
-import Child_process from 'child_process'
+import { concatFiles } from '../util/exec-safe.js'
 import pathModule from 'path'
 import Mkdirp from 'mkdirp'
 const { basename: PathBasename, dirname: PathDirname } = pathModule;
@@ -104,25 +104,24 @@ router.put('/join', function(req, res, next){
         } else {
             //cat
             const ext = zip_type === 3 ? '_7z' : '_zip';
-            let cmdline = 'cat';
+            const srcPaths = [];
             for (let i = 1; i <= Object.keys(order_items).length; i++) {
                 if (order_items[i]) {
                     let joinPath = `${getFileLocation(order_items[i].owner, order_items[i]._id)}${ext}`;
                     if (!FsExistsSync(joinPath)) {
                         joinPath = getFileLocation(order_items[i].owner, order_items[i]._id);
                     }
-                    cmdline = `${cmdline} ${joinPath}`;
+                    srcPaths.push(joinPath);
                 } else {
                     break;
                 }
             }
             const filePath = getFileLocation(order_items[1].owner, order_items[1]._id);
             const cFilePath = `${filePath}${ext}_c`;
-            cmdline = `${cmdline} >> ${cFilePath}`;
-            console.log(cmdline);
+            console.log('concatFiles', srcPaths, '>>', cFilePath);
             const unlinkC = () => FsExistsSync(cFilePath) ? new Promise((resolve, reject) => FsUnlink(cFilePath, err => err ? reject(err) : resolve())) : Promise.resolve();
             const mediaType = extType(order_items[1]['name']);
-            return unlinkC().then(() => new Promise((resolve, reject) => Child_process.exec(cmdline, (err, output) => err ? reject(err) : resolve(output)))).then(output => MediaHandleTool.handleMediaUpload(mediaType, filePath, order_items[1]._id, req.user).then(() => res.json({
+            return unlinkC().then(() => concatFiles(srcPaths, cFilePath)).then(() => MediaHandleTool.handleMediaUpload(mediaType, filePath, order_items[1]._id, req.user).then(() => res.json({
                 id: order_items[1]._id,
                 name: order_items[1].name,
             })).catch(handleMediaError(res, order_items[1]._id, mediaType['fileIndex'])));

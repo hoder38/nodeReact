@@ -16,10 +16,13 @@ jest.unstable_mockModule('node-fetch', () => ({
   })),
 }));
 
-// ── child_process mock ──
-const mockExec = jest.fn();
-jest.unstable_mockModule('child_process', () => ({
-  default: { exec: mockExec },
+// ── exec-safe mock ──
+const mockExecSafe = jest.fn();
+jest.unstable_mockModule('../../util/exec-safe.js', () => ({
+  execSafe: mockExecSafe,
+  execFileWithHandle: jest.fn(),
+  concatFiles: jest.fn(),
+  appendFile: jest.fn(),
 }));
 
 // ── path mock ──
@@ -307,7 +310,7 @@ describe('shioaji-tool.js', () => {
         order: '[{"symbol":"2330","price":580,"amount":1}]',
         fillOrder: '[]',
       });
-      mockExec.mockImplementation((cmd, cb) => cb(null, output));
+      mockExecSafe.mockResolvedValue(output);
       mockGetSuggestionData.mockReturnValue({});
 
       await twseShioajiInit();
@@ -326,7 +329,7 @@ describe('shioaji-tool.js', () => {
         order: '[]',
         fillOrder: '[]',
       });
-      mockExec.mockImplementation((cmd, cb) => cb(null, output));
+      mockExecSafe.mockResolvedValue(output);
       mockGetSuggestionData.mockReturnValue({});
 
       await twseShioajiInit();
@@ -335,7 +338,7 @@ describe('shioaji-tool.js', () => {
     });
 
     test('Python error — rejects with HoError', async () => {
-      mockExec.mockImplementation((cmd, cb) => cb(new Error('python crash')));
+      mockExecSafe.mockRejectedValue(new Error('python crash'));
 
       // handleError returns Promise.reject, so twseShioajiInit rejects
       await expect(twseShioajiInit()).rejects.toThrow('Shioaji python error!!!');
@@ -348,7 +351,7 @@ describe('shioaji-tool.js', () => {
 
     test('Python error with force=true — trade is decremented on error', async () => {
       _setState({ updateTime: { book: 0, trade: 5 } });
-      mockExec.mockImplementation((cmd, cb) => cb(new Error('python crash')));
+      mockExecSafe.mockRejectedValue(new Error('python crash'));
 
       await expect(twseShioajiInit(true)).rejects.toThrow('Shioaji python error!!!');
 
@@ -358,7 +361,7 @@ describe('shioaji-tool.js', () => {
 
     test('Python error with force=true and trade < 1 — trade floors at 0', async () => {
       _setState({ updateTime: { book: 0, trade: 0 } });
-      mockExec.mockImplementation((cmd, cb) => cb(new Error('python crash')));
+      mockExecSafe.mockRejectedValue(new Error('python crash'));
 
       await expect(twseShioajiInit(true)).rejects.toThrow('Shioaji python error!!!');
 
@@ -368,15 +371,15 @@ describe('shioaji-tool.js', () => {
 
     test('uses real credentials when simulation=false (via twseShioajiInit)', async () => {
       const output = buildPythonOutput();
-      mockExec.mockImplementation((cmd, cb) => cb(null, output));
+      mockExecSafe.mockResolvedValue(output);
       mockGetSuggestionData.mockReturnValue({});
 
       await twseShioajiInit();
 
       // twseShioajiInit calls getShioajiData(false) => real credentials
-      const cmdUsed = mockExec.mock.calls[0][0];
-      expect(cmdUsed).toContain('test-key');
-      expect(cmdUsed).toContain('test-secret');
+      const argsUsed = mockExecSafe.mock.calls[0][1];
+      expect(argsUsed).toContain('test-key');
+      expect(argsUsed).toContain('test-secret');
     });
 
     test('previous position is returned in ret.position for fill_order processing', async () => {
@@ -385,7 +388,7 @@ describe('shioaji-tool.js', () => {
         position: '[{"symbol":"2330","amount":1,"price":200}]',
         fillOrder: '[{"price":200,"time":' + (Math.round(Date.now() / 1000)) + ',"symbol":"2330","starttime":' + (Math.round(Date.now() / 1000)) + ',"type":"Buy","quantity":1}]',
       });
-      mockExec.mockImplementation((cmd, cb) => cb(null, output));
+      mockExecSafe.mockResolvedValue(output);
       mockGetSuggestionData.mockReturnValue({});
       mockMongo.mockResolvedValue([]);
 
@@ -400,7 +403,7 @@ describe('shioaji-tool.js', () => {
         preamble: 'line1\nline2\nline3\nmore noise',
         available: '42',
       });
-      mockExec.mockImplementation((cmd, cb) => cb(null, output));
+      mockExecSafe.mockResolvedValue(output);
       mockGetSuggestionData.mockReturnValue({});
 
       await twseShioajiInit();
@@ -414,23 +417,23 @@ describe('shioaji-tool.js', () => {
   describe('twseShioajiInit — initialBook throttle', () => {
     test('force=false, first call (book=0) — always proceeds', async () => {
       const output = buildPythonOutput();
-      mockExec.mockImplementation((cmd, cb) => cb(null, output));
+      mockExecSafe.mockResolvedValue(output);
       mockGetSuggestionData.mockReturnValue({});
 
       await twseShioajiInit();
 
-      expect(mockExec).toHaveBeenCalled();
+      expect(mockExecSafe).toHaveBeenCalled();
     });
 
     test('within UPDATE_ORDER window — skips ("Shioaji no new")', async () => {
       // Set book to recent time
       _setState({ updateTime: { book: Math.round(Date.now() / 1000), trade: 0 } });
       const output = buildPythonOutput();
-      mockExec.mockImplementation((cmd, cb) => cb(null, output));
+      mockExecSafe.mockResolvedValue(output);
 
       await twseShioajiInit();
 
-      expect(mockExec).not.toHaveBeenCalled();
+      expect(mockExecSafe).not.toHaveBeenCalled();
       // trade should still increment
       expect(_getState().updateTime.trade).toBe(1);
     });
@@ -438,7 +441,7 @@ describe('shioaji-tool.js', () => {
     test('trade counter increments on each call', async () => {
       // First call proceeds (book=0)
       const output = buildPythonOutput();
-      mockExec.mockImplementation((cmd, cb) => cb(null, output));
+      mockExecSafe.mockResolvedValue(output);
       mockGetSuggestionData.mockReturnValue({});
 
       await twseShioajiInit();
@@ -458,7 +461,7 @@ describe('shioaji-tool.js', () => {
 
     test('empty fill_order — resolves immediately', async () => {
       const output = buildPythonOutput({ fillOrder: '[]' });
-      mockExec.mockImplementation((cmd, cb) => cb(null, output));
+      mockExecSafe.mockResolvedValue(output);
       mockGetSuggestionData.mockReturnValue({});
 
       await twseShioajiInit();
@@ -471,7 +474,7 @@ describe('shioaji-tool.js', () => {
         { price: -5, time: now, symbol: '2330', starttime: now, type: 'Sell', quantity: 1 },
       ]);
       const output = buildPythonOutput({ fillOrder });
-      mockExec.mockImplementation((cmd, cb) => cb(null, output));
+      mockExecSafe.mockResolvedValue(output);
       mockGetSuggestionData.mockReturnValue({});
 
       await twseShioajiInit();
@@ -483,7 +486,7 @@ describe('shioaji-tool.js', () => {
         { price: 100, time: now, symbol: 'XXXX', starttime: now, type: 'Buy', quantity: 1 },
       ]);
       const output = buildPythonOutput({ fillOrder });
-      mockExec.mockImplementation((cmd, cb) => cb(null, output));
+      mockExecSafe.mockResolvedValue(output);
       mockGetSuggestionData.mockReturnValue({});
       mockMongo.mockResolvedValue([]);
 
@@ -496,7 +499,7 @@ describe('shioaji-tool.js', () => {
         { price: 570, time: now, symbol: '2330', starttime: now, type: 'Buy', quantity: 1000 },
       ]);
       const output = buildPythonOutput({ fillOrder });
-      mockExec.mockImplementation((cmd, cb) => cb(null, output));
+      mockExecSafe.mockResolvedValue(output);
       mockGetSuggestionData.mockReturnValue({});
 
       const item = {
@@ -536,7 +539,7 @@ describe('shioaji-tool.js', () => {
         { price: 575, time: now - 100, symbol: '2330', starttime: now, type: 'Buy', quantity: 1 },
       ]);
       const output = buildPythonOutput({ fillOrder });
-      mockExec.mockImplementation((cmd, cb) => cb(null, output));
+      mockExecSafe.mockResolvedValue(output);
       mockGetSuggestionData.mockReturnValue({});
 
       const item = {
@@ -570,7 +573,7 @@ describe('shioaji-tool.js', () => {
         { price: 600, time: now, symbol: '2330', starttime: now, type: 'Buy', quantity: 1 },
       ]);
       const output = buildPythonOutput({ fillOrder });
-      mockExec.mockImplementation((cmd, cb) => cb(null, output));
+      mockExecSafe.mockResolvedValue(output);
       mockGetSuggestionData.mockReturnValue({});
 
       const item = {
@@ -608,7 +611,7 @@ describe('shioaji-tool.js', () => {
         { price: 570, time: now, symbol: '2330', starttime: oldStarttime, type: 'Buy', quantity: 1 },
       ]);
       const output = buildPythonOutput({ fillOrder });
-      mockExec.mockImplementation((cmd, cb) => cb(null, output));
+      mockExecSafe.mockResolvedValue(output);
       mockGetSuggestionData.mockReturnValue({});
 
       const item = {
@@ -644,7 +647,7 @@ describe('shioaji-tool.js', () => {
         { price: 570, time: now, symbol: '2330', starttime: now, type: 'Buy', fake: true },
       ]);
       const output = buildPythonOutput({ fillOrder });
-      mockExec.mockImplementation((cmd, cb) => cb(null, output));
+      mockExecSafe.mockResolvedValue(output);
       mockGetSuggestionData.mockReturnValue({});
 
       const item = {
@@ -686,7 +689,7 @@ describe('shioaji-tool.js', () => {
         { price: 570, time: now, symbol: '2330', starttime: now, type: 'Buy', fake: true },
       ]);
       const output = buildPythonOutput({ fillOrder });
-      mockExec.mockImplementation((cmd, cb) => cb(null, output));
+      mockExecSafe.mockResolvedValue(output);
       mockGetSuggestionData.mockReturnValue({});
 
       const item = {
@@ -724,7 +727,7 @@ describe('shioaji-tool.js', () => {
         position: '[{"symbol":"2330","amount":2,"price":575.5}]',
         fillOrder,
       });
-      mockExec.mockImplementation((cmd, cb) => cb(null, output));
+      mockExecSafe.mockResolvedValue(output);
       mockGetSuggestionData.mockReturnValue({});
 
       const item = {
@@ -760,7 +763,7 @@ describe('shioaji-tool.js', () => {
         { price: 590, time: now - 200, symbol: '2330', starttime: now, type: 'Sell', quantity: 1 },
       ]);
       const output = buildPythonOutput({ fillOrder });
-      mockExec.mockImplementation((cmd, cb) => cb(null, output));
+      mockExecSafe.mockResolvedValue(output);
       mockGetSuggestionData.mockReturnValue({});
 
       const item = {
@@ -796,7 +799,7 @@ describe('shioaji-tool.js', () => {
         position: '[{"symbol":"2330","amount":2,"price":575.5}]',
         fillOrder,
       });
-      mockExec.mockImplementation((cmd, cb) => cb(null, output));
+      mockExecSafe.mockResolvedValue(output);
       mockGetSuggestionData.mockReturnValue({});
 
       const item = {
@@ -836,7 +839,7 @@ describe('shioaji-tool.js', () => {
         position: '[{"symbol":"2330","amount":2,"price":575.5}]',
         fillOrder,
       });
-      mockExec.mockImplementation((cmd, cb) => cb(null, output));
+      mockExecSafe.mockResolvedValue(output);
       mockGetSuggestionData.mockReturnValue({});
 
       const item = {
@@ -875,7 +878,7 @@ describe('shioaji-tool.js', () => {
         position: '[]',
         fillOrder,
       });
-      mockExec.mockImplementation((cmd, cb) => cb(null, output));
+      mockExecSafe.mockResolvedValue(output);
       mockGetSuggestionData.mockReturnValue({});
 
       const item = {
@@ -912,7 +915,7 @@ describe('shioaji-tool.js', () => {
         { price: 570, time: now, symbol: '2330', starttime: now, type: 'Buy', oddquantity: 50 },
       ]);
       const output = buildPythonOutput({ fillOrder });
-      mockExec.mockImplementation((cmd, cb) => cb(null, output));
+      mockExecSafe.mockResolvedValue(output);
       mockGetSuggestionData.mockReturnValue({});
 
       const item = {
@@ -942,7 +945,7 @@ describe('shioaji-tool.js', () => {
         position: '[{"symbol":"2330","amount":2,"price":575.5}]',
         fillOrder,
       });
-      mockExec.mockImplementation((cmd, cb) => cb(null, output));
+      mockExecSafe.mockResolvedValue(output);
       mockGetSuggestionData.mockReturnValue({});
 
       const item = {
@@ -970,7 +973,7 @@ describe('shioaji-tool.js', () => {
         { price: 580, time: now + 1, symbol: '2317', starttime: now + 1, type: 'Buy', quantity: 200 },
       ]);
       const output = buildPythonOutput({ fillOrder });
-      mockExec.mockImplementation((cmd, cb) => cb(null, output));
+      mockExecSafe.mockResolvedValue(output);
       mockGetSuggestionData.mockReturnValue({});
 
       const item1 = {
@@ -1016,7 +1019,7 @@ describe('shioaji-tool.js', () => {
         position: '[{"symbol":"2330","amount":2,"price":575.5}]',
         fillOrder,
       });
-      mockExec.mockImplementation((cmd, cb) => cb(null, output));
+      mockExecSafe.mockResolvedValue(output);
       mockGetSuggestionData.mockReturnValue({});
 
       const item = {
@@ -1061,7 +1064,7 @@ describe('shioaji-tool.js', () => {
       });
 
       const output = buildPythonOutput({ fillOrder: '[]' });
-      mockExec.mockImplementation((cmd, cb) => cb(null, output));
+      mockExecSafe.mockResolvedValue(output);
       mockGetSuggestionData.mockReturnValue({
         '2330': { price: 570 }, // 570 <= 580
       });
@@ -1086,7 +1089,7 @@ describe('shioaji-tool.js', () => {
       });
 
       const output = buildPythonOutput({ fillOrder: '[]' });
-      mockExec.mockImplementation((cmd, cb) => cb(null, output));
+      mockExecSafe.mockResolvedValue(output);
       mockGetSuggestionData.mockReturnValue({
         '2330': { price: 590 }, // 590 >= 580
       });
@@ -1107,7 +1110,7 @@ describe('shioaji-tool.js', () => {
       });
 
       const output = buildPythonOutput({ fillOrder: '[]' });
-      mockExec.mockImplementation((cmd, cb) => cb(null, output));
+      mockExecSafe.mockResolvedValue(output);
       mockGetSuggestionData.mockReturnValue({
         '2330': { price: 590 }, // 590 > 580 — not matched
       });
@@ -1126,7 +1129,7 @@ describe('shioaji-tool.js', () => {
       });
 
       const output = buildPythonOutput({ fillOrder: '[]' });
-      mockExec.mockImplementation((cmd, cb) => cb(null, output));
+      mockExecSafe.mockResolvedValue(output);
       mockGetSuggestionData.mockReturnValue({
         '2330': { price: 570 }, // 570 < 580 — not matched
       });
@@ -1145,7 +1148,7 @@ describe('shioaji-tool.js', () => {
       });
 
       const output = buildPythonOutput({ fillOrder: '[]' });
-      mockExec.mockImplementation((cmd, cb) => cb(null, output));
+      mockExecSafe.mockResolvedValue(output);
       mockGetSuggestionData.mockReturnValue({
         '2330': { price: 570 },
       });
@@ -1164,7 +1167,7 @@ describe('shioaji-tool.js', () => {
       });
 
       const output = buildPythonOutput({ fillOrder: '[]' });
-      mockExec.mockImplementation((cmd, cb) => cb(null, output));
+      mockExecSafe.mockResolvedValue(output);
       mockGetSuggestionData.mockReturnValue({
         '2330': { price: 0 },
       });
@@ -1191,12 +1194,12 @@ describe('shioaji-tool.js', () => {
       _setState({ updateTime: { book: now, trade: tradeValue } });
       // initialBook skips (book is recent), trade increments to tradeValue+1
       const output = buildPythonOutput();
-      mockExec.mockImplementation((cmd, cb) => cb(null, output));
+      mockExecSafe.mockResolvedValue(output);
     }
 
     test('modulo check fails — resolves early, no trade evaluation', async () => {
       const output = buildPythonOutput();
-      mockExec.mockImplementation((cmd, cb) => cb(null, output));
+      mockExecSafe.mockResolvedValue(output);
       mockGetSuggestionData.mockReturnValue({});
 
       await twseShioajiInit();
@@ -1373,7 +1376,7 @@ describe('shioaji-tool.js', () => {
       global.Date = origDate;
 
       // No submit because index===0 was skipped
-      expect(mockExec).not.toHaveBeenCalled(); // No Python call for submit
+      expect(mockExecSafe).not.toHaveBeenCalled(); // No Python call for submit
     });
 
     test('item with no suggestion data — skipped', async () => {
@@ -1414,20 +1417,20 @@ describe('shioaji-tool.js', () => {
       });
 
       // submitShioajiOrder will call exec
-      mockExec.mockImplementation((cmd, cb) => cb(null, 'submit ok'));
+      mockExecSafe.mockResolvedValue('submit ok');
 
       await twseShioajiInit();
 
       global.Date = origDate;
 
       // Exec should be called for submit (second call after getShioajiData skipped)
-      const execCalls = mockExec.mock.calls;
+      const execCalls = mockExecSafe.mock.calls;
       // The submit command should contain the stock symbol
-      const submitCmd = execCalls.find(c => c[0].includes('submit'));
+      const submitCmd = execCalls.find(c => c[1]?.includes('submit'));
       expect(submitCmd).toBeDefined();
-      expect(submitCmd[0]).toContain('2330');
-      expect(submitCmd[0]).toContain('buy1000');
-      expect(submitCmd[0]).toContain('sell500');
+      expect(submitCmd[1].join(' ')).toContain('2330');
+      expect(submitCmd[1].join(' ')).toContain('buy1000');
+      expect(submitCmd[1].join(' ')).toContain('sell500');
     });
 
     test('ing === 1, price is 0 — skipped', async () => {
@@ -1448,7 +1451,7 @@ describe('shioaji-tool.js', () => {
       global.Date = origDate;
 
       // No submit since price is falsy
-      const submitCalls = mockExec.mock.calls.filter(c => c[0]?.includes?.('submit'));
+      const submitCalls = mockExecSafe.mock.calls.filter(c => c[1]?.includes?.('submit'));
       expect(submitCalls).toHaveLength(0);
     });
 
@@ -1474,7 +1477,7 @@ describe('shioaji-tool.js', () => {
         if (method === 'deleteMany') return Promise.resolve();
         return Promise.resolve();
       });
-      mockExec.mockImplementation((cmd, cb) => cb(null, 'ok'));
+      mockExecSafe.mockResolvedValue('ok');
 
       await twseShioajiInit();
 
@@ -1482,7 +1485,7 @@ describe('shioaji-tool.js', () => {
       global.Date = origDate;
 
       // sellall command should have been called
-      const sellallCmd = mockExec.mock.calls.find(c => c[0]?.includes?.('sellall'));
+      const sellallCmd = mockExecSafe.mock.calls.find(c => c[1]?.includes?.('sellall'));
       expect(sellallCmd).toBeDefined();
       // deleteMany should be called
       const deleteCalls = mockMongo.mock.calls.filter(c => c[0] === 'deleteMany');
@@ -1504,7 +1507,7 @@ describe('shioaji-tool.js', () => {
       }]);
 
       // sellall exec call fails
-      mockExec.mockImplementation((cmd, cb) => cb(new Error('sellall fail')));
+      mockExecSafe.mockRejectedValue(new Error('sellall fail'));
 
       await expect(twseShioajiInit()).rejects.toThrow('Shioaji python error!!!');
 
@@ -1540,7 +1543,7 @@ describe('shioaji-tool.js', () => {
         return Promise.resolve();
       });
 
-      mockExec.mockImplementation((cmd, cb) => cb(null, 'ok'));
+      mockExecSafe.mockResolvedValue('ok');
 
       await twseShioajiInit();
 
@@ -1609,7 +1612,7 @@ describe('shioaji-tool.js', () => {
       // ing=1 update should be called but no submit (price=0 falsy)
       const updateCalls = mockMongo.mock.calls.filter(c => c[0] === 'update');
       expect(updateCalls).toHaveLength(1);
-      const submitCalls = mockExec.mock.calls.filter(c => c[0]?.includes?.('submit'));
+      const submitCalls = mockExecSafe.mock.calls.filter(c => c[1]?.includes?.('submit'));
       expect(submitCalls).toHaveLength(0);
     });
 
@@ -1634,7 +1637,7 @@ describe('shioaji-tool.js', () => {
         return Promise.resolve();
       });
 
-      mockExec.mockImplementation((cmd, cb) => cb(null, 'ok'));
+      mockExecSafe.mockResolvedValue('ok');
 
       await twseShioajiInit();
 
@@ -1642,7 +1645,7 @@ describe('shioaji-tool.js', () => {
 
       // The mul multiplier should have been applied in memory
       // We can't check directly but verify submit was called
-      const submitCmd = mockExec.mock.calls.find(c => c[0]?.includes?.('submit'));
+      const submitCmd = mockExecSafe.mock.calls.find(c => c[1]?.includes?.('submit'));
       expect(submitCmd).toBeDefined();
     });
 
@@ -1669,17 +1672,17 @@ describe('shioaji-tool.js', () => {
         return Promise.resolve();
       });
 
-      mockExec.mockImplementation((cmd, cb) => cb(null, 'ok'));
+      mockExecSafe.mockResolvedValue('ok');
 
       await twseShioajiInit();
 
       global.Date = origDate;
 
       // Submit should be called
-      const submitCmd = mockExec.mock.calls.find(c => c[0]?.includes?.('submit'));
+      const submitCmd = mockExecSafe.mock.calls.find(c => c[1]?.includes?.('submit'));
       expect(submitCmd).toBeDefined();
       // 2317 (count=2 * price=100 = 200) should come before 2330 (count=1 * price=90 = 90)
-      const cmdStr = submitCmd[0];
+      const cmdStr = submitCmd[1].join(' ');
       const pos2317 = cmdStr.indexOf('2317');
       const pos2330 = cmdStr.indexOf('2330');
       expect(pos2317).toBeLessThan(pos2330);
@@ -1702,7 +1705,7 @@ describe('shioaji-tool.js', () => {
       ]);
 
       // submit exec fails
-      mockExec.mockImplementation((cmd, cb) => cb(new Error('submit fail')));
+      mockExecSafe.mockRejectedValue(new Error('submit fail'));
 
       await expect(twseShioajiInit()).rejects.toThrow('Shioaji python error!!!');
 
@@ -1731,7 +1734,7 @@ describe('shioaji-tool.js', () => {
       global.Date = origDate;
 
       // No submit exec call
-      expect(mockExec).not.toHaveBeenCalled();
+      expect(mockExecSafe).not.toHaveBeenCalled();
     });
   });
 
@@ -1759,15 +1762,15 @@ describe('shioaji-tool.js', () => {
       mockMongo.mockResolvedValue([
         { _id: 'id1', index: '2330', setype: 'twse', ing: 1, amount: 3 },
       ]);
-      mockExec.mockImplementation((cmd, cb) => cb(null, 'ok'));
+      mockExecSafe.mockResolvedValue('ok');
 
       await twseShioajiInit();
 
       global.Date = origDate;
 
-      const submitCmd = mockExec.mock.calls.find(c => c[0]?.includes?.('submit'));
-      expect(submitCmd[0]).toContain('buy1000=495');
-      expect(submitCmd[0]).toContain('sell500=510');
+      const submitCmd = mockExecSafe.mock.calls.find(c => c[1]?.includes?.('submit'));
+      expect(submitCmd[1].join(' ')).toContain('buy1000=495');
+      expect(submitCmd[1].join(' ')).toContain('sell500=510');
       expect(_getState().fakeOrder).toEqual([]);
     });
 
@@ -1779,7 +1782,7 @@ describe('shioaji-tool.js', () => {
       mockMongo.mockResolvedValue([
         { _id: 'id1', index: '2330', setype: 'twse', ing: 1, amount: 3 },
       ]);
-      mockExec.mockImplementation((cmd, cb) => cb(null, 'ok'));
+      mockExecSafe.mockResolvedValue('ok');
 
       await twseShioajiInit();
 
@@ -1801,7 +1804,7 @@ describe('shioaji-tool.js', () => {
       mockMongo.mockResolvedValue([
         { _id: 'id1', index: '2330', setype: 'twse', ing: 1, amount: 3 },
       ]);
-      mockExec.mockImplementation((cmd, cb) => cb(null, 'ok'));
+      mockExecSafe.mockResolvedValue('ok');
 
       await twseShioajiInit();
 
@@ -1821,7 +1824,7 @@ describe('shioaji-tool.js', () => {
       mockMongo.mockResolvedValue([
         { _id: 'id1', index: '2330', setype: 'twse', ing: 1, amount: 3 },
       ]);
-      mockExec.mockImplementation((cmd, cb) => cb(null, 'ok'));
+      mockExecSafe.mockResolvedValue('ok');
 
       await twseShioajiInit();
 
@@ -1841,7 +1844,7 @@ describe('shioaji-tool.js', () => {
       mockMongo.mockResolvedValue([
         { _id: 'id1', index: '2330', setype: 'twse', ing: 1, amount: 3 },
       ]);
-      mockExec.mockImplementation((cmd, cb) => cb(null, 'ok'));
+      mockExecSafe.mockResolvedValue('ok');
 
       await twseShioajiInit();
 
@@ -1858,18 +1861,18 @@ describe('shioaji-tool.js', () => {
       mockMongo.mockResolvedValue([
         { _id: 'id1', index: '2330', setype: 'twse', ing: 1, amount: 3 },
       ]);
-      mockExec.mockImplementation((cmd, cb) => cb(null, 'ok'));
+      mockExecSafe.mockResolvedValue('ok');
 
       await twseShioajiInit();
 
       global.Date = origDate;
 
-      const submitCmd = mockExec.mock.calls.find(c => c[0]?.includes?.('submit'));
-      expect(submitCmd[0]).toContain('test-key');
-      expect(submitCmd[0]).toContain('test-secret');
-      expect(submitCmd[0]).toContain('test-ca');
-      expect(submitCmd[0]).toContain('test-capw');
-      expect(submitCmd[0]).toContain('0.003'); // TRADE_FEE
+      const submitCmd = mockExecSafe.mock.calls.find(c => c[1]?.includes?.('submit'));
+      expect(submitCmd[1].join(' ')).toContain('test-key');
+      expect(submitCmd[1].join(' ')).toContain('test-secret');
+      expect(submitCmd[1].join(' ')).toContain('test-ca');
+      expect(submitCmd[1].join(' ')).toContain('test-capw');
+      expect(submitCmd[1].join(' ')).toContain('0.003'); // TRADE_FEE
     });
 
     test('fakeOrder is reset before each submit', async () => {
@@ -1890,7 +1893,7 @@ describe('shioaji-tool.js', () => {
       mockMongo.mockResolvedValue([
         { _id: 'id1', index: '2330', setype: 'twse', ing: 1, amount: 3 },
       ]);
-      mockExec.mockImplementation((cmd, cb) => cb(null, 'ok'));
+      mockExecSafe.mockResolvedValue('ok');
 
       await twseShioajiInit();
 
@@ -1929,20 +1932,20 @@ describe('shioaji-tool.js', () => {
         if (method === 'deleteMany') return Promise.resolve();
         return Promise.resolve();
       });
-      mockExec.mockImplementation((cmd, cb) => cb(null, 'ok'));
+      mockExecSafe.mockResolvedValue('ok');
 
       await twseShioajiInit();
 
       globalThis.setTimeout = origSetTimeout;
       global.Date = origDate;
 
-      const sellallCmd = mockExec.mock.calls.find(c => c[0]?.includes?.('sellall'));
+      const sellallCmd = mockExecSafe.mock.calls.find(c => c[1]?.includes?.('sellall'));
       expect(sellallCmd).toBeDefined();
-      expect(sellallCmd[0]).toContain('test-key');
-      expect(sellallCmd[0]).toContain('test-secret');
-      expect(sellallCmd[0]).toContain('test-ca');
-      expect(sellallCmd[0]).toContain('test-capw');
-      expect(sellallCmd[0]).toContain('2330');
+      expect(sellallCmd[1].join(' ')).toContain('test-key');
+      expect(sellallCmd[1].join(' ')).toContain('test-secret');
+      expect(sellallCmd[1].join(' ')).toContain('test-ca');
+      expect(sellallCmd[1].join(' ')).toContain('test-capw');
+      expect(sellallCmd[1].join(' ')).toContain('2330');
     });
   });
 
@@ -1957,7 +1960,7 @@ describe('shioaji-tool.js', () => {
         { price: 570, time: now, symbol: '2330', starttime: now, type: 'Buy', quantity: 1 },
       ]);
       const output = buildPythonOutput({ fillOrder });
-      mockExec.mockImplementation((cmd, cb) => cb(null, output));
+      mockExecSafe.mockResolvedValue(output);
       mockGetSuggestionData.mockReturnValue({});
 
       const item = {
@@ -2004,7 +2007,7 @@ describe('shioaji-tool.js', () => {
         { price: 0.01, time: now, symbol: '2330', starttime: now, type: 'Buy', quantity: 1 },
       ]);
       const output = buildPythonOutput({ fillOrder });
-      mockExec.mockImplementation((cmd, cb) => cb(null, output));
+      mockExecSafe.mockResolvedValue(output);
       mockGetSuggestionData.mockReturnValue({});
       mockMongo.mockImplementation((method) => {
         if (method === 'find') return Promise.resolve([]);
@@ -2019,7 +2022,7 @@ describe('shioaji-tool.js', () => {
 
     test('negative available value parsed correctly', async () => {
       const output = buildPythonOutput({ available: '-5000' });
-      mockExec.mockImplementation((cmd, cb) => cb(null, output));
+      mockExecSafe.mockResolvedValue(output);
       mockGetSuggestionData.mockReturnValue({});
 
       await twseShioajiInit();
@@ -2032,7 +2035,7 @@ describe('shioaji-tool.js', () => {
         order: '[]',
         fillOrder: '[]',
       });
-      mockExec.mockImplementation((cmd, cb) => cb(null, output));
+      mockExecSafe.mockResolvedValue(output);
       mockGetSuggestionData.mockReturnValue({});
 
       await twseShioajiInit();

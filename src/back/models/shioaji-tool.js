@@ -2,7 +2,7 @@ import { SHIOAJI_APIKEY, SHIOAJI_APISECRET, SHIOAJI_CA, SHIOAJI_CAPW } from '../
 import { __dirname, TRADE_FEE, UPDATE_ORDER, TOTALDB, RANGE_INTERVAL, TWSE_ORDER_INTERVAL, TWSE_MARKET_TIME, PRICE_INTERVAL, API_WAIT } from '../constants.js'
 import pathModule from 'path'
 const { join: PathJoin } = pathModule;
-import Child_process from 'child_process'
+import { execSafe } from '../util/exec-safe.js'
 import { getSuggestionData } from '../models/stock-tool.js'
 import { handleError, HoError } from '../util/utility.js'
 import Mongo from '../models/mongo-tool.js'
@@ -375,7 +375,7 @@ export const twseShioajiInit = (force = false) => {
 const getShioajiData = (simulation = true) => {
     const id = simulation ? 'PAPIUSER02' : SHIOAJI_APIKEY;
     const pw = simulation ? '2222' : SHIOAJI_APISECRET;
-    return new Promise((resolve, reject) => Child_process.exec(`${PathJoin(__dirname, 'util/twse.py')} ${id} ${pw}`, (err, output) => err ? reject(err) : resolve(output))).then(output => {
+    return execSafe(PathJoin(__dirname, 'util/twse.py'), [id, pw]).then(output => {
         log.debug({ output }, 'shioaji python raw output')
         const result = output.split('\n');
         log.debug({ result }, 'parsed result lines')
@@ -438,7 +438,8 @@ const submitShioajiOrder = (submitList, simulation = true) => {
         }
     });
     log.info({ list }, 'submitting shioaji order')
-    return new Promise((resolve, reject) => Child_process.exec(`${PathJoin(__dirname, 'util/twse.py')} ${id} ${pw} submit ${ca} ${capw} ${TRADE_FEE} ${list}`, (err, output) => err ? reject(err) : resolve(output))).then(output => {
+    const listArgs = list.trim().split(/\s+/).filter(a => a);
+    return execSafe(PathJoin(__dirname, 'util/twse.py'), [id, pw, 'submit', ca, capw, String(TRADE_FEE), ...listArgs]).then(output => {
         log.debug({ output }, 'submit order output')
     });
 }
@@ -448,7 +449,7 @@ const sellallShioajiOrder = (index, simulation = true) => {
     const pw = simulation ? '2222' : SHIOAJI_APISECRET;
     const ca = simulation ? '2222' : SHIOAJI_CA;
     const capw = simulation ? '2222' : SHIOAJI_CAPW;
-    return new Promise((resolve, reject) => Child_process.exec(`${PathJoin(__dirname, 'util/twse.py')} ${id} ${pw} sellall ${ca} ${capw} ${index}`, (err, output) => err ? reject(err) : resolve(output))).then(output => {
+    return execSafe(PathJoin(__dirname, 'util/twse.py'), [id, pw, 'sellall', ca, capw, String(index)]).then(output => {
         log.debug({ output }, 'sellall order output')
     });
 }

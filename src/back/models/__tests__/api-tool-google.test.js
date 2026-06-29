@@ -100,7 +100,12 @@ mockYoutubeDl.getSubs = jest.fn();
 jest.unstable_mockModule('youtube-dl-exec', () => ({ default: mockYoutubeDl }));
 jest.unstable_mockModule('path', () => ({ default: { join: jest.fn((...a) => a.join('/')) } }));
 mockChildExec = jest.fn();
-jest.unstable_mockModule('child_process', () => ({ default: { exec: mockChildExec } }));
+jest.unstable_mockModule('../../util/exec-safe.js', () => ({
+  execSafe: mockChildExec,
+  execFileWithHandle: jest.fn(),
+  concatFiles: jest.fn(),
+  appendFile: jest.fn(),
+}));
 mockMkdirp = jest.fn();
 jest.unstable_mockModule('mkdirp', () => ({ default: mockMkdirp }));
 
@@ -212,7 +217,7 @@ describe('api-tool-google.js', () => {
         setupFetch();
         mockYoutubeDl.mockResolvedValue({ formats: [] });
         mockYoutubeDl.getSubs.mockResolvedValue({});
-        mockChildExec.mockImplementation((cmd, cb) => cb(null, 'ok', ''));
+        mockChildExec.mockResolvedValue('ok');
         mockMkdirp.mockResolvedValue();
         mockFsCreateReadStream.mockReturnValue({ pipe: jest.fn() });
         mockFsUnlink.mockImplementation((p, cb) => cb && cb(null));
@@ -699,7 +704,7 @@ describe('api-tool-google.js', () => {
         });
         test('multi-page download', async () => {
             let cc = 0;
-            mockChildExec.mockImplementation((cmd, cb) => { if (cc < 2) { cc++; cb(null, '12,"p' + cc + '",' + (cc-1) + ',0'); } else { cb(new Error('end'), null); } });
+            mockChildExec.mockImplementation(() => { if (cc < 2) { cc++; return Promise.resolve('12,"p' + cc + '",' + (cc-1) + ',0'); } else { return Promise.reject(new Error('end')); } });
             const restFn = jest.fn().mockResolvedValue();
             mockHandleError.mockImplementation((e, t) => { if (t) return; return Promise.reject(e); });
             await api('download present', { user: { username: 'u' }, exportlink: 'http://x=pdf', alternate: 'http://a', filePath: '/f', rest: restFn, errhandle: jest.fn() });
@@ -707,7 +712,7 @@ describe('api-tool-google.js', () => {
             expect(restFn).toHaveBeenCalled();
         }, 15000);
         test('number=0 on error → handleError', async () => {
-            mockChildExec.mockImplementation((cmd, cb) => cb(new Error('grep fail')));
+            mockChildExec.mockRejectedValue(new Error('grep fail'));
             await api('download present', { user: { username: 'u' }, exportlink: 'http://x=pdf', alternate: 'http://a', filePath: '/f' });
             await WAIT(2000);
         }, 10000);

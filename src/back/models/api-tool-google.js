@@ -7,7 +7,7 @@ import Fetch from 'node-fetch'
 import youtubedl from 'youtube-dl-exec'
 import pathModule from 'path'
 const { join: PathJoin } = pathModule;
-import Child_process from 'child_process'
+import { execSafe } from '../util/exec-safe.js'
 import Mkdirp from 'mkdirp'
 import fsModule from 'fs'
 const { existsSync: FsExistsSync, createReadStream: FsCreateReadStream, unlink: FsUnlink, renameSync: FsRenameSync, createWriteStream: FsCreateWriteStream, statSync: FsStatSync, readdirSync: FsReaddirSync, lstatSync: FsLstatSync, writeFile: FsWriteFile } = fsModule
@@ -584,7 +584,7 @@ function downloadPresent(data) {
         const exportlink = data['exportlink'].replace('=pdf', '=svg&pageid=p');
         const dir = `${data['filePath']}_present`;
         const presentDir = () => FsExistsSync(dir) ? Promise.resolve() : Mkdirp(dir);
-        const recur_present = () => new Promise((resolve, reject) => Child_process.exec(`grep -o "12,\\\"p[0-9][0-9]*\\\",${number},0" ${present_html}`, (err, output) => err ? reject(err) : resolve(output))).then(output => {
+        const recur_present = () => execSafe('grep', ['-o', `12,"p[0-9][0-9]*",${number},0`, present_html]).then(output => {
             console.log(output);
             number++;
             const pageid = output.match(/\"p(\d+)\"/);
@@ -623,7 +623,7 @@ function downloadDoc(data) {
         }
         const dir = `${data['filePath']}_doc`;
         const docDir = () => FsExistsSync(dir) ? Promise.resolve() : Mkdirp(dir);
-        return docDir().then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), 5000))).then(() => new Promise((resolve, reject) => Child_process.exec(`${PathJoin(__dirname, 'util/myuzip.py')} ${zip} ${dir}`, (err, output) => err ? reject(err) : resolve(output)))).then(output => new Promise((resolve, reject) => FsUnlink(zip, err => err ? reject(err) : resolve()))).then(() => {
+        return docDir().then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), 5000))).then(() => execSafe(PathJoin(__dirname, 'util/myuzip.py'), [zip, dir])).then(output => new Promise((resolve, reject) => FsUnlink(zip, err => err ? reject(err) : resolve()))).then(() => {
             let doc_index = 1;
             if(FsExistsSync(dir)) {
                 FsReaddirSync(dir).forEach((file,index) => {

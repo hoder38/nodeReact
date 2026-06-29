@@ -68,10 +68,13 @@ jest.unstable_mockModule('fs', () => ({
   },
 }));
 
-// --- child_process (for cat command in join) ---
-const mockExec = jest.fn((cmd, cb) => cb(null, 'ok'));
-jest.unstable_mockModule('child_process', () => ({
-  default: { exec: mockExec },
+// --- exec-safe (for concatFiles in join) ---
+const mockConcatFiles = jest.fn().mockResolvedValue();
+jest.unstable_mockModule('../../util/exec-safe.js', () => ({
+  execSafe: jest.fn(),
+  execFileWithHandle: jest.fn(),
+  concatFiles: mockConcatFiles,
+  appendFile: jest.fn(),
 }));
 
 // --- ver.js ---
@@ -289,7 +292,7 @@ describe('playlist-router.js', () => {
     mockHandleMediaUpload.mockResolvedValue();
     mockPlaylistApi.mockResolvedValue();
     mockCreateReadStream.mockImplementation(() => makeStreamMock());
-    mockExec.mockImplementation((cmd, cb) => cb(null, 'ok'));
+    mockConcatFiles.mockResolvedValue();
     mockExtType.mockReturnValue({ type: 'video', fileIndex: 0 });
   });
 
@@ -391,7 +394,7 @@ describe('playlist-router.js', () => {
         .send({ uids: [VALID_UID, VALID_UID2] });
       expect(res.status).toBe(200);
       expect(res.body).toEqual({ id: VALID_UID, name: 'data.7z.001' });
-      expect(mockExec).toHaveBeenCalledWith(expect.stringContaining('cat'), expect.any(Function));
+      expect(mockConcatFiles).toHaveBeenCalled();
     });
 
     test('successful ZIP join uses cat command', async () => {
@@ -405,7 +408,7 @@ describe('playlist-router.js', () => {
         .set('x-test-user', u(ADMIN))
         .send({ uids: [VALID_UID, VALID_UID2] });
       expect(res.status).toBe(200);
-      expect(mockExec).toHaveBeenCalledWith(expect.stringContaining('cat'), expect.any(Function));
+      expect(mockConcatFiles).toHaveBeenCalled();
     });
 
     test('case-insensitive extension matching (Part01.RAR)', async () => {
@@ -440,7 +443,7 @@ describe('playlist-router.js', () => {
       mockMongo
         .mockResolvedValueOnce([makeItem({ _id: VALID_UID, name: 'data.7z.001', owner: ADMIN._id })])
         .mockResolvedValueOnce([makeItem({ _id: VALID_UID2, name: 'data.7z.002', owner: ADMIN._id })]);
-      mockExec.mockImplementation((cmd, cb) => cb(new Error('exec fail'), ''));
+      mockConcatFiles.mockRejectedValue(new Error('exec fail'));
 
       const res = await request(app)
         .put('/join')
