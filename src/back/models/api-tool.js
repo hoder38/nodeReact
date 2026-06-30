@@ -5,13 +5,14 @@ import Fetch from 'node-fetch'
 import querystring from 'querystring'
 const { stringify: QStringify } = querystring;
 import fsModule from 'fs'
-const { createWriteStream: FsCreateWriteStream, statSync: FsStatSync, unlink: FsUnlink, existsSync: FsExistsSync, renameSync: FsRenameSync } = fsModule;
+const { createWriteStream: FsCreateWriteStream, unlink: FsUnlink } = fsModule;
 import pathModule from 'path'
 const { basename: PathBasename } = pathModule;
 import urlModule from 'url'
 const { parse: UrlParse } = urlModule;
 import utf8 from 'utf8';
-import { handleError, HoError, big5Encode, bufferToString, isEmptyObject } from '../util/utility.js'
+import { stat, rename } from 'fs/promises'
+import { handleError, HoError, big5Encode, bufferToString, isEmptyObject, fsExists } from '../util/utility.js'
 import sendWs from '../util/sendWs.js'
 
 let api_ing = 0;
@@ -141,7 +142,7 @@ function download(user, url, { filePath=null, is_check=true, referer=null, is_js
         not_utf8 ? Object.entries(post).forEach(f => qspost = qspost ? `${qspost}&${f[0]}=${big5Encode(f[1])}` : `${f[0]}=${big5Encode(f[1])}`) : qspost = QStringify(post);
     }
     const temp = `${filePath}_t`;
-    const checkTmp = () => FsExistsSync(temp) ? new Promise((resolve, reject) => FsUnlink(temp, err => err ? reject(err) : resolve())) : Promise.resolve();
+    const checkTmp = () => fsExists(temp).then(exists => exists ? new Promise((resolve, reject) => FsUnlink(temp, err => err ? reject(err) : resolve())) : Promise.resolve());
     let index = 0;
     const proc = () => Fetch(utf8.encode(url), Object.assign({cache: 'no-store'}, {headers: Object.assign(referer ? {'Referer': referer} : {}, user ? {} : agent ? agent : {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Safari/537.36'}, cookie ? {Cookie: cookie} : {}, qspost !== null ? {
             'Content-Type': 'application/x-www-form-urlencoded',
@@ -162,9 +163,9 @@ function download(user, url, { filePath=null, is_check=true, referer=null, is_js
                 res.body.pipe(dest);
                 dest.on('finish', () => resolve());
                 dest.on('error', err => reject(err));
-            }).then(() => {
-                FsRenameSync(temp, filePath);
-                if (is_check && (!res.headers.get('content-length') || Number(res.headers.get('content-length')) !== FsStatSync(filePath)['size'])) {
+            }).then(async () => {
+                await rename(temp, filePath);
+                if (is_check && (!res.headers.get('content-length') || Number(res.headers.get('content-length')) !== (await stat(filePath))['size'])) {
                     return handleError(new HoError('incomplete download'), errHandle);
                 }
                 if (rest) {
@@ -180,7 +181,7 @@ function download(user, url, { filePath=null, is_check=true, referer=null, is_js
                 const dest = FsCreateWriteStream(temp);
                 res.body.pipe(dest);
                 dest.on('finish', () => resolve());
-            })).then(() => FsRenameSync(temp, filePath)) : res.buffer().then(buffer => bufferToString(buffer, big5));
+            })).then(() => rename(temp, filePath)) : res.buffer().then(buffer => bufferToString(buffer, big5));
         }
     }).catch(err => {
         if (err.code === 'HPE_INVALID_CONSTANT') {

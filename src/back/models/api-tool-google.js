@@ -10,12 +10,13 @@ const { join: PathJoin } = pathModule;
 import { execSafe } from '../util/exec-safe.js'
 import Mkdirp from 'mkdirp'
 import fsModule from 'fs'
-const { existsSync: FsExistsSync, createReadStream: FsCreateReadStream, unlink: FsUnlink, renameSync: FsRenameSync, createWriteStream: FsCreateWriteStream, statSync: FsStatSync, readdirSync: FsReaddirSync, lstatSync: FsLstatSync, writeFile: FsWriteFile } = fsModule
+const { createReadStream: FsCreateReadStream, unlink: FsUnlink, createWriteStream: FsCreateWriteStream, writeFile: FsWriteFile } = fsModule
+import { stat, lstat, rename, readdir } from 'fs/promises'
 import PQueue from 'p-queue'
 import { Mutex } from 'async-mutex'
 import Mongo from '../models/mongo-tool.js'
 import MediaHandleTool from '../models/mediaHandle-tool.js'
-import { handleError, HoError, isValidString } from '../util/utility.js'
+import { handleError, HoError, isValidString, fsExists } from '../util/utility.js'
 import { mediaMIME, isKindle } from '../util/mime.js'
 import sendWs from '../util/sendWs.js'
 
@@ -120,17 +121,17 @@ const setToken = () => {
 }
 
 //need utf8 ansi
-function sendMail(data) {
+async function sendMail(data) {
     if (!data['name'] || !data['filePath'] || !data['kindle']) {
         return handleError(new HoError('mail parameter lost!!!'));
     }
     if (!isKindle(data['name'])) {
         return handleError(new HoError('Unsupported kindle format!!!'));
     }
-    if (!FsExistsSync(data['filePath'])) {
+    if (!await fsExists(data['filePath'])) {
         return handleError(new HoError('file not exist!!!'));
     }
-    if (FsStatSync(data['filePath'])['size'] > KINDLE_LIMIT) {
+    if ((await stat(data['filePath']))['size'] > KINDLE_LIMIT) {
         return handleError(new HoError('file too large!!!'));
     }
     const gmail = googleapis.gmail({
@@ -441,7 +442,7 @@ function download(data) {
         return handleError(new HoError('download parameter lost!!!'), data['errhandle']);
     }
     const temp = `${data['filePath']}_t`;
-    const checkTmp = () => FsExistsSync(temp) ? new Promise((resolve, reject) => FsUnlink(temp, err => err ? reject(err) : resolve())) : Promise.resolve();
+    const checkTmp = () => fsExists(temp).then(exists => exists ? new Promise((resolve, reject) => FsUnlink(temp, err => err ? reject(err) : resolve())) : Promise.resolve());
     let index = 0;
     const proc = () => Fetch(data['url'], {headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
@@ -451,9 +452,9 @@ function download(data) {
         res.body.pipe(dest);
         dest.on('finish', () => resolve());
         dest.on('error', err => reject(err));
-    })).then(() => {
-        FsRenameSync(temp, data['filePath']);
-        if (res.headers.get('content-length') && Number(res.headers.get('content-length')) !== FsStatSync(data['filePath'])['size']) {
+    })).then(async () => {
+        await rename(temp, data['filePath']);
+        if (res.headers.get('content-length') && Number(res.headers.get('content-length')) !== (await stat(data['filePath']))['size']) {
             return handleError(new HoError('incomplete download'));
         }
         if (data['rest']) {
@@ -543,16 +544,16 @@ function downloadMedia(data) {
         if (!media_id) {
             return handleError(new HoError('quality low'));
         }
-        const getSavePath = () => FsExistsSync(data['filePath']) ? FsExistsSync(`${data['filePath']}_t`) ? new Promise((resolve, reject) => FsUnlink(`${data['filePath']}_t`, err => err ? reject(err) : resolve(`${data['filePath']}_t`))) : Promise.resolve(`${data['filePath']}_t`) : Promise.resolve(data['filePath']);
+        const getSavePath = async () => await fsExists(data['filePath']) ? await fsExists(`${data['filePath']}_t`) ? new Promise((resolve, reject) => FsUnlink(`${data['filePath']}_t`, err => err ? reject(err) : resolve(`${data['filePath']}_t`))) : Promise.resolve(`${data['filePath']}_t`) : Promise.resolve(data['filePath']);
         return getSavePath().then(savePath => youtubedl(`https://drive.google.com/open?id=${data['key']}`, {
             format: media_id,
             output: savePath,
             writeThumbnail: true
         }).then(() => {
-            const clearPath = () => savePath === data['filePath'] ? Promise.resolve() : new Promise((resolve, reject) => FsUnlink(data['filePath'], err => err ? reject(err) : resolve())).then(() => FsRenameSync(savePath, data['filePath']));
-            return clearPath().then(() => {
-                if (FsExistsSync(`${savePath}.jpg`)) {
-                    FsRenameSync(`${savePath}.jpg`, `${data['filePath']}_s.jpg`);
+            const clearPath = () => savePath === data['filePath'] ? Promise.resolve() : new Promise((resolve, reject) => FsUnlink(data['filePath'], err => err ? reject(err) : resolve())).then(() => rename(savePath, data['filePath']));
+            return clearPath().then(async () => {
+                if (await fsExists(`${savePath}.jpg`)) {
+                    await rename(`${savePath}.jpg`, `${data['filePath']}_s.jpg`);
                 }
                 if (data['rest']) {
                     return () => new Promise((resolve, reject) => setTimeout(() => resolve(), 0)).then(() => data['rest'](currentHeight)).catch(err => data['errhandle'](err));
@@ -583,7 +584,7 @@ function downloadPresent(data) {
     }).then(() => {
         const exportlink = data['exportlink'].replace('=pdf', '=svg&pageid=p');
         const dir = `${data['filePath']}_present`;
-        const presentDir = () => FsExistsSync(dir) ? Promise.resolve() : Mkdirp(dir);
+        const presentDir = () => fsExists(dir).then(exists => exists ? Promise.resolve() : Mkdirp(dir));
         const recur_present = () => execSafe('grep', ['-o', `12,"p[0-9][0-9]*",${number},0`, present_html]).then(output => {
             console.log(output);
             number++;
@@ -617,35 +618,35 @@ function downloadDoc(data) {
     return download({
         url: data['exportlink'].replace('=pdf', '=zip'),
         filePath: zip,
-    }).then(() => {
-        if (!FsExistsSync(zip)) {
+    }).then(async () => {
+        if (!await fsExists(zip)) {
             return handleError(new HoError('cannot find zip'));
         }
         const dir = `${data['filePath']}_doc`;
-        const docDir = () => FsExistsSync(dir) ? Promise.resolve() : Mkdirp(dir);
-        return docDir().then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), 5000))).then(() => execSafe(PathJoin(__dirname, 'util/myuzip.py'), [zip, dir])).then(output => new Promise((resolve, reject) => FsUnlink(zip, err => err ? reject(err) : resolve()))).then(() => {
+        const docDir = () => fsExists(dir).then(exists => exists ? Promise.resolve() : Mkdirp(dir));
+        return docDir().then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), 5000))).then(() => execSafe(PathJoin(__dirname, 'util/myuzip.py'), [zip, dir])).then(output => new Promise((resolve, reject) => FsUnlink(zip, err => err ? reject(err) : resolve()))).then(async () => {
             let doc_index = 1;
-            if(FsExistsSync(dir)) {
-                FsReaddirSync(dir).forEach((file,index) => {
+            if(await fsExists(dir)) {
+                for (const file of await readdir(dir)) {
                     const curPath = `${dir}/${file}`;
-                    if(!FsLstatSync(curPath).isDirectory()) {
+                    if(!(await lstat(curPath)).isDirectory()) {
                         for (doc_index; doc_index < 100;doc_index++) {
                             if (doc_index === 1) {
                                 const first = `${dir}/doc.html`;
-                                if (!FsExistsSync(first)) {
-                                    FsRenameSync(curPath, first);
+                                if (!await fsExists(first)) {
+                                    await rename(curPath, first);
                                     break;
                                 }
                             } else {
                                 const other = `${dir}/doc${doc_index}.html`;
-                                if (!FsExistsSync(other)) {
-                                    FsRenameSync(curPath, other);
+                                if (!await fsExists(other)) {
+                                    await rename(curPath, other);
                                     break;
                                 }
                             }
                         }
                     }
-                });
+                }
             }
             if (data['rest']) {
                 return () => new Promise((resolve, reject) => setTimeout(() => resolve(), 0)).then(() => data['rest'](doc_index)).catch(err => data['errhandle'](err));
@@ -654,7 +655,7 @@ function downloadDoc(data) {
     });
 }
 
-export function googleBackup(user, id, name, filePath, tags, recycle, append='') {
+export async function googleBackup(user, id, name, filePath, tags, recycle, append='') {
     switch (recycle) {
         case 1:
         return api('upload', {
@@ -664,17 +665,17 @@ export function googleBackup(user, id, name, filePath, tags, recycle, append='')
             filePath: `${filePath}${append}`,
         });
         case 2:
-        return FsExistsSync(`${filePath}.srt`) ? api('upload', {
+        return await fsExists(`${filePath}.srt`) ? api('upload', {
             user,
             type: 'backup',
             name: `${id}.${name}.srt`,
             filePath: `${filePath}.srt`,
-        }) : FsExistsSync(`${filePath}.ass`) ? api('upload', {
+        }) : await fsExists(`${filePath}.ass`) ? api('upload', {
             user: user,
             type: 'backup',
             name: `${id}.${name}.ass`,
             filePath: `${filePath}.ass`,
-        }) : FsExistsSync(`${filePath}.ssa`) ? api('upload', {
+        }) : await fsExists(`${filePath}.ssa`) ? api('upload', {
             user,
             type: 'backup',
             name: `${id}.${name}.ssa`,
@@ -786,17 +787,17 @@ export const sendPresentName = (text, mail, append=null) => api('send name', {ti
 
 export const sendLotteryName = (title, text, mail) => api('send name', {title, text: text, mail});
 
-export const googleBackupDb = backupDate => api('create', {name: backupDate, parent: GOOGLE_DB_BACKUP_FOLDER(ENV_TYPE)}).then(metadata => {
+export const googleBackupDb = backupDate => api('create', {name: backupDate, parent: GOOGLE_DB_BACKUP_FOLDER(ENV_TYPE)}).then(async metadata => {
     const backup_collection = [];
-    FsReaddirSync(`${BACKUP_PATH(ENV_TYPE)}/${backupDate}`).forEach((file,index) => {
+    for (const file of await readdir(`${BACKUP_PATH(ENV_TYPE)}/${backupDate}`)) {
         const list = [];
-        FsReaddirSync(`${BACKUP_PATH(ENV_TYPE)}/${backupDate}/${file}`).forEach((file1,index1) => list.push(file1));
+        for (const file1 of await readdir(`${BACKUP_PATH(ENV_TYPE)}/${backupDate}/${file}`)) list.push(file1);
         backup_collection.push({
             name: file,
             path: `${BACKUP_PATH(ENV_TYPE)}/${backupDate}/${file}`,
             list,
         });
-    });
+    }
     const create_collection = index => {
         if (index >= backup_collection.length) {
             console.log(backup_collection);

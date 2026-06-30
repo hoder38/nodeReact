@@ -2,7 +2,8 @@ import { ENV_TYPE } from '../../../ver.js'
 import { TORRENT_LIMIT, ZIP_LIMIT, MEGA_LIMIT, NAS_TMP } from '../config.js'
 import { TORRENT_CONNECT, TORRENT_UPLOAD, STORAGEDB, TORRENT_DURATION, ZIP_DURATION, MEGA_DURATION, __dirname, BEST_TRACKER_LIST } from '../constants.js'
 import fsModule from 'fs'
-const { existsSync: FsExistsSync, unlink: FsUnlink, createReadStream: FsCreateReadStream, createWriteStream: FsCreateWriteStream, statSync: FsStatSync, renameSync: FsRenameSync, readdirSync: FsReaddirSync, lstatSync: FsLstatSync } = fsModule;
+const { unlink: FsUnlink, createReadStream: FsCreateReadStream, createWriteStream: FsCreateWriteStream } = fsModule;
+import { stat, lstat, rename, readdir } from 'fs/promises'
 import pathModule from 'path'
 const { basename: PathBasename, join: PathJoin, dirname: PathDirname } = pathModule
 import { execFileWithHandle } from '../util/exec-safe.js'
@@ -12,7 +13,7 @@ import Mkdirp from 'mkdirp'
 import { Mutex } from 'async-mutex'
 import Mongo from '../models/mongo-tool.js'
 import MediaHandleTool, { errorMedia } from '../models/mediaHandle-tool.js'
-import { handleError, HoError, getFileLocation, checkAdmin, deleteFolderRecursive, sortList } from '../util/utility.js'
+import { handleError, HoError, getFileLocation, checkAdmin, deleteFolderRecursive, sortList, fsExists } from '../util/utility.js'
 import { isVideo, isDoc, isZipbook, extType, extTag } from '../util/mime.js'
 //import computeHash from '../util/os-torrent-hash.js'
 import sendWs from '../util/sendWs.js'
@@ -259,30 +260,30 @@ const startMega = (user, url, filePath, data) => {
                 }
             }
         });
-        return wrappedPromise.then(output => {
+        return wrappedPromise.then(async output => {
             let playList = [];
-            const megaFolder = (previous, depth=0) => {
+            const megaFolder = async (previous, depth=0) => {
                 if (depth > 20) return;
-                FsReaddirSync(`${real}/${previous}`).forEach((file,index) => {
+                for (const file of await readdir(`${real}/${previous}`)) {
                     const next = (previous === '') ? file : `${previous}/${file}`;
                     const curPath = `${real}/${next}`;
-                    if (FsLstatSync(curPath).isDirectory()) {
-                        megaFolder(next, depth + 1);
+                    if ((await lstat(curPath)).isDirectory()) {
+                        await megaFolder(next, depth + 1);
                     } else {
                         playList.push(next);
                     }
-                });
+                }
             };
-            megaFolder('');
+            await megaFolder('');
             playList = sortList(playList);
             if (playList.length < 1) {
                 megaComplete();
                 return handleError(new HoError('mega empty'), data['errhandle']);
             }
             if (playList.length === 1) {
-                FsRenameSync(`${real}/${playList[0]}`, `${filePath}_t`);
-                deleteFolderRecursive(filePath);
-                FsRenameSync(`${filePath}_t`, filePath);
+                await rename(`${real}/${playList[0]}`, `${filePath}_t`);
+                await deleteFolderRecursive(filePath);
+                await rename(`${filePath}_t`, filePath);
                 megaComplete(true);
                 if (data['rest']) {
                     return () => new Promise((resolve, reject) => setTimeout(() => resolve(), 0)).then(() => data['rest']([PathBasename(playList[0]), new Set(['mega upload']), new Set()])).catch(err => data['errhandle'](err));
@@ -314,14 +315,16 @@ const startMega = (user, url, filePath, data) => {
                     if (index < playList.length) {
                         return recur_media(index);
                     } else {
-                        deleteFolderRecursive(`${PathDirname(filePath)}/mega`);
-                        megaComplete(true);
-                        if (data['rest']) {
-                            return () => new Promise((resolve, reject) => setTimeout(() => resolve(), 0)).then(() => data['rest']([PathBasename(playList[0]), setTag, optTag, {
-                                mega: encodeURIComponent(url),
-                                playList,
-                            }])).catch(err => data['errhandle'](err));
-                        }
+                        return deleteFolderRecursive(`${PathDirname(filePath)}/mega`).then(() => {
+                            return megaComplete(true).then(() => {
+                                if (data['rest']) {
+                                    return () => new Promise((resolve, reject) => setTimeout(() => resolve(), 0)).then(() => data['rest']([PathBasename(playList[0]), setTag, optTag, {
+                                        mega: encodeURIComponent(url),
+                                        playList,
+                                    }])).catch(err => data['errhandle'](err));
+                                }
+                            });
+                        });
                     }
                 });
                 return recur_media(0);
@@ -339,7 +342,7 @@ const startMega = (user, url, filePath, data) => {
                     }
                     mega_pool.splice(i, 1);
                     if (!is_success) {
-                        deleteFolderRecursive(entry.filePath);
+                        return deleteFolderRecursive(entry.filePath);
                     }
                     break;
                 }
@@ -349,7 +352,7 @@ const startMega = (user, url, filePath, data) => {
     }
 }
 
-const megaAdd = (user, url, filePath, data={})  => megaMutex.runExclusive(() => {
+const megaAdd = (user, url, filePath, data={})  => megaMutex.runExclusive(async () => {
     let is_queue = false;
     let runNum = 0;
     for (let i of mega_pool) {
@@ -361,20 +364,22 @@ const megaAdd = (user, url, filePath, data={})  => megaMutex.runExclusive(() => 
             console.log(real);
             let filename = 'Mega file';
             let size = 0;
-            const recur_size = previous => FsReaddirSync(`${real}/${previous}`).forEach((file,index) => {
-                const next = (previous === '') ? file : `${previous}/${file}`;
-                const curPath = `${real}/${next}`;
-                if (FsLstatSync(curPath).isDirectory()) {
-                    recur_size(next);
-                } else {
-                    size += FsStatSync(curPath).size;
-                    if (filename === 'Mega file') {
-                        filename = next;
+            const recur_size = async previous => {
+                for (const file of await readdir(`${real}/${previous}`)) {
+                    const next = (previous === '') ? file : `${previous}/${file}`;
+                    const curPath = `${real}/${next}`;
+                    if ((await lstat(curPath)).isDirectory()) {
+                        await recur_size(next);
+                    } else {
+                        size += (await stat(curPath)).size;
+                        if (filename === 'Mega file') {
+                            filename = next;
+                        }
                     }
                 }
-            });
-            if (FsExistsSync(real)) {
-                recur_size('');
+            };
+            if (await fsExists(real)) {
+                await recur_size('');
                 sendWs({
                     type: user.username,
                     data: `${filename}: ${Math.floor(size / 1024 / 1024 * 100) / 100}MB`,
@@ -404,10 +409,10 @@ const megaAdd = (user, url, filePath, data={})  => megaMutex.runExclusive(() => 
     return is_run ? startMega(user, url, filePath, data) : Promise.resolve();
 });
 
-const startZip = (user, index, id, owner, name, pwd, zip_type) => Mongo('update', STORAGEDB, {_id: id}, {$set: {utime: Math.round(new Date().getTime() / 1000)}}).then(() => {
+const startZip = (user, index, id, owner, name, pwd, zip_type) => Mongo('update', STORAGEDB, {_id: id}, {$set: {utime: Math.round(new Date().getTime() / 1000)}}).then(async () => {
     const filePath = getFileLocation(owner, id);
     const comPath = `${filePath}/${index}_complete`;
-    if (FsExistsSync(comPath)) {
+    if (await fsExists(comPath)) {
         return zipComplete();
     } else {
         const realPath = `${filePath}/real`;
@@ -431,7 +436,7 @@ const startZip = (user, index, id, owner, name, pwd, zip_type) => Mongo('update'
         }
         console.log(extractCmd, extractArgs);
         const realName = `${realPath}/${name}`;
-        const unReal = () => FsExistsSync(realName) ? new Promise((resolve, reject) => FsUnlink(realName, err => err ? zipComplete().then(() => reject(err)) : resolve())) : Promise.resolve();
+        const unReal = () => fsExists(realName).then(exists => exists ? new Promise((resolve, reject) => FsUnlink(realName, err => err ? zipComplete().then(() => reject(err)) : resolve())) : Promise.resolve());
         return unReal().then(() => {
             const { chp, promise } = execFileWithHandle(extractCmd, extractArgs);
             const wrappedPromise = promise.catch(err => zipComplete().then(() => Promise.reject(err)));
@@ -482,21 +487,22 @@ const startZip = (user, index, id, owner, name, pwd, zip_type) => Mongo('update'
 
 function zipAdd(user, index, id, owner, name, pwd='') {
     const filePath = getFileLocation(owner, id);
-    const zip_type = FsExistsSync(`${filePath}_zip_c`) ? 4 : FsExistsSync(`${filePath}_7z_c`) ? 5 : FsExistsSync(`${filePath}_zip`) ? 1 : FsExistsSync(`${filePath}.1.rar`) ? 2 : FsExistsSync(`${filePath}_7z`) ? 3 : 0;
-    if (!zip_type) {
-        return handleError(new HoError('not zip'));
-    }
-    return zipMutex.runExclusive(() => {
+    return Promise.all([fsExists(`${filePath}_zip_c`), fsExists(`${filePath}_7z_c`), fsExists(`${filePath}_zip`), fsExists(`${filePath}.1.rar`), fsExists(`${filePath}_7z`)]).then(([hasZipC, has7zC, hasZip, hasRar, has7z]) => {
+        const zip_type = hasZipC ? 4 : has7zC ? 5 : hasZip ? 1 : hasRar ? 2 : has7z ? 3 : 0;
+        if (!zip_type) {
+            return handleError(new HoError('not zip'));
+        }
+        return zipMutex.runExclusive(async () => {
         let is_queue = false;
         let runNum = 0;
         for (let i of zip_pool) {
             if (id.equals(i.fileId) && i.index === index) {
                 is_queue = true;
                 const realName = `${filePath}/real/${i.name}`;
-                if (FsExistsSync(realName)) {
+                if (await fsExists(realName)) {
                     sendWs({
                         type: user.username,
-                        data: `${i.name}: ${Math.floor(FsStatSync(realName).size / 1024 / 1024 * 100) / 100}MB`,
+                        data: `${i.name}: ${Math.floor((await stat(realName)).size / 1024 / 1024 * 100) / 100}MB`,
                     }, 0);
                 }
             }
@@ -524,10 +530,11 @@ function zipAdd(user, index, id, owner, name, pwd='') {
             } : {run: false}));
         }
         return is_run ? startZip(user, index, id, owner, name, pwd, zip_type) : Promise.resolve();
+        });
     });
 }
 
-const startTorrent = (user, id, owner, index, hash, engine) => Mongo('update', STORAGEDB, {_id: id}, {$set: {utime: Math.round(new Date().getTime() / 1000)}}).then(() => {
+const startTorrent = (user, id, owner, index, hash, engine) => Mongo('update', STORAGEDB, {_id: id}, {$set: {utime: Math.round(new Date().getTime() / 1000)}}).then(async () => {
     const filePath = getFileLocation(owner, id);
     const bufferPath = `${filePath}/${index}`;
     const comPath = `${bufferPath}_complete`;
@@ -552,8 +559,8 @@ const startTorrent = (user, id, owner, index, hash, engine) => Mongo('update', S
         console.log(file.length);
         console.log('torrent real start');
         console.log(bufferPath);
-        if (FsExistsSync(bufferPath)) {
-            const size = FsStatSync(bufferPath).size;
+        if (await fsExists(bufferPath)) {
+            const size = (await stat(bufferPath)).size;
             console.log(size);
             return (size >= file.length) ? torrentComplete(true, file.path) : new Promise((resolve, reject) => {
                 const fileStream = file.createReadStream({start: size});
@@ -625,8 +632,8 @@ const startTorrent = (user, id, owner, index, hash, engine) => Mongo('update', S
             });
         }
     }
-    function torrentComplete(is_success=false, exitPath=bufferPath) {
-        return torrentMutex.runExclusive(() => {
+    async function torrentComplete(is_success=false, exitPath=bufferPath) {
+        return torrentMutex.runExclusive(async () => {
             console.log('torrent complete');
             for (let i in torrent_pool) {
                 if (torrent_pool[i].hash === hash) {
@@ -644,7 +651,7 @@ const startTorrent = (user, id, owner, index, hash, engine) => Mongo('update', S
                 }
             }
             if (is_success) {
-                FsRenameSync(bufferPath, comPath);
+                await rename(bufferPath, comPath);
                 if (isVideo(exitPath) || isDoc(exitPath) || isZipbook(exitPath)) {
                     const dbPath = `${filePath}/real/${exitPath}`;
                     return MediaHandleTool.handleTag(dbPath, {}, PathBasename(exitPath), '', 0, false).then(([mediaType, mediaTag, DBdata]) => {
@@ -672,7 +679,7 @@ function torrentAdd(user, torrent, fileIndex, id, owner, pType=0) {
     let bufferPath = `${filePath}/${fileIndex}`;
     let is_queue = false;
     let engine = null;
-    return torrentMutex.runExclusive(() => {
+    return torrentMutex.runExclusive(async () => {
         for (let i in torrent_pool) {
             if (torrent_pool[i].hash === shortTorrent) {
                 is_queue = true;
@@ -689,16 +696,16 @@ function torrentAdd(user, torrent, fileIndex, id, owner, pType=0) {
                         if (pType === 1) {
                             let totalDSize = 0;
                             let totalSize = 0;
-                            torrent_pool[i].engine.files.forEach((v, j) => {
+                            for (const [j, v] of torrent_pool[i].engine.files.entries()) {
                                 const DPath = `${filePath}/${j}`;
                                 const CDPath = `${DPath}_complete`;
                                 totalSize += v.length;
-                                if (FsExistsSync(CDPath)) {
+                                if (await fsExists(CDPath)) {
                                     totalDSize += v.length;
-                                } else if (FsExistsSync(DPath)) {
-                                    totalDSize += FsStatSync(DPath).size;
+                                } else if (await fsExists(DPath)) {
+                                    totalDSize += (await stat(DPath)).size;
                                 }
-                            });
+                            }
                             const percent = totalSize > 0 ? Math.ceil(totalDSize / totalSize * 100) : 0;
                             sendWs({
                                 type: user.username,
@@ -716,9 +723,9 @@ function torrentAdd(user, torrent, fileIndex, id, owner, pType=0) {
                             }
                             if (torrent_pool[i].engine.files[tIndex]) {
                                 let percent = 0;
-                                if (FsExistsSync(bufferPath)) {
+                                if (await fsExists(bufferPath)) {
                                     if (torrent_pool[i].engine.files[tIndex].length > 0) {
-                                        percent = Math.ceil(FsStatSync(bufferPath).size / torrent_pool[i].engine.files[tIndex].length * 100);
+                                        percent = Math.ceil((await stat(bufferPath)).size / torrent_pool[i].engine.files[tIndex].length * 100);
                                     }
                                 }
                                 console.log(percent);
@@ -957,20 +964,20 @@ function zipStop(user, index=false) {
     return Promise.resolve();
 }
 
-function megaStop(user, index=false) {
+async function megaStop(user, index=false) {
     if (user) {
         const toRemove = [];
-        mega_pool.forEach(i => {
+        for (const i of mega_pool) {
             if (user._id.equals(i.user._id)) {
                 console.log('mega stop');
                 console.log(i);
                 if (i.run && i.chp) {
                     i.chp.kill('SIGKILL');
                 }
-                deleteFolderRecursive(i.filePath);
+                await deleteFolderRecursive(i.filePath);
                 toRemove.push(i.url);
             }
-        });
+        }
         for (let j = mega_pool.length - 1; j >= 0; j--) {
             if (toRemove.includes(mega_pool[j].url)) {
                 mega_pool.splice(j, 1);
@@ -981,7 +988,7 @@ function megaStop(user, index=false) {
             console.log(mega_pool[index]);
             if (mega_pool[index].run && mega_pool[index].chp) {
                 mega_pool[index].chp.kill('SIGKILL');
-                deleteFolderRecursive(mega_pool[index].filePath);
+                await deleteFolderRecursive(mega_pool[index].filePath);
             }
             const url = mega_pool[index].url;
             for (let j in mega_pool) {

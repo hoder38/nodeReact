@@ -1,12 +1,12 @@
 import { STORAGEDB, NOISE_TIME } from '../constants.js'
 import Express from 'express'
 import fsModule from 'fs'
-const { existsSync: FsExistsSync, unlink: FsUnlink } = fsModule;
+const { unlink: FsUnlink } = fsModule;
 import MediaHandleTool, { handleMediaError, completeMedia } from '../models/mediaHandle-tool.js'
 import { googleBackup } from '../models/api-tool-google.js'
 import Mongo from '../models/mongo-tool.js'
 import TagTool from '../models/tag-tool.js'
-import { checkLogin, handleError, HoError, getFileLocation, checkAdmin, deleteFolderRecursive, isValidString } from '../util/utility.js'
+import { checkLogin, handleError, HoError, getFileLocation, checkAdmin, deleteFolderRecursive, isValidString, fsExists } from '../util/utility.js'
 import sendWs from '../util/sendWs.js'
 import { supplyTag, isVideo } from '../util/mime.js'
 
@@ -38,7 +38,7 @@ router.delete('/del/:uid/:recycle', function(req, res, next) {
     if (!id) {
         return handleError(new HoError('uid is not vaild'), next);
     }
-    Mongo('find', STORAGEDB, {_id: id}, {limit: 1}).then(items => {
+    Mongo('find', STORAGEDB, {_id: id}, {limit: 1}).then(async items => {
         if (items.length === 0) {
             return handleError(new HoError('file can not be fund!!!'));
         }
@@ -58,17 +58,17 @@ router.delete('/del/:uid/:recycle', function(req, res, next) {
             if (items[0].status === 7 || items[0].status === 8 || items[0].thumb) {
                 return rest();
             } else if (items[0].status === 9) {
-                deleteFolderRecursive(filePath);
-                const zip_filePath = FsExistsSync(`${filePath}_zip`) ? `${filePath}_zip` : FsExistsSync(`${filePath}_7z`) ? `${filePath}_7z` : FsExistsSync(`${filePath}.1.rar`) ? `${filePath}.1.rar` : null;
+                await deleteFolderRecursive(filePath);
+                const zip_filePath = await fsExists(`${filePath}_zip`) ? `${filePath}_zip` : await fsExists(`${filePath}_7z`) ? `${filePath}_7z` : await fsExists(`${filePath}.1.rar`) ? `${filePath}.1.rar` : null;
                 if (zip_filePath) {
                     let del_arr = [zip_filePath];
-                    if (FsExistsSync(`${filePath}_zip_c`)) {
+                    if (await fsExists(`${filePath}_zip_c`)) {
                         del_arr.push(`${filePath}_zip_c`);
-                    } else if (FsExistsSync(`${filePath}_7z_c`)) {
+                    } else if (await fsExists(`${filePath}_7z_c`)) {
                         del_arr.push(`${filePath}_7z_c`);
                     } else {
                         let rIndex = 2;
-                        while (FsExistsSync(`${filePath}.${rIndex}.rar`)) {
+                        while (await fsExists(`${filePath}.${rIndex}.rar`)) {
                             del_arr.push(`${filePath}.${rIndex}.rar`);
                             rIndex++;
                         }
@@ -80,38 +80,40 @@ router.delete('/del/:uid/:recycle', function(req, res, next) {
                 }
             } else {
                 let del_arr = [filePath];
-                if (FsExistsSync(`${filePath}.jpg`)) {
+                if (await fsExists(`${filePath}.jpg`)) {
                     del_arr.push(`${filePath}.jpg`);
                 }
-                if (FsExistsSync(`${filePath}_s.jpg`)) {
+                if (await fsExists(`${filePath}_s.jpg`)) {
                     del_arr.push(`${filePath}_s.jpg`);
                 }
-                if (FsExistsSync(`${filePath}.srt`)) {
+                if (await fsExists(`${filePath}.srt`)) {
                     del_arr.push(`${filePath}.srt`);
                 }
-                if (FsExistsSync(`${filePath}.srt1`)) {
+                if (await fsExists(`${filePath}.srt1`)) {
                     del_arr.push(`${filePath}.srt1`);
                 }
-                if (FsExistsSync(`${filePath}.ass`)) {
+                if (await fsExists(`${filePath}.ass`)) {
                     del_arr.push(`${filePath}.ass`);
                 }
-                if (FsExistsSync(`${filePath}.ass1`)) {
+                if (await fsExists(`${filePath}.ass1`)) {
                     del_arr.push(`${filePath}.ass1`);
                 }
-                if (FsExistsSync(`${filePath}.ssa`)) {
+                if (await fsExists(`${filePath}.ssa`)) {
                     del_arr.push(`${filePath}.ssa`);
                 }
-                if (FsExistsSync(`${filePath}.ssa1`)) {
+                if (await fsExists(`${filePath}.ssa1`)) {
                     del_arr.push(`${filePath}.ssa1`);
                 }
-                if (FsExistsSync(`${filePath}.vtt`)) {
+                if (await fsExists(`${filePath}.vtt`)) {
                     del_arr.push(`${filePath}.vtt`);
                 }
                 console.log(del_arr);
-                deleteFolderRecursive(`${filePath}_doc`);
-                deleteFolderRecursive(`${filePath}_img`);
-                deleteFolderRecursive(`${filePath}_present`);
-                deleteFolderRecursive(`${filePath}_sub`);
+                await Promise.all([
+                    deleteFolderRecursive(`${filePath}_doc`),
+                    deleteFolderRecursive(`${filePath}_img`),
+                    deleteFolderRecursive(`${filePath}_present`),
+                    deleteFolderRecursive(`${filePath}_sub`),
+                ]);
                 return Promise.all(del_arr.map(d => new Promise((resolve, reject) => FsUnlink(d, err => err ? reject(err) : resolve())))).then(() => rest());
             }
         } else {
@@ -129,13 +131,13 @@ router.delete('/del/:uid/:recycle', function(req, res, next) {
                 res.json({apiOK: true});
             }));
         }
-        function recur_backup(recycle) {
+        async function recur_backup(recycle) {
             if (items[0].status === 7 || items[0].status === 8 || items[0].thumb) {
                 return Promise.resolve();
             } else if (items[0].status === 9) {
                 const total_file = items[0].playList.length;
                 if (total_file > 0) {
-                    const zip_filePath = FsExistsSync(`${filePath}_zip`) ? `${filePath}_zip` : FsExistsSync(`${filePath}_7z`) ? `${filePath}_7z` : FsExistsSync(`${filePath}.1.rar`) ? `${filePath}.1.rar` : null;
+                    const zip_filePath = await fsExists(`${filePath}_zip`) ? `${filePath}_zip` : await fsExists(`${filePath}_7z`) ? `${filePath}_7z` : await fsExists(`${filePath}.1.rar`) ? `${filePath}.1.rar` : null;
                     if (zip_filePath) {
                         console.log(zip_filePath);
                         return googleBackup(req.user, items[0]._id, items[0].name, zip_filePath, items[0].tags, recycle).then(() => recur_playlist_backup(0));
@@ -145,7 +147,7 @@ router.delete('/del/:uid/:recycle', function(req, res, next) {
                 } else {
                     return Promise.resolve();
                 }
-                function recur_playlist_backup(index) {
+                async function recur_playlist_backup(index) {
                     const bufferPath = `${filePath}/${index}`;
                     const rest2 = () => {
                         index++;
@@ -156,7 +158,7 @@ router.delete('/del/:uid/:recycle', function(req, res, next) {
                             return (recycle < 4) ? recur_backup(recycle) : Promise.resolve();
                         }
                     }
-                    return FsExistsSync(`${bufferPath}_complete`) ? googleBackup(req.user, items[0]._id, items[0].playList[index], bufferPath, items[0].tags, recycle, '_complete').then(() => rest2()) : rest2();
+                    return await fsExists(`${bufferPath}_complete`) ? googleBackup(req.user, items[0]._id, items[0].playList[index], bufferPath, items[0].tags, recycle, '_complete').then(() => rest2()) : rest2();
                 }
             } else {
                 return googleBackup(req.user, items[0]._id, items[0].name, filePath, items[0].tags, recycle).then(() => {
@@ -179,7 +181,7 @@ router.get('/media/:action(act|del)/:uid/:index(\\d+|v)?', function(req, res, ne
     if (!id) {
         return handleError(new HoError('uid is not vaild'), next);
     }
-    Mongo('find', STORAGEDB, {_id: id}, {limit: 1}).then(items => {
+    Mongo('find', STORAGEDB, {_id: id}, {limit: 1}).then(async items => {
         console.log(items);
         if (items.length < 1) {
             return handleError(new HoError('cannot find file!!!'));
@@ -202,7 +204,7 @@ router.get('/media/:action(act|del)/:uid/:index(\\d+|v)?', function(req, res, ne
                         }
                     }
                 }
-                if (!FsExistsSync(`${filePath}/${items[0].mediaType[req.params.index]['fileIndex']}_complete`)) {
+                if (!await fsExists(`${filePath}/${items[0].mediaType[req.params.index]['fileIndex']}_complete`)) {
                     return handleError(new HoError('need complete first'));
                 }
                 let fileIndex = false;
@@ -220,7 +222,7 @@ router.get('/media/:action(act|del)/:uid/:index(\\d+|v)?', function(req, res, ne
             } else {
                 let handleItems = [];
                 for (let i in items[0].mediaType) {
-                    if (FsExistsSync(`${filePath}/${items[0].mediaType[i]['fileIndex']}_complete`)) {
+                    if (await fsExists(`${filePath}/${items[0].mediaType[i]['fileIndex']}_complete`)) {
                         handleItems.push(items[0].mediaType[i]);
                     }
                 }
@@ -237,7 +239,7 @@ router.get('/media/:action(act|del)/:uid/:index(\\d+|v)?', function(req, res, ne
                 let handleItems = [];
                 for (let i in items[0].mediaType) {
                     is_empty = false;
-                    if (FsExistsSync(`${getFileLocation(items[0].owner, items[0]._id)}/${items[0].mediaType[i]['fileIndex']}_complete`)) {
+                    if (await fsExists(`${getFileLocation(items[0].owner, items[0]._id)}/${items[0].mediaType[i]['fileIndex']}_complete`)) {
                         handleItems.push(items[0].mediaType[i]);
                     }
                 }

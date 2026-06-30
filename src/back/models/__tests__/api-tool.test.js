@@ -88,6 +88,13 @@ jest.unstable_mockModule('fs', () => ({
     },
 }));
 
+
+
+jest.unstable_mockModule('fs/promises', () => ({
+    stat: jest.fn((...a) => Promise.resolve(mockFsStatSync(...a))),
+    rename: jest.fn((...a) => Promise.resolve(mockFsRenameSync(...a))),
+}));
+
 // Mock path
 mockPathBasename = jest.fn(p => {
     const parts = p.split('/');
@@ -133,6 +140,7 @@ jest.unstable_mockModule('../../util/utility.js', () => ({
     big5Encode: mockBig5Encode,
     bufferToString: mockBufferToString,
     isEmptyObject: (obj) => obj && Object.keys(obj).length === 0 && obj.constructor === Object,
+    fsExists: jest.fn((p) => Promise.resolve(mockFsExistsSync(p))),
 }));
 
 // Mock sendWs.js

@@ -5,8 +5,6 @@ import * as cheerio from 'cheerio/slim'
 import pathModule from 'path'
 const { dirname: PathDirname, extname: PathExtname, join: PathJoin } = pathModule;
 import Mkdirp from 'mkdirp'
-import fsModule from 'fs'
-const { existsSync: FsExistsSync } = fsModule;
 import ReadTorrent from 'read-torrent'
 import Redis from '../models/redis-tool.js'
 import GoogleApi from '../models/api-tool-google.js'

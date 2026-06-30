@@ -2,7 +2,8 @@ import { OPENSUBTITLES_KEY, OPENSUBTITLES_USERNAME, OPENSUBTITLES_PASSWORD } fro
 import { USERDB, STORAGEDB } from '../constants.js'
 import Express from 'express'
 import fsModule from 'fs'
-const { existsSync: FsExistsSync, unlink: FsUnlink, statSync: FsStatSync, renameSync: FsRenameSync, readdirSync: FsReaddirSync, lstatSync: FsLstatSync, createReadStream: FsCreateReadStream, writeFile: FsWriteFile } = fsModule;
+const { unlink: FsUnlink, createReadStream: FsCreateReadStream, writeFile: FsWriteFile } = fsModule;
+import { stat, rename } from 'fs/promises'
 import pathModule from 'path'
 const { dirname: PathDirname, basename: PathBasename, join: PathJoin } = pathModule;
 import Mkdirp from 'mkdirp'
@@ -19,7 +20,7 @@ import Api from '../models/api-tool.js'
 import TagTool, { isDefaultTag, normalize } from '../models/tag-tool.js'
 import External/*, { subHdUrl }*/ from '../models/external-tool.js'
 import { addPost, extType, extTag, supplyTag, isTorrent, isVideo, isDoc, isZipbook, isSub } from '../util/mime.js'
-import { checkLogin, handleError, HoError, isValidString, getFileLocation, getJson, toValidName, checkAdmin, sortList, torrent2Magnet, SRT2VTT, completeZero } from '../util/utility.js'
+import { checkLogin, handleError, HoError, isValidString, getFileLocation, getJson, toValidName, checkAdmin, sortList, torrent2Magnet, SRT2VTT, completeZero, fsExists } from '../util/utility.js'
 import sendWs from '../util/sendWs.js'
 
 const router = Express.Router();
@@ -42,7 +43,7 @@ router.get('/2drive/:uid', function(req, res, next){
         if (!id) {
             return handleError(new HoError('uid is not vaild'), next);
         }
-        return Mongo('find', STORAGEDB, {_id: id}, {limit: 1}).then(items => {
+        return Mongo('find', STORAGEDB, {_id: id}, {limit: 1}).then(async items => {
             if (items.length < 1) {
                 return handleError(new HoError('cannot find file!!!'), next);
             }
@@ -64,9 +65,9 @@ router.get('/2drive/:uid', function(req, res, next){
                     if (items[0]['playList'].length > 0) {
                         let folderArr = [];
                         let fileArr = [];
-                        items[0]['playList'].forEach((v, i) => {
+                        for (const [i, v] of items[0]['playList'].entries()) {
                             const comPath = `${filePath}/${i}_complete`;
-                            if (FsExistsSync(comPath)) {
+                            if (await fsExists(comPath)) {
                                 let d = PathDirname(v);
                                 fileArr.push({
                                     name: PathBasename(v),
@@ -83,7 +84,7 @@ router.get('/2drive/:uid', function(req, res, next){
                                     folderArr.splice(0, 0, {key: d, name: PathBasename(d), parent: PathDirname(d)});
                                 }
                             }
-                        });
+                        }
                         console.log(fileArr);
                         console.log(folderArr);
                         const comNext = index => {
@@ -135,10 +136,10 @@ router.get('/2drive/:uid', function(req, res, next){
                         if (folderArr.length + fileArr.length > 0) {
                             return recur_upload(0);
                         } else {
-                            const zip_filePath = FsExistsSync(`${filePath}_zip`) ? `${filePath}_zip` : FsExistsSync(`${filePath}_7z`) ? `${filePath}_7z` : FsExistsSync(`${filePath}.1.rar`) ? `${filePath}.1.rar` : null;
+                            const zip_filePath = await fsExists(`${filePath}_zip`) ? `${filePath}_zip` : await fsExists(`${filePath}_7z`) ? `${filePath}_7z` : await fsExists(`${filePath}.1.rar`) ? `${filePath}.1.rar` : null;
                             if (zip_filePath) {
                                 console.log(zip_filePath);
-                                const recur_zip = (index, name) => FsExistsSync(`${filePath}.${index}.rar`) ? GoogleApi('upload', {
+                                const recur_zip = async (index, name) => await fsExists(`${filePath}.${index}.rar`) ? GoogleApi('upload', {
                                     user: req.user,
                                     type: 'auto',
                                     name: `${name}.part${index}.rar`,
@@ -199,7 +200,7 @@ router.get('/2kindle/:uid', function(req, res, next){
         if (!id) {
             return handleError(new HoError('uid is not vaild'), next);
         }
-        return Mongo('find', STORAGEDB, {_id: id}, {limit: 1}).then(items => {
+        return Mongo('find', STORAGEDB, {_id: id}, {limit: 1}).then(async items => {
             if (items.length < 1) {
                 return handleError(new HoError('cannot find file!!!'), next);
             }
@@ -309,7 +310,7 @@ router.post('/upload/url', function(req, res, next) {
         const filePath = getFileLocation(req.user._id, oOID);
         const shortTorrentMatch = decodeUrl.match(/^magnet:[^&]+/);
         const folderPath = shortTorrentMatch ? filePath : PathDirname(filePath);
-        const mkfolder = () => FsExistsSync(folderPath) ? Promise.resolve() : Mkdirp(folderPath);
+        const mkfolder = () => fsExists(folderPath).then(exists => exists ? Promise.resolve() : Mkdirp(folderPath));
         let is_media = 0;
         mkfolder().then(() => {
             if (shortTorrentMatch) {
@@ -538,7 +539,7 @@ router.post('/upload/url', function(req, res, next) {
                 errHandle: err => handleError(err),
             });
         }
-        function streamClose(filename, setTag, optTag, db_obj={}) {
+        async function streamClose(filename, setTag, optTag, db_obj={}) {
             if (!filename) {
                 return Promise.resolve();
             }
@@ -547,8 +548,8 @@ router.post('/upload/url', function(req, res, next) {
                 name = addPost(name, '1');
             }
             let size = 0;
-            if (FsExistsSync(filePath)) {
-                const stats = FsStatSync(filePath);
+            if (await fsExists(filePath)) {
+                const stats = await stat(filePath);
                 if (stats.isFile()) {
                     size = stats['size'];
                 }
@@ -722,7 +723,7 @@ router.post('/subtitle/search/:uid/:index(\\d+)?', function(req, res, next) {
     console.log(episode);
     const getId = () => {
         const validId = isValidString(req.params.uid, 'uid');
-        return validId ?  Mongo('find', STORAGEDB, {_id: validId}, {limit: 1}).then(items => {
+        return validId ?  Mongo('find', STORAGEDB, {_id: validId}, {limit: 1}).then(async items => {
                 if (items.length < 1) {
                     return handleError(new HoError('cannot find file!!!'), next);
                 }
@@ -751,7 +752,7 @@ router.post('/subtitle/search/:uid/:index(\\d+)?', function(req, res, next) {
                         return handleError(new HoError('file type error!!!'), next);
                     }
                     filePath = `${filePath}/${fileIndex}`;
-                    if (!FsExistsSync(filePath)) {
+                    if (!await fsExists(filePath)) {
                         filePath = `${filePath}_complete`;
                     }
                     fileName = items[0]['playList'][fileIndex].substr(items[0]['playList'][fileIndex].indexOf('/') + 1);
@@ -773,7 +774,7 @@ router.post('/subtitle/search/:uid/:index(\\d+)?', function(req, res, next) {
         }
     }).then(([id, filePath, fileName/*, size, moviehash*/]) => {
         const folderPath = PathDirname(filePath);
-        const mkfolder = () => FsExistsSync(folderPath) ? Promise.resolve() : Mkdirp(folderPath);
+        const mkfolder = () => fsExists(folderPath).then(exists => exists ? Promise.resolve() : Mkdirp(folderPath));
         const getZh = sub_url => sub_url ? SUB2VTT(sub_url, filePath, false) : Promise.resolve();
         const getEn = sub_en_url => sub_en_url ? SUB2VTT(sub_en_url, filePath, false, 'en') : Promise.resolve();
         let OpenSubtitles = null;
@@ -853,7 +854,7 @@ router.post('/subtitle/search/:uid/:index(\\d+)?', function(req, res, next) {
                 }
             });
         }
-        function SUB2VTT(choose_subtitle, subPath, is_file, lang='') {
+        async function SUB2VTT(choose_subtitle, subPath, is_file, lang='') {
             if (!choose_subtitle) {
                 return handleError(new HoError('donot have sub!!!'), next);
             }
@@ -870,17 +871,17 @@ router.post('/subtitle/search/:uid/:index(\\d+)?', function(req, res, next) {
             if (lang === 'en') {
                 subPath = `${subPath}.en`;
             }
-            if (FsExistsSync(`${subPath}.srt`)) {
-                FsRenameSync(`${subPath}.srt`, `${subPath}.srt1`);
+            if (await fsExists(`${subPath}.srt`)) {
+                await rename(`${subPath}.srt`, `${subPath}.srt1`);
             }
-            if (FsExistsSync(`${subPath}.ass`)) {
-                FsRenameSync(`${subPath}.ass`, `${subPath}.ass1`);
+            if (await fsExists(`${subPath}.ass`)) {
+                await rename(`${subPath}.ass`, `${subPath}.ass1`);
             }
-            if (FsExistsSync(`${subPath}.ssa`)) {
-                FsRenameSync(`${subPath}.ssa`, `${subPath}.ssa1`);
+            if (await fsExists(`${subPath}.ssa`)) {
+                await rename(`${subPath}.ssa`, `${subPath}.ssa1`);
             }
             if (is_file) {
-                FsRenameSync(choose_subtitle, `${subPath}.${ext}`);
+                await rename(choose_subtitle, `${subPath}.${ext}`);
                 return SRT2VTT(subPath, ext);
             } else {
                 return OpenSubtitles.download({
@@ -904,7 +905,7 @@ router.get('/subtitle/fix/:uid/:lang/:adjust/:index(\\d+)?', function(req, res, 
         if (!id) {
             return handleError(new HoError('uid is not vaild'), next);
         }
-        return Mongo('find', STORAGEDB, {_id: id}, {limit: 1}).then(items => {
+        return Mongo('find', STORAGEDB, {_id: id}, {limit: 1}).then(async items => {
             if (items.length < 1) {
                 return handleError(new HoError('cannot find file!!!'), next);
             }
@@ -935,9 +936,9 @@ router.get('/subtitle/fix/:uid/:lang/:adjust/:index(\\d+)?', function(req, res, 
             return Promise.resolve([items[0]._id, filePath]);
         });
     }
-    getId().then(([id, filePath]) => {
+    getId().then(async ([id, filePath]) => {
         const vtt = `${filePath}.vtt`;
-        if (!FsExistsSync(vtt)) {
+        if (!await fsExists(vtt)) {
             return handleError(new HoError('do not have subtitle!!!'), next);
         }
         return new Promise((resolve, reject) => {

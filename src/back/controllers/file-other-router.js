@@ -3,7 +3,8 @@ import { ENV_TYPE } from '../../../ver.js'
 import { NAS_TMP } from '../config.js'
 import Express from 'express'
 import fsModule from 'fs'
-const { existsSync: FsExistsSync, createReadStream: FsCreateReadStream, statSync: FsStatSync, createWriteStream: FsCreateWriteStream, unlink: FsUnlink, renameSync: FsRenameSync, writeFileSync: FsWriteFileSync } = fsModule;
+const { createReadStream: FsCreateReadStream, createWriteStream: FsCreateWriteStream, unlink: FsUnlink } = fsModule;
+import { stat, rename, writeFile } from 'fs/promises'
 import pathModule from 'path'
 const { dirname: PathDirname } = pathModule;
 import Mkdirp from 'mkdirp'
@@ -13,7 +14,7 @@ import MediaHandleTool, { handleMediaError } from '../models/mediaHandle-tool.js
 import Mongo, { objectID } from '../models/mongo-tool.js'
 import PlaylistApi from '../models/api-tool-playlist.js'
 import TagTool, { isDefaultTag, normalize } from '../models/tag-tool.js'
-import { checkLogin, isValidString, handleError, getFileLocation, HoError, checkAdmin, toValidName, getJson, torrent2Magnet, sortList, completeZero, SRT2VTT } from '../util/utility.js'
+import { checkLogin, isValidString, handleError, getFileLocation, HoError, checkAdmin, toValidName, getJson, torrent2Magnet, sortList, completeZero, SRT2VTT, fsExists } from '../util/utility.js'
 import { isVideo, isImage, isMusic, addPost, supplyTag, isTorrent, extTag, extType, isDoc, isZipbook, isSub } from '../util/mime.js'
 import sendWs from '../util/sendWs.js'
 
@@ -27,7 +28,7 @@ router.get('/preview/:uid', function(req, res, next) {
         if (!id) {
             return handleError(new HoError('uid is not vaild'), next);
         }
-        Mongo('find', STORAGEDB, {_id: id}, {limit: 1}).then(items => {
+        Mongo('find', STORAGEDB, {_id: id}, {limit: 1}).then(async items => {
             if (items.length < 1 || (items[0].status !== 2 && items[0].status !== 3 && items[0].status !== 5 && items[0].status !== 6 && items[0].status !== 10)) {
                 return handleError(new HoError('cannot find file!!!'));
             }
@@ -40,12 +41,12 @@ router.get('/preview/:uid', function(req, res, next) {
                 previewPath = `${STATIC_PATH}/pdf.png`;
             } else {
                 let filePath = getFileLocation(items[0].owner, items[0]._id);
-                if (FsExistsSync(`${filePath}_complete`)) {
+                if (await fsExists(`${filePath}_complete`)) {
                     filePath = `${filePath}_complete`;
                 }
                 previewPath = `${filePath}${(items[0].status === 2) ? '.jpg' : '_s.jpg'}`;
             }
-            if (!FsExistsSync(previewPath)) {
+            if (!await fsExists(previewPath)) {
                 console.log(previewPath);
                 return handleError(new HoError('cannot find file!!!'));
             }
@@ -67,7 +68,7 @@ router.get('/download/:uid', function(req, res, next) {
         if (!id) {
             return handleError(new HoError('uid is not vaild'), next);
         }
-        Mongo('find', STORAGEDB, {_id: id}, {limit: 1}).then(items => {
+        Mongo('find', STORAGEDB, {_id: id}, {limit: 1}).then(async items => {
             if (items.length === 0) {
                 return handleError(new HoError('cannot find file!!!'));
             }
@@ -80,16 +81,16 @@ router.get('/download/:uid', function(req, res, next) {
                 } else if (items[0].mega) {
                     ret_string = decodeURIComponent(items[0].mega);
                 } else {
-                    filePath = FsExistsSync(`${filePath}_7z`) ? `${filePath}_7z` : FsExistsSync(`${filePath}.1.rar`) ? `${filePath}.1.rar` : `${filePath}_zip`;
+                    filePath = await fsExists(`${filePath}_7z`) ? `${filePath}_7z` : await fsExists(`${filePath}.1.rar`) ? `${filePath}.1.rar` : `${filePath}_zip`;
                 }
             }
-            if (!FsExistsSync(filePath) && !ret_string) {
+            if (!await fsExists(filePath) && !ret_string) {
                 return handleError(new HoError('cannot find file!!!'));
             }
             StorageTagTool.setLatest(items[0]._id, req.session).then(() => Mongo('update', STORAGEDB, {_id: items[0]._id}, {$inc: {count: 1}})).catch(err => handleError(err, 'Set latest'));
             if (ret_string) {
                 const randomName = `${NAS_TMP(ENV_TYPE)}/${Math.floor(Math.random() * 1000)}`;
-                FsWriteFileSync(randomName, ret_string, 'utf8');
+                await writeFile(randomName, ret_string, 'utf8');
                 res.writeHead(200, {
                     'X-Forwarded-Name': `attachment;filename*=UTF-8''${encodeURIComponent(items[0].name)}.txt`,
                     'X-Forwarded-Path': randomName,
@@ -115,17 +116,17 @@ router.get('/download/:uid', function(req, res, next) {
 router.get('/subtitle/:uid/:lang/:index(\\d+|v)/:fresh(0+)?', function(req, res, next) {
     checkLogin(req, res, () => {
         console.log('subtitle file');
-        const sendSub = (filePath, fileIndex=false) => {
+        const sendSub = async (filePath, fileIndex=false) => {
             filePath = fileIndex === false ? filePath : `${filePath}/${fileIndex}`;
             const subPath = req.params.lang === 'en' ? `${filePath}.en` : filePath;
             console.log(subPath);
             res.writeHead(200, {
-                'X-Forwarded-Path': FsExistsSync(`${subPath}.vtt`) ? `${subPath}.vtt` : `${STATIC_PATH}/123.vtt`,
+                'X-Forwarded-Path': await fsExists(`${subPath}.vtt`) ? `${subPath}.vtt` : `${STATIC_PATH}/123.vtt`,
                 'X-Forwarded-Type': 'text/vtt',
             });
             res.end('ok');
             /*res.writeHead(200, {'Content-Type': 'text/vtt'});
-            FsCreateReadStream(FsExistsSync(`${subPath}.vtt`) ? `${subPath}.vtt` : `${STATIC_PATH}/123.vtt`).pipe(res);*/
+            FsCreateReadStream(await fsExists(`${subPath}.vtt`) ? `${subPath}.vtt` : `${STATIC_PATH}/123.vtt`).pipe(res);*/
         }
         const id = req.params.uid.match(/^(yif)_/);
         if (id) {
@@ -178,15 +179,15 @@ router.get('/video/:uid/file', function(req, res, next) {
         if (!id) {
             return handleError(new HoError('uid is not vaild'), next);
         }
-        Mongo('find', STORAGEDB, {_id: id}, {limit: 1}).then(items => {
+        Mongo('find', STORAGEDB, {_id: id}, {limit: 1}).then(async items => {
             if (items.length < 1 || (items[0].status !== 3 && items[0].status !== 4)) {
                 return handleError(new HoError('cannot find video!!!'));
             }
             const videoPath = getFileLocation(items[0].owner, items[0]._id);
             console.log(videoPath);
             let finalPath = `${videoPath}_complete`;
-            if (!FsExistsSync(finalPath)) {
-                if (!FsExistsSync(videoPath)) {
+            if (!await fsExists(finalPath)) {
+                if (!await fsExists(videoPath)) {
                     return handleError(new HoError('cannot find file!!!'));
                 }
                 finalPath = videoPath;
@@ -197,7 +198,7 @@ router.get('/video/:uid/file', function(req, res, next) {
                 //'X-Forwarded-Name': `attachment; filename=123456.txt`,
             });
             res.end('ok');
-            /*const total = FsStatSync(finalPath).size;
+            /*const total = (await stat(finalPath)).size;
             if (req.headers['range']) {
                 const parts = req.headers.range.replace(/bytes(=|: )/, '').split('-');
                 const partialend = parts[1];
@@ -232,7 +233,7 @@ router.get('/torrent/:index(\\d+|v)/:uid/:type(images|resources|\\d+)/:number(im
         if (!id) {
             return handleError(new HoError('uid is not vaild'), next);
         }
-        Mongo('find', STORAGEDB, {_id: id}, {limit: 1}).then(items => {
+        Mongo('find', STORAGEDB, {_id: id}, {limit: 1}).then(async items => {
             if (items.length < 1) {
                 return handleError(new HoError('torrent can not be fund!!!'));
             }
@@ -248,8 +249,8 @@ router.get('/torrent/:index(\\d+|v)/:uid/:type(images|resources|\\d+)/:number(im
             const comPath = `${bufferPath}_complete`;
             const type = isImage(items[0].playList[fileIndex]) ? 2 : (isVideo(items[0].playList[fileIndex]) || isMusic(items[0].playList[fileIndex])) ? 1 : (isDoc(items[0].playList[fileIndex]) || isZipbook(items[0].playList[fileIndex])) ? 4 : 3;
             if (type === 1) {
-                const outputPath = FsExistsSync(comPath) ? comPath : FsExistsSync(bufferPath) ? bufferPath : null;
-                if (FsExistsSync(`${bufferPath}_error`) || !outputPath) {
+                const outputPath = await fsExists(comPath) ? comPath : await fsExists(bufferPath) ? bufferPath : null;
+                if (await fsExists(`${bufferPath}_error`) || !outputPath) {
                     return handleError(new HoError('video error!!!'));
                 }
                 console.log(outputPath);
@@ -258,7 +259,7 @@ router.get('/torrent/:index(\\d+|v)/:uid/:type(images|resources|\\d+)/:number(im
                     'X-Forwarded-Type': 'video/mp4',
                 });
                 res.end('ok');
-                /*const total = FsStatSync(outputPath).size;
+                /*const total = (await stat(outputPath)).size;
                 if (req.headers['range']) {
                     const parts = req.headers.range.replace(/bytes(=|: )/, '').split('-');
                     const partialend = parts[1];
@@ -313,9 +314,9 @@ router.get('/torrent/:index(\\d+|v)/:uid/:type(images|resources|\\d+)/:number(im
                         return Redis(data[0], `record: ${req.user._id}`, data[1]).then(() => !ext ? [`${bufferPath}_img/${req.params.type}`, 'image/jpeg'] : (ext.type === 'present') ? [`${bufferPath}_present/${req.params.type}.svg`, 'image/svg+xml'] : (ext.type === 'pdf') ? [`${bufferPath}_pdf/${completeZero(req.params.type, 3)}.pdf`, 'application/pdf'] : [`${bufferPath}_doc/doc${req.params.type}.html`, 'text/html']);
                     }
                 }
-                return torrentDoc().then(([docFilePath, docMime]) => {
+                return torrentDoc().then(async ([docFilePath, docMime]) => {
                     console.log(docFilePath);
-                    if (!FsExistsSync(docFilePath)) {
+                    if (!await fsExists(docFilePath)) {
                         return handleError(new HoError('cannot find file!!!'));
                     }
                     res.writeHead(200, {
@@ -334,8 +335,8 @@ router.get('/torrent/:index(\\d+|v)/:uid/:type(images|resources|\\d+)/:number(im
                     'hmset',
                     {[items[0]._id.toString()]: `0&${fileIndex}`},
                 ];
-                return Redis(data[0], `record: ${req.user._id}`, data[1]).then(() => {
-                    if (FsExistsSync(comPath)) {
+                return Redis(data[0], `record: ${req.user._id}`, data[1]).then(async () => {
+                    if (await fsExists(comPath)) {
                         res.writeHead(200, {
                             'X-Forwarded-Path': comPath,
                             'X-Forwarded-Name': `attachment;filename*=UTF-8''${encodeURIComponent(items[0].playList[fileIndex])}`,
@@ -344,7 +345,7 @@ router.get('/torrent/:index(\\d+|v)/:uid/:type(images|resources|\\d+)/:number(im
                     } else {
                         return handleError(new HoError('need download first!!!'));
                     }
-                    //FsExistsSync(comPath) ? res.download(comPath, items[0].playList[fileIndex]) : handleError(new HoError('need download first!!!'))
+                    //await fsExists(comPath) ? res.download(comPath, items[0].playList[fileIndex]) : handleError(new HoError('need download first!!!'))
                 });
             }
         }).catch(err => handleError(err, next));
@@ -358,7 +359,7 @@ router.get('/image/:uid/:type(file|images|resources|\\d+)/:number(image\\d+.png|
         if (!id) {
             return handleError(new HoError('uid is not vaild'), next);
         }
-        Mongo('find', STORAGEDB, {_id: id}, {limit: 1}).then(items => {
+        Mongo('find', STORAGEDB, {_id: id}, {limit: 1}).then(async items => {
             if (items.length < 1) {
                 return handleError(new HoError('cannot find file!!!'));
             }
@@ -390,9 +391,9 @@ router.get('/image/:uid/:type(file|images|resources|\\d+)/:number(image\\d+.png|
                     return Redis('hget', `record: ${req.user._id}`, items[0]._id.toString()).then(item => items[0].status === 6 ? [item ? `${filePath}_present/${item}.svg` : `${filePath}_present/1.svg`, 'image/svg+xml'] : items[0].status === 5 ? [(item && item !== '1') ? `${filePath}_doc/doc${item}.html` : `${filePath}_doc/doc.html`, 'text/html'] : items[0].status === 10 ? [item ? `${filePath}_pdf/${completeZero(item, 3)}.pdf` : `${filePath}_pdf/001.pdf`, 'application/pdf'] : [item ? `${filePath}_img/${item}}` : `${filePath}_img/1`, 'image/jpeg']);
                 }
             }
-            return getRecord().then(([docFilePath, docMime]) => {
+            return getRecord().then(async ([docFilePath, docMime]) => {
                 console.log(docFilePath);
-                if (!FsExistsSync(docFilePath)) {
+                if (!await fsExists(docFilePath)) {
                     return handleError(new HoError('cannot find file!!!'));
                 }
                 res.writeHead(200, {
@@ -413,7 +414,7 @@ router.post('/upload/file', function(req, res, next) {
         console.log(req.files);
         const oOID = objectID();
         const filePath = getFileLocation(req.user._id, oOID);
-        const mkdir = folderPath => !FsExistsSync(folderPath) ? Mkdirp(folderPath) : Promise.resolve();
+        const mkdir = folderPath => fsExists(folderPath).then(exists => !exists ? Mkdirp(folderPath) : Promise.resolve());
         mkdir(PathDirname(filePath)).then(() => new Promise((resolve, reject) => {
             const stream = FsCreateReadStream(req.files.file.path);
             stream.on('error', err => reject(err));
@@ -567,18 +568,18 @@ router.post('/upload/subtitle/:uid/:index(\\d+)?', function(req, res, next) {
             }, 0, 0);
             res.json({apiOK: true});
         }));
-        const saveSub = (filePath, id) => {
+        const saveSub = async (filePath, id) => {
             const folderPath = PathDirname(filePath);
-            const mkFolder = filePath => FsExistsSync(folderPath) ? Promise.resolve() : Mkdirp(folderPath);
-            return mkFolder().then(() => {
-                if (FsExistsSync(`${filePath}.srt`)) {
-                    FsRenameSync(`${filePath}.srt`, `${filePath}.srt1`);
+            const mkFolder = filePath => fsExists(folderPath).then(exists => exists ? Promise.resolve() : Mkdirp(folderPath));
+            return mkFolder().then(async () => {
+                if (await fsExists(`${filePath}.srt`)) {
+                    await rename(`${filePath}.srt`, `${filePath}.srt1`);
                 }
-                if (FsExistsSync(`${filePath}.ass`)) {
-                    FsRenameSync(`${filePath}.ass`, `${filePath}.ass1`);
+                if (await fsExists(`${filePath}.ass`)) {
+                    await rename(`${filePath}.ass`, `${filePath}.ass1`);
                 }
-                if (FsExistsSync(`${filePath}.ssa`)) {
-                    FsRenameSync(`${filePath}.ssa`, `${filePath}.ssa1`);
+                if (await fsExists(`${filePath}.ssa`)) {
+                    await rename(`${filePath}.ssa`, `${filePath}.ssa1`);
                 }
                 return new Promise((resolve, reject) => {
                     const stream = FsCreateReadStream(req.files.file.path);
@@ -592,7 +593,7 @@ router.post('/upload/subtitle/:uid/:index(\\d+)?', function(req, res, next) {
         if (!id) {
             return handleError(new HoError('uid is not vaild'), next);
         }
-        Mongo('find', STORAGEDB, {_id: id}, {limit: 1}).then(items => {
+        Mongo('find', STORAGEDB, {_id: id}, {limit: 1}).then(async items => {
             if (items.length < 1 ) {
                 return handleError(new HoError('file not exist!!!'));
             }

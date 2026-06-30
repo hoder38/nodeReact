@@ -128,6 +128,16 @@ jest.unstable_mockModule('fs', () => ({
     writeFile: (...a) => mockFsWriteFile(...a),
 }));
 
+
+
+jest.unstable_mockModule('fs/promises', () => ({
+    access: jest.fn((...a) => mockFsExistsSync(...a) ? Promise.resolve() : Promise.reject(new Error('ENOENT'))),
+    stat: jest.fn((...a) => Promise.resolve(mockFsStatSync(...a))),
+    lstat: jest.fn((...a) => Promise.resolve(mockFsLstatSync(...a))),
+    rename: jest.fn((...a) => Promise.resolve(mockFsRenameSync(...a))),
+    readdir: jest.fn((...a) => Promise.resolve(mockFsReaddirSync(...a))),
+}));
+
 mockMongoFind = jest.fn(); mockMongoUpdate = jest.fn(); mockMongoInsert = jest.fn();
 const mockMongoFunction = jest.fn((op, col, q, o) => {
     switch (op) { case 'find': return mockMongoFind(col, q, o); case 'update': return mockMongoUpdate(col, q, o);
@@ -141,13 +151,14 @@ mockExternal = { handleDoc: jest.fn() };
 jest.unstable_mockModule('../external-tool.js', () => ({ default: mockExternal }));
 
 mockHandleError = jest.fn((err) => Promise.reject(err));
-mockDeleteFolderRecursive = jest.fn(); mockSRT2VTT = jest.fn(); mockIsValidString = jest.fn();
+mockDeleteFolderRecursive = jest.fn(() => Promise.resolve()); mockSRT2VTT = jest.fn(); mockIsValidString = jest.fn();
 jest.unstable_mockModule('../../util/utility.js', () => ({
     handleError: (...a) => mockHandleError(...a),
     HoError: class HoError extends Error { constructor(m, c=500) { super(m); this.code = c; } },
     deleteFolderRecursive: (...a) => mockDeleteFolderRecursive(...a),
     SRT2VTT: (...a) => mockSRT2VTT(...a),
     isValidString: (...a) => mockIsValidString(...a),
+    fsExists: jest.fn((p) => Promise.resolve(mockFsExistsSync(p))),
 }));
 
 mockMediaMIME = jest.fn(); mockIsSub = jest.fn(); mockIsKindle = jest.fn();

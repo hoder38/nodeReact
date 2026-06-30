@@ -11,7 +11,7 @@ import { jest, describe, test, expect, beforeEach, afterEach } from '@jest/globa
 
 // ─── fs mock state ───────────────────────────────────────────────────
 let mockExistsSync, mockReaddirSync, mockLstatSync, mockUnlinkSync,
-    mockRmdirSync, mockReadFile, mockWriteFile,
+    mockRmdirSync, mockReadFile, mockWriteFile, mockRm,
     mockCreateReadStream, mockCreateWriteStream;
 
 // ─── MobileDetect mock state ────────────────────────────────────────
@@ -81,6 +81,7 @@ mockReadFile = jest.fn();
 mockWriteFile = jest.fn();
 mockCreateReadStream = jest.fn();
 mockCreateWriteStream = jest.fn();
+mockRm = jest.fn(() => Promise.resolve());
 
 jest.unstable_mockModule('fs', () => ({
     default: {
@@ -103,6 +104,18 @@ jest.unstable_mockModule('fs', () => ({
     writeFile: (...a) => mockWriteFile(...a),
     createReadStream: (...a) => mockCreateReadStream(...a),
     createWriteStream: (...a) => mockCreateWriteStream(...a),
+}));
+
+jest.unstable_mockModule('fs/promises', () => ({
+    access: jest.fn((...a) => mockExistsSync(...a) ? Promise.resolve() : Promise.reject(new Error('ENOENT'))),
+    rm: (...a) => mockRm(...a),
+    readFile: jest.fn((...a) => Promise.resolve(mockReadFile(...a))),
+    writeFile: jest.fn((...a) => Promise.resolve(mockWriteFile(...a))),
+    unlink: jest.fn(() => Promise.resolve()),
+    stat: jest.fn(() => Promise.resolve({ size: 0, isFile: () => true })),
+    lstat: jest.fn(() => Promise.resolve({ isDirectory: () => false })),
+    rename: jest.fn(() => Promise.resolve()),
+    readdir: jest.fn(() => Promise.resolve([])),
 }));
 
 mockDetectFn = jest.fn();
@@ -974,26 +987,14 @@ describe('getFileLocation', () => {
 // deleteFolderRecursive
 // =====================================================================
 describe('deleteFolderRecursive', () => {
-    test('deletes files and directories recursively', () => {
-        mockExistsSync.mockReturnValue(true);
-        mockReaddirSync
-            .mockReturnValueOnce(['file1', 'subdir'])
-            .mockReturnValueOnce([]);
-        mockLstatSync
-            .mockReturnValueOnce({ isDirectory: () => false })
-            .mockReturnValueOnce({ isDirectory: () => true });
-
-        deleteFolderRecursive('/tmp/test');
-
-        expect(mockUnlinkSync).toHaveBeenCalledWith('/tmp/test/file1');
-        expect(mockRmdirSync).toHaveBeenCalledWith('/tmp/test/subdir');
-        expect(mockRmdirSync).toHaveBeenCalledWith('/tmp/test');
+    test('deletes files and directories recursively', async () => {
+        await deleteFolderRecursive('/tmp/test');
+        expect(mockRm).toHaveBeenCalledWith('/tmp/test', { recursive: true, force: true });
     });
 
-    test('does nothing if path does not exist', () => {
-        mockExistsSync.mockReturnValue(false);
-        deleteFolderRecursive('/nonexistent');
-        expect(mockReaddirSync).not.toHaveBeenCalled();
+    test('does nothing if path does not exist', async () => {
+        await deleteFolderRecursive('/nonexistent');
+        expect(mockRm).toHaveBeenCalledWith('/nonexistent', { recursive: true, force: true });
     });
 });
 
@@ -1004,25 +1005,24 @@ describe('SRT2VTT', () => {
     test('srt conversion writes .vtt file', async () => {
         const srtContent = Buffer.from('1\n00:00:01,000 --> 00:00:02,000\nHello');
         mockDetectFn.mockReturnValue({ encoding: 'utf-8' });
-        mockReadFile.mockImplementation((path, cb) => cb(null, srtContent));
-        mockWriteFile.mockImplementation((path, data, enc, cb) => cb(null));
+        mockReadFile.mockResolvedValue(srtContent);
+        mockWriteFile.mockResolvedValue();
 
         await SRT2VTT('/path/file', 'srt');
 
-        expect(mockReadFile).toHaveBeenCalledWith('/path/file.srt', expect.any(Function));
+        expect(mockReadFile).toHaveBeenCalledWith('/path/file.srt');
         expect(mockWriteFile).toHaveBeenCalledWith(
             '/path/file.vtt',
             expect.stringContaining('WEBVTT'),
             'utf8',
-            expect.any(Function),
         );
     });
 
     test('srt conversion replaces commas with dots', async () => {
         const srtContent = Buffer.from('00:00:01,500');
         mockDetectFn.mockReturnValue({ encoding: 'utf-8' });
-        mockReadFile.mockImplementation((path, cb) => cb(null, srtContent));
-        mockWriteFile.mockImplementation((path, data, enc, cb) => cb(null));
+        mockReadFile.mockResolvedValue(srtContent);
+        mockWriteFile.mockResolvedValue();
 
         await SRT2VTT('/path/file', 'srt');
 
@@ -1032,15 +1032,15 @@ describe('SRT2VTT', () => {
     });
 
     test('readFile error rejects', async () => {
-        mockReadFile.mockImplementation((path, cb) => cb(new Error('read fail')));
+        mockReadFile.mockRejectedValue(new Error('read fail'));
         await expect(SRT2VTT('/path/file', 'srt')).rejects.toThrow('read fail');
     });
 
     test('ass conversion pipes through ass2vtt', async () => {
         const assContent = Buffer.from('[Script Info]\nTitle: Test');
         mockDetectFn.mockReturnValue({ encoding: 'utf-8' });
-        mockReadFile.mockImplementation((path, cb) => cb(null, assContent));
-        mockWriteFile.mockImplementation((path, data, enc, cb) => cb(null));
+        mockReadFile.mockResolvedValue(assContent);
+        mockWriteFile.mockResolvedValue();
 
         const mockPipe = jest.fn().mockReturnValue({ pipe: jest.fn() });
         const mockOn = jest.fn().mockImplementation((event, cb) => {
@@ -1057,7 +1057,6 @@ describe('SRT2VTT', () => {
             '/path/file.sub',
             expect.any(String),
             'utf8',
-            expect.any(Function),
         );
     });
 });

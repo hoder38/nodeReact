@@ -55,6 +55,18 @@ const mockCreateReadStream = jest.fn(() => makeStreamMock());
 const mockCreateWriteStream = jest.fn(() => ({ on: jest.fn(), write: jest.fn(), end: jest.fn() }));
 const mockStatSync = jest.fn(() => ({ size: 1000 }));
 
+jest.unstable_mockModule('fs/promises', () => ({
+  access: jest.fn((...a) => mockExistsSync(...a) ? Promise.resolve() : Promise.reject(new Error('ENOENT'))),
+  rm: jest.fn(() => Promise.resolve()),
+  readFile: jest.fn(() => Promise.resolve(Buffer.from(''))),
+  writeFile: jest.fn((...a) => Promise.resolve(mockWriteFile(...a))),
+  unlink: jest.fn(() => Promise.resolve()),
+  stat: jest.fn((...a) => Promise.resolve((typeof mockStatSync === 'function' ? mockStatSync(...a) : { size: 0, isFile: () => true }))),
+  lstat: jest.fn(() => Promise.resolve({ isDirectory: () => false })),
+  rename: jest.fn((...a) => Promise.resolve(typeof mockRenameSync === 'function' ? mockRenameSync(...a) : undefined)),
+  readdir: jest.fn(() => Promise.resolve([])),
+}));
+
 // --- node-fetch (prevents test pollution from api-tool.js retry logic) ---
 jest.unstable_mockModule('node-fetch', () => ({
   default: jest.fn(() => Promise.resolve({
@@ -481,7 +493,7 @@ describe('file-other-router.js', () => {
       const res = await request(app).get(`/download/${VALID_UID}`).set('x-test-user', u(ADMIN));
       expect(res.status).toBe(200);
       expect(res.headers['x-forwarded-name']).toContain('.txt');
-      expect(mockWriteFileSync).toHaveBeenCalled();
+      expect(mockWriteFile).toHaveBeenCalled();
     });
 
     test('status=9 with mega → downloads mega as .txt', async () => {

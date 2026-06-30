@@ -5,12 +5,13 @@ import pathModule from 'path'
 import Mkdirp from 'mkdirp'
 const { basename: PathBasename, dirname: PathDirname } = pathModule;
 import fsModule from 'fs'
-const { existsSync: FsExistsSync, unlink: FsUnlink, createReadStream: FsCreateReadStream, createWriteStream: FsCreateWriteStream, statSync: FsStatSync } = fsModule;
+const { unlink: FsUnlink, createReadStream: FsCreateReadStream, createWriteStream: FsCreateWriteStream } = fsModule;
+import { stat } from 'fs/promises'
 import Mongo, { objectID } from '../models/mongo-tool.js'
 import MediaHandleTool, { handleMediaError } from '../models/mediaHandle-tool.js'
 import PlaylistApi from '../models/api-tool-playlist.js'
 import TagTool, { isDefaultTag, normalize } from '../models/tag-tool.js'
-import { checkLogin, isValidString, handleError, HoError, getFileLocation, checkAdmin, toValidName } from '../util/utility.js'
+import { checkLogin, isValidString, handleError, HoError, getFileLocation, checkAdmin, toValidName, fsExists } from '../util/utility.js'
 import { extType, isVideo, supplyTag, addPost } from '../util/mime.js'
 import sendWs from '../util/sendWs.js'
 
@@ -71,15 +72,15 @@ router.put('/join', function(req, res, next){
             return handleError(new HoError('must large than one split'));
         }
         return [order_items, zip_type];
-    }).then(([order_items, zip_type]) => {
+    }).then(async ([order_items, zip_type]) => {
         StorageTagTool.setLatest(order_items[1]._id, req.session).then(() => Mongo('update', STORAGEDB, {_id: order_items[1]._id}, {$inc: {count: 1}})).catch(err => handleError(err, 'Set latest'));
         if (zip_type === 2) {
             //copy
             const filePath1 = getFileLocation(order_items[1].owner, order_items[1]._id);
-            function recur_copy(index) {
+            async function recur_copy(index) {
                 if (order_items[index]) {
                     let filePath = `${getFileLocation(order_items[index].owner, order_items[index]._id)}.1.rar`;
-                    if (!FsExistsSync(filePath)) {
+                    if (!await fsExists(filePath)) {
                         filePath = getFileLocation(order_items[index].owner, order_items[index]._id);
                     }
                     const stream = FsCreateReadStream(filePath);
@@ -108,7 +109,7 @@ router.put('/join', function(req, res, next){
             for (let i = 1; i <= Object.keys(order_items).length; i++) {
                 if (order_items[i]) {
                     let joinPath = `${getFileLocation(order_items[i].owner, order_items[i]._id)}${ext}`;
-                    if (!FsExistsSync(joinPath)) {
+                    if (!await fsExists(joinPath)) {
                         joinPath = getFileLocation(order_items[i].owner, order_items[i]._id);
                     }
                     srcPaths.push(joinPath);
@@ -119,7 +120,7 @@ router.put('/join', function(req, res, next){
             const filePath = getFileLocation(order_items[1].owner, order_items[1]._id);
             const cFilePath = `${filePath}${ext}_c`;
             console.log('concatFiles', srcPaths, '>>', cFilePath);
-            const unlinkC = () => FsExistsSync(cFilePath) ? new Promise((resolve, reject) => FsUnlink(cFilePath, err => err ? reject(err) : resolve())) : Promise.resolve();
+            const unlinkC = () => fsExists(cFilePath).then(exists => exists ? new Promise((resolve, reject) => FsUnlink(cFilePath, err => err ? reject(err) : resolve())) : Promise.resolve());
             const mediaType = extType(order_items[1]['name']);
             return unlinkC().then(() => concatFiles(srcPaths, cFilePath)).then(() => MediaHandleTool.handleMediaUpload(mediaType, filePath, order_items[1]._id, req.user).then(() => res.json({
                 id: order_items[1]._id,
@@ -136,7 +137,7 @@ router.post('/copy/:uid/:index(\\d+)', function(req, res, next) {
     if (!id) {
         return handleError(new HoError('uid is not vaild'), next);
     }
-    Mongo('find', STORAGEDB, {_id: id}, {limit: 1}).then(items => {
+    Mongo('find', STORAGEDB, {_id: id}, {limit: 1}).then(async items => {
         if (items.length < 1) {
             return handleError(new HoError('torrent can not be found!!!'));
         }
@@ -147,19 +148,19 @@ router.post('/copy/:uid/:index(\\d+)', function(req, res, next) {
             return handleError(new HoError('torrent index can not be found!!!'));
         }
         const origPath = `${getFileLocation(items[0].owner, items[0]._id)}/${index}_complete`;
-        if (!FsExistsSync(origPath)) {
+        if (!await fsExists(origPath)) {
             return handleError(new HoError('please download first!!!'));
         }
         const oOID = objectID();
         const filePath = getFileLocation(req.user._id, oOID);
         const folderPath = PathDirname(filePath);
-        const mkfolder = () => FsExistsSync(folderPath) ? Promise.resolve() : Mkdirp(folderPath);
+        const mkfolder = () => fsExists(folderPath).then(exists => exists ? Promise.resolve() : Mkdirp(folderPath));
         return mkfolder().then(() => new Promise((resolve, reject) => {
             const stream = FsCreateReadStream(origPath);
             stream.on('error', err => reject(err));
             stream.on('close', () => resolve());
             stream.pipe(FsCreateWriteStream(filePath));
-        })).then(() => {
+        })).then(async () => {
             let name = toValidName(PathBasename(items[0].playList[index]));
             if (isDefaultTag(normalize(name))) {
                 name = addPost(name, '1');
@@ -169,7 +170,7 @@ router.post('/copy/:uid/:index(\\d+)', function(req, res, next) {
                 name: name,
                 owner: req.user._id,
                 utime: Math.round(new Date().getTime() / 1000),
-                size: FsStatSync(origPath)['size'],
+                size: (await stat(origPath))['size'],
                 count: 0,
                 first: 1,
                 recycle: 0,
@@ -251,7 +252,7 @@ router.get('/all/download/:uid', function(req, res, next) {
     if (!id) {
         return handleError(new HoError('uid is not vaild'), next);
     }
-    Mongo('find', STORAGEDB, {_id: id}, {limit: 1}).then(items => {
+    Mongo('find', STORAGEDB, {_id: id}, {limit: 1}).then(async items => {
         if (items.length === 0) {
             return handleError(new HoError('playlist can not be fund!!!'));
         }
@@ -259,9 +260,9 @@ router.get('/all/download/:uid', function(req, res, next) {
         let queueItems = [];
         for (let i in items[0]['playList']) {
             const bufferPath = `${filePath}/${i}`;
-            if (FsExistsSync(`${bufferPath}_complete`)) {
+            if (await fsExists(`${bufferPath}_complete`)) {
                 continue;
-            } else if (FsExistsSync(`${bufferPath}_error`)) {
+            } else if (await fsExists(`${bufferPath}_error`)) {
                 continue;
             } else {
                 queueItems.push(i);
@@ -294,7 +295,7 @@ router.get('/check/:uid/:index(\\d+|v)/:size(\\d+)', function(req, res, next) {
     if (!id) {
         return handleError(new HoError('uid is not vaild'), next);
     }
-    Mongo('find', STORAGEDB, {_id: id}, {limit: 1}).then(items => {
+    Mongo('find', STORAGEDB, {_id: id}, {limit: 1}).then(async items => {
         if (items.length < 1) {
             return handleError(new HoError('torrent can not be fund!!!'));
         }
@@ -308,20 +309,20 @@ router.get('/check/:uid/:index(\\d+|v)/:size(\\d+)', function(req, res, next) {
         }
         const filePath = getFileLocation(items[0].owner, items[0]._id);
         const bufferPath = `${filePath}/${index}`;
-        if (FsExistsSync(`${bufferPath}_error`)) {
+        if (await fsExists(`${bufferPath}_error`)) {
             return handleError(new HoError('torrent video error!!!'));
         }
         const realPath = `${filePath}/real/${items[0]['playList'][index]}`;
         const comPath = `${bufferPath}_complete`;
         const qt = () => items[0]['magnet'] ? PlaylistApi('torrent add', req.user, decodeURIComponent(items[0]['magnet']), index, items[0]._id, items[0].owner) : PlaylistApi('zip add', req.user, index, items[0]._id, items[0].owner, items[0]['playList'][index], items[0].pwd);
-        if (FsExistsSync(comPath)) {
+        if (await fsExists(comPath)) {
             res.json({
                 newBuffer: true,
                 complete: true,
-                ret_size: FsStatSync(comPath).size,
+                ret_size: (await stat(comPath)).size,
             });
-        } else if (FsExistsSync(bufferPath)) {
-            const total = FsStatSync(bufferPath).size;
+        } else if (await fsExists(bufferPath)) {
+            const total = (await stat(bufferPath)).size;
             console.log(total);
             res.json({
                 newBuffer: (total > bufferSize + 10 * 1024 * 1024) ? true : false,

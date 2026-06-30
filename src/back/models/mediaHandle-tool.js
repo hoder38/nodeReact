@@ -1,7 +1,6 @@
 import { STORAGEDB, STATIC_PATH, NOISE_SIZE, __dirname } from '../constants.js'
 import Mkdirp from 'mkdirp'
-import fsModule from 'fs'
-const { existsSync: FsExistsSync, readdirSync: FsReaddirSync, lstatSync: FsLstatSync, renameSync: FsRenameSync, statSync: FsStatSync } = fsModule
+import { stat, lstat, rename, readdir } from 'fs/promises'
 import pathModule from 'path'
 const { join: PathJoin, dirname: PathDirname } = pathModule;
 import { execSafe, appendFile } from '../util/exec-safe.js'
@@ -9,7 +8,7 @@ import Ffmpeg from 'ffmpeg'
 import Mongo, { objectID } from '../models/mongo-tool.js'
 import GoogleApi, { isApiing } from '../models/api-tool-google.js'
 import TagTool, { normalize, isDefaultTag } from '../models/tag-tool.js'
-import { isValidString, handleError, HoError, checkAdmin, getFileLocation, deleteFolderRecursive, sortList, toValidName } from '../util/utility.js'
+import { isValidString, handleError, HoError, checkAdmin, getFileLocation, deleteFolderRecursive, sortList, toValidName, fsExists } from '../util/utility.js'
 import { extTag, extType, isImage, addPost } from '../util/mime.js'
 import sendWs from '../util/sendWs.js'
 
@@ -108,7 +107,7 @@ export default {
             });
         });
     },
-    handleTag: function(filePath, DBdata, newName, oldName, status, ret_mediaType=true) {
+    handleTag: async function(filePath, DBdata, newName, oldName, status, ret_mediaType=true) {
         if (status === 7) {
             return Promise.resolve([false, extTag('url'), DBdata]);
         } else if (status === 8) {
@@ -175,7 +174,7 @@ export default {
                 switch(mediaType['type']) {
                     case 'video':
                     case 'music':
-                    if (!DBdata['height'] && !DBdata['time'] && FsExistsSync(filePath)) {
+                    if (!DBdata['height'] && !DBdata['time'] && await fsExists(filePath)) {
                         console.log(filePath);
                         return new Ffmpeg(filePath).then(info => {
                             console.log(info.metadata);
@@ -230,7 +229,7 @@ export default {
             return Promise.resolve([mediaType, mediaTag, DBdata]);
         }
     },
-    handleMediaUpload: function(mediaType, filePath, fileID, user, add_noise=false) {
+    handleMediaUpload: async function(mediaType, filePath, fileID, user, add_noise=false) {
         if (!mediaType) {
             return Promise.resolve();
         }
@@ -240,71 +239,70 @@ export default {
             const comPath = mediaType['realPath'] ? `${filePath}_complete` : filePath;
             const pdfPath = `${filePath}_pdf`;
             console.log(pdfPath);
-            deleteFolderRecursive(pdfPath);
-            return Mkdirp(pdfPath).then(() => execSafe('qpdf', [comPath, '--split-pages=1', '--', `${pdfPath}/%d.pdf`], { allowExitCode: [3] })).then(() => {
-                const files = FsReaddirSync(pdfPath)
+            await deleteFolderRecursive(pdfPath);
+            return Mkdirp(pdfPath).then(() => execSafe('qpdf', [comPath, '--split-pages=1', '--', `${pdfPath}/%d.pdf`], { allowExitCode: [3] })).then(async () => {
+                const files = (await readdir(pdfPath))
                     .filter(f => f.endsWith('.pdf'))
                     .sort((a, b) => parseInt(a) - parseInt(b));
-                files.forEach((file, i) => {
+                for (const [i, file] of files.entries()) {
                     const padded = String(i + 1).padStart(3, '0') + '.pdf';
-                    if (file !== padded) FsRenameSync(`${pdfPath}/${file}`, `${pdfPath}/${padded}`);
-                });
+                    if (file !== padded) await rename(`${pdfPath}/${file}`, `${pdfPath}/${padded}`);
+                }
                 return completeMedia(fileID, 10, mediaType['fileIndex'], files.length);
             });
         } else if (mediaType['type'] === 'zipbook') {
             filePath = mediaType['realPath'] ? `${filePath}/${mediaType['fileIndex']}` : filePath;
             const imgPath = `${filePath}_img`;
             const tempPath = `${imgPath}/temp`;
-            deleteFolderRecursive(imgPath);
-            deleteFolderRecursive(tempPath);
-            return Mkdirp(tempPath).then(() => {
+            await Promise.all([deleteFolderRecursive(imgPath), deleteFolderRecursive(tempPath)]);
+            return Mkdirp(tempPath).then(async () => {
                 let is_processed = false;
                 let append = '';
                 const zip_type = (mediaType['ext'] === 'rar' || mediaType['ext'] === 'cbr') ? 2 : (mediaType['ext'] === '7z') ? 3 : 1;
                 let zipPath = mediaType['realPath'] ? `${filePath}_complete` : filePath;
-                if (FsExistsSync(`${filePath}.1.rar`)) {
+                if (await fsExists(`${filePath}.1.rar`)) {
                     zipPath = `${filePath}.1.rar`;
                     is_processed = true;
-                } else if (FsExistsSync(`${filePath}_zip`)) {
+                } else if (await fsExists(`${filePath}_zip`)) {
                     zipPath = `${filePath}_zip`;
                     is_processed = true;
-                } else if (FsExistsSync(`${filePath}_7z`)) {
+                } else if (await fsExists(`${filePath}_7z`)) {
                     zipPath = `${filePath}_7z`;
                     is_processed = true;
                 }
-                if (FsExistsSync(`${filePath}_zip_c`)) {
+                if (await fsExists(`${filePath}_zip_c`)) {
                     zipPath = `${filePath}_zip_c`;
-                } else if (FsExistsSync(`${filePath}_7z_c`)) {
+                } else if (await fsExists(`${filePath}_7z_c`)) {
                     zipPath = `${filePath}_7z_c`;
                 }
                 const [extractCmd, extractArgs] = (mediaType['ext'] === 'rar' || mediaType['ext'] === 'cbr') ? ['7za', ['x', zipPath, `-o${tempPath}`, '-p123']] : (mediaType['ext'] === '7z') ? ['7za', ['x', zipPath, `-o${tempPath}`, '-p123']] : [PathJoin(__dirname, 'util/myuzip.py'), [zipPath, tempPath, '123']];
                 console.log(extractCmd, extractArgs);
-                return execSafe(extractCmd, extractArgs).then(output => {
+                return execSafe(extractCmd, extractArgs).then(async output => {
                     let zip_arr = [];
-                    const recurFolder = (indexFolder, initFolder, preFolder) => {
-                        FsReaddirSync(initFolder).forEach((file,index) => {
+                    const recurFolder = async (indexFolder, initFolder, preFolder) => {
+                        for (const file of await readdir(initFolder)) {
                             const curPath = initFolder ? `${initFolder}/${file}` : file;
                             const showPath = preFolder ? `${preFolder}/${file}` : file;
-                            if(FsLstatSync(curPath).isDirectory()) {
+                            if((await lstat(curPath)).isDirectory()) {
                                 if (indexFolder < 4) {
-                                    recurFolder(indexFolder+1, curPath, showPath);
+                                    await recurFolder(indexFolder+1, curPath, showPath);
                                 }
-                            } else {
-                                if (isImage(file)) {
-                                    zip_arr.push(showPath);
-                                }
+                            } else if (isImage(file)) {
+                                zip_arr.push(showPath);
                             }
-                        });
+                        }
                     }
-                    recurFolder(0, tempPath, '');
+                    await recurFolder(0, tempPath, '');
                     if (zip_arr.length < 1) {
                         return handleError(new HoError('empty zip'));
                     }
                     zip_arr = sortList(zip_arr);
-                    zip_arr.forEach((s, i) => FsRenameSync(`${tempPath}/${s}`, `${filePath}_img/${Number(i)+1}`));
-                    deleteFolderRecursive(tempPath);
+                    for (const [i, s] of zip_arr.entries()) {
+                        await rename(`${tempPath}/${s}`, `${filePath}_img/${Number(i)+1}`);
+                    }
+                    await deleteFolderRecursive(tempPath);
                     if (!is_processed) {
-                        FsRenameSync(zipPath, (zip_type === 2) ? `${filePath}.1.rar` : (zip_type === 3) ? `${filePath}_7z` : `${filePath}_zip`);
+                        await rename(zipPath, (zip_type === 2) ? `${filePath}.1.rar` : (zip_type === 3) ? `${filePath}_7z` : `${filePath}_zip`);
                     }
                     console.log(zip_arr);
                     return GoogleApi('upload', {
@@ -327,19 +325,19 @@ export default {
             const zip_type = (mediaType['ext'] === 'rar' || mediaType['ext'] === 'cbr') ? 2 : (mediaType['ext'] === '7z') ? 3 : 1;
             let is_processed = false;
             let append = '';
-            if (FsExistsSync(`${filePath}.1.rar`)) {
+            if (await fsExists(`${filePath}.1.rar`)) {
                 append = '.1.rar';
                 is_processed = true;
-            } else if (FsExistsSync(`${filePath}_zip`)) {
+            } else if (await fsExists(`${filePath}_zip`)) {
                 append = '_zip';
                 is_processed = true;
-            } else if (FsExistsSync(`${filePath}_7z`)) {
+            } else if (await fsExists(`${filePath}_7z`)) {
                 append = '_7z';
                 is_processed = true;
             }
-            if (FsExistsSync(`${filePath}_zip_c`)) {
+            if (await fsExists(`${filePath}_zip_c`)) {
                 append = '_zip_c';
-            } else if (FsExistsSync(`${filePath}_7z_c`)) {
+            } else if (await fsExists(`${filePath}_7z_c`)) {
                 append = '_7z_c';
             }
             const archivePath = `${filePath}${append}`;
@@ -410,11 +408,11 @@ export default {
                             utags.push(t);
                         }
                     });
-                    const process = () => {
+                    const process = async () => {
                         if (is_processed) {
                             return Promise.resolve();
                         } else {
-                            FsRenameSync(filePath, (zip_type === 2) ? `${filePath}.1.rar` : (zip_type === 3) ? `${filePath}_7z` : `${filePath}_zip`);
+                            await rename(filePath, (zip_type === 2) ? `${filePath}.1.rar` : (zip_type === 3) ? `${filePath}_7z` : `${filePath}_zip`);
                             return Mkdirp(`${filePath}/real`);
                         }
                     }
@@ -429,11 +427,11 @@ export default {
             if (mediaType['type'] === 'rawdoc') {
                 mediaType['ext'] = 'txt';
             }
-            const addNoise = () => {
+            const addNoise = async () => {
                 if (add_noise && mediaType['type'] === 'video') {
                     console.log(`appendFile ${STATIC_PATH}/noise >> "${uploadPath}"`);
                     return appendFile(`${STATIC_PATH}/noise`, uploadPath).then(() => GoogleApi('delete', {fileId: add_noise}));
-                } else if (mediaType['type'] === 'video' && FsStatSync(uploadPath).size > NOISE_SIZE) {
+                } else if (mediaType['type'] === 'video' && (await stat(uploadPath)).size > NOISE_SIZE) {
                     console.log(`appendFile ${STATIC_PATH}/noise >> "${uploadPath}"`);
                     return appendFile(`${STATIC_PATH}/noise`, uploadPath);
                 } else {
@@ -542,7 +540,7 @@ export default {
         console.log(metadata);
         const oOID = objectID();
         const filePath = getFileLocation(user._id, oOID);
-        const mkFolder = folderPath => FsExistsSync(folderPath) ? Promise.resolve() : Mkdirp(folderPath);
+        const mkFolder = folderPath => fsExists(folderPath).then(exists => exists ? Promise.resolve() : Mkdirp(folderPath));
         const handleDelete = () => (!metadata.userPermission || metadata.userPermission.role !== 'owner') ? GoogleApi('move parent', {
             fileId: metadata.id,
             rmFolderId: handling,
@@ -621,7 +619,7 @@ export default {
                     fileId: metadata.id,
                     rmFolderId: folderId,
                     addFolderId: handling,
-                }).then(() => FsExistsSync(filePath) ? GoogleApi('download media', {
+                }).then(async () => await fsExists(filePath) ? GoogleApi('download media', {
                     user,
                     key: metadata.id,
                     filePath: `${filePath}_complete`,
@@ -647,7 +645,7 @@ export default {
                     fileId: metadata.id,
                     rmFolderId: folderId,
                     addFolderId: handling,
-                }).then(() => FsExistsSync(filePath) ? handleRest(data, name) : GoogleApi('download', {
+                }).then(async () => await fsExists(filePath) ? handleRest(data, name) : GoogleApi('download', {
                     user,
                     url: metadata.downloadUrl,
                     filePath,
@@ -707,11 +705,11 @@ export default {
                 console.log(timeoutItems);
                 if (timeoutItems.length > 0) {
                     const recur_check = index => {
-                        const single_check = () => {
+                        const single_check = async () => {
                             const filePath = getFileLocation(timeoutItems[index].item.owner, timeoutItems[index].item._id);
                             if (timeoutItems[index].mediaType.key) {
                                 if (timeoutItems[index].mediaType['realPath']) {
-                                    if (FsExistsSync(`${filePath}/${timeoutItems[index].mediaType['fileIndex']}_complete`)) {
+                                    if (await fsExists(`${filePath}/${timeoutItems[index].mediaType['fileIndex']}_complete`)) {
                                         return Mongo('update', STORAGEDB, {_id: timeoutItems[index].item._id}, {$set: {[`mediaType.${timeoutItems[index].mediaType['fileIndex']}.timeout`]: false}}).then(() => this.handleMedia(timeoutItems[index].mediaType, filePath, timeoutItems[index].item._id, timeoutItems[index].mediaType.key, {
                                             _id: timeoutItems[index].item.owner,
                                             perm: 1,
@@ -726,7 +724,7 @@ export default {
                                     }).catch(err => handleError(err, errorMedia, timeoutItems[index].item._id, timeoutItems[index].mediaType['fileIndex'])));
                                 }
                             } else if (timeoutItems[index].mediaType['realPath']) {
-                                if (FsExistsSync(`${filePath}/${timeoutItems[index].mediaType['fileIndex']}_complete`)) {
+                                if (await fsExists(`${filePath}/${timeoutItems[index].mediaType['fileIndex']}_complete`)) {
                                     return Mongo('update', STORAGEDB, {_id: timeoutItems[index].item._id}, {$set: {[`mediaType.${timeoutItems[index].mediaType['fileIndex']}.timeout`]: false}}).then(() => this.handleMediaUpload(timeoutItems[index].mediaType, filePath, timeoutItems[index].item._id, {
                                         _id: timeoutItems[index].item.owner,
                                         perm: 1,

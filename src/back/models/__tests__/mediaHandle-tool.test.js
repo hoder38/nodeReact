@@ -20,6 +20,13 @@ jest.unstable_mockModule('node-fetch', () => ({
   })),
 }));
 
+jest.unstable_mockModule('fs/promises', () => ({
+  stat: jest.fn((...a) => Promise.resolve(mockStatSync(...a))),
+  lstat: jest.fn((...a) => Promise.resolve(mockLstatSync(...a))),
+  rename: jest.fn((...a) => Promise.resolve(mockRenameSync(...a))),
+  readdir: jest.fn((...a) => Promise.resolve(mockReaddirSync(...a))),
+}));
+
 // --- fs ---
 const mockExistsSync = jest.fn(() => false);
 const mockReaddirSync = jest.fn(() => []);
@@ -104,7 +111,7 @@ jest.unstable_mockModule('../tag-tool.js', () => ({
 // --- utility ---
 const mockIsValidString = jest.fn((s) => s);
 const mockGetFileLocation = jest.fn((owner, id) => `/files/${owner}/${id}`);
-const mockDeleteFolderRecursive = jest.fn();
+const mockDeleteFolderRecursive = jest.fn(() => Promise.resolve());
 const mockSortList = jest.fn((arr) => arr);
 const mockToValidName = jest.fn((s) => s);
 const mockCheckAdmin = jest.fn(() => true);
@@ -124,6 +131,7 @@ jest.unstable_mockModule('../../util/utility.js', () => ({
   checkAdmin: mockCheckAdmin,
   getFileLocation: mockGetFileLocation,
   deleteFolderRecursive: mockDeleteFolderRecursive,
+  fsExists: jest.fn((p) => Promise.resolve(mockExistsSync(p))),
   sortList: mockSortList,
   toValidName: mockToValidName,
   getJson: jest.fn((s) => { try { return JSON.parse(s); } catch { return s; } }),

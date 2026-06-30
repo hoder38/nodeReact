@@ -3,7 +3,6 @@ import { CHECK_STOCK, USSE_TICKER, TWSE_TICKER } from '../config.js'
 import { STOCKDB, CACHE_EXPIRE, STOCK_FILTER_LIMIT, STOCK_FILTER, MAX_RETRY, TOTALDB, STOCK_INDEX, NORMAL_DISTRIBUTION, TRADE_FEE, TRADE_INTERVAL, RANGE_INTERVAL, TRADE_TIME, USSE_FEE, USERDB, TWSE_NUM, USSE_NUM, MAX_NEWMID_STACK, EMERGENCY_STOP_THRESHOLD, MIN_BINS, MAX_BINS, VOLUME_DECAY_LAMBDA } from '../constants.js'
 import Htmlparser from 'htmlparser2'
 import * as cheerio from 'cheerio/slim'
-import fsModule from 'fs'
 import yahooFinance from 'yahoo-finance2'
 import Mkdirp from 'mkdirp'
 import Redis from '../models/redis-tool.js'
@@ -13,13 +12,12 @@ import TagTool, { isDefaultTag, normalize } from '../models/tag-tool.js'
 import Api from './api-tool.js'
 import { getUssePosition, getUsseOrder } from '../models/tdameritrade-tool.js'
 import { getTwsePosition, getTwseOrder } from '../models/shioaji-tool.js'
-import { handleError, HoError, completeZero, addPre, isValidString, toValidName, convertTimestampToDate } from '../util/utility.js'
+import { handleError, HoError, completeZero, addPre, isValidString, toValidName, convertTimestampToDate, fsExists } from '../util/utility.js'
 import { getExtname } from '../util/mime.js'
 import sendWs from '../util/sendWs.js'
 import createLogger from '../util/logger.js'
 
 const log = createLogger('stock')
-const { existsSync: FsExistsSync } = fsModule;
 const StockTagTool = TagTool(STOCKDB);
 
 let stockFiltering = false;
@@ -2834,7 +2832,7 @@ export const getSingleAnnual = (year, folder, index) => {
         if (!annual_list.includes(cYear.toString()) && !annual_list.includes(`read${cYear}`)) {
             const folderPath = `/mnt/stock/twse/${index}`;
             const filePath = `${folderPath}/tmp`;
-            const mkfolder = () => FsExistsSync(folderPath) ? Promise.resolve() : Mkdirp(folderPath);
+            const mkfolder = () => fsExists(folderPath).then(exists => exists ? Promise.resolve() : Mkdirp(folderPath));
             return mkfolder().then(() => getTwseAnnual(index, cYear, filePath).then(filename => GoogleApi('upload', {
                 type: 'auto',
                 name: `${cYear}${getExtname(filename).ext}`,

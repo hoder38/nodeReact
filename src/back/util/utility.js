@@ -11,7 +11,8 @@ const { encode: IconvEncode, decode: IconvDecode } = iconvLite;
 import pathModule from 'path'
 const { join: PathJoin } = pathModule;
 import fsModule from 'fs'
-const { existsSync: FsExistsSync, readdirSync: FsReaddirSync, lstatSync: FsLstatSync, unlinkSync: FsUnlinkSync, rmdirSync: FsRmdirSync, readFile: FsReadFile, writeFile: FsWriteFile, createReadStream: FsCreateReadStream, createWriteStream: FsCreateWriteStream } = fsModule;
+const { createReadStream: FsCreateReadStream, createWriteStream: FsCreateWriteStream } = fsModule;
+import { access, rm, readFile, writeFile, unlink, stat, lstat, rename, readdir } from 'fs/promises'
 import jsCharDet from 'jschardet'
 import Ass2vtt from 'ass-to-vtt'
 
@@ -320,21 +321,15 @@ export const getFileLocation = (owner, uid) => {
     return PathJoin(NAS_PREFIX(ENV_TYPE), owner_md5.substr(0, 2), owner_S, uid_md5.substr(0, 2), uid_S);
 }
 
-export const deleteFolderRecursive = path => {
-    if(FsExistsSync(path)) {
-        FsReaddirSync(path).forEach(file => {
-            const curPath = `${path}/${file}`;
-            FsLstatSync(curPath).isDirectory() ? deleteFolderRecursive(curPath) : FsUnlinkSync(curPath);
-        });
-        FsRmdirSync(path);
-    }
-}
+export const fsExists = path => access(path).then(() => true).catch(() => false);
 
-export const SRT2VTT = (filePath, ext) => new Promise((resolve, reject) => FsReadFile(`${filePath}.${ext}`, (err,data) => err ? reject(err) : resolve(data))).then(data => (ext === 'srt') ? new Promise((resolve, reject) => FsWriteFile(`${filePath}.vtt`, `WEBVTT\n\n${bufferToString(data).replace(/,/g, '.')}`, 'utf8', err => err ? reject(err) : resolve())) : new Promise((resolve, reject) => FsWriteFile(`${filePath}.sub`, bufferToString(data), 'utf8', err => err ? reject(err) : resolve())).then(() => new Promise((resolve, reject) => {
+export const deleteFolderRecursive = path => rm(path, { recursive: true, force: true });
+
+export const SRT2VTT = (filePath, ext) => readFile(`${filePath}.${ext}`).then(data => (ext === 'srt') ? writeFile(`${filePath}.vtt`, `WEBVTT\n\n${bufferToString(data).replace(/,/g, '.')}`, 'utf8') : writeFile(`${filePath}.sub`, bufferToString(data), 'utf8').then(() => new Promise((resolve, reject) => {
     const subfs = FsCreateReadStream(`${filePath}.sub`);
     subfs.pipe(Ass2vtt()).pipe(FsCreateWriteStream(`${filePath}.vtt`));
     subfs.on('end', () => resolve());
-})).then(() => FsUnlinkSync(`${filePath}.sub`)));
+})).then(() => unlink(`${filePath}.sub`)));
 
 export const bufferToString = (buffer, big5=false) => {
     const charset = jsCharDet.detect(buffer);

@@ -91,6 +91,14 @@ class MockTorrentEngine {
     }
 }
 
+
+
+jest.unstable_mockModule('fs/promises', () => ({
+    stat: jest.fn((...a) => Promise.resolve(mockStatSync(...a))),
+    lstat: jest.fn((...a) => Promise.resolve(mockLstatSync(...a))),
+    rename: jest.fn((...a) => Promise.resolve(mockRenameSync(...a))),
+    readdir: jest.fn((...a) => Promise.resolve(mockReaddirSync(...a))),
+}));
 // Mock ObjectId
 class MockObjectID {
     constructor(id) {
@@ -268,7 +276,7 @@ mockHoError = class HoError extends Error {
 mockGetFileLocation = jest.fn((owner, id) => `/mock/path/${id}`);
 mockCheckAdmin = jest.fn(() => false);
 mockSRT2VTT = jest.fn();
-mockDeleteFolderRecursive = jest.fn();
+mockDeleteFolderRecursive = jest.fn(() => Promise.resolve());
 mockSortList = jest.fn((arr) => arr.sort());
 
 jest.unstable_mockModule('../../util/utility.js', () => ({
@@ -278,6 +286,7 @@ jest.unstable_mockModule('../../util/utility.js', () => ({
     checkAdmin: mockCheckAdmin,
     SRT2VTT: mockSRT2VTT,
     deleteFolderRecursive: mockDeleteFolderRecursive,
+    fsExists: jest.fn((p) => Promise.resolve(mockExistsSync(p))),
     sortList: mockSortList,
     isEmptyObject: (obj) => obj && Object.keys(obj).length === 0 && obj.constructor === Object,
 }));
@@ -2508,7 +2517,7 @@ describe('api-tool-playlist.js', () => {
             mockLstatSync.mockReturnValue({ isDirectory: () => false });
             mockSortList.mockImplementation(arr => [...arr].sort());
             mockRenameSync.mockImplementation(() => {});
-            mockDeleteFolderRecursive.mockImplementation(() => {});
+            mockDeleteFolderRecursive.mockResolvedValue();
 
             // Set two entries: second has lower time → should be picked
             _setPools({
@@ -2559,7 +2568,7 @@ describe('api-tool-playlist.js', () => {
             mockLstatSync.mockReturnValue({ isDirectory: () => false });
             mockSortList.mockImplementation(arr => [...arr].sort());
             mockRenameSync.mockImplementation(() => {});
-            mockDeleteFolderRecursive.mockImplementation(() => {});
+            mockDeleteFolderRecursive.mockResolvedValue();
 
             PlaylistModule.default('mega stop', null, false);
             await new Promise(resolve => setTimeout(resolve, 800));
@@ -2728,7 +2737,7 @@ describe('api-tool-playlist.js', () => {
             mockLstatSync.mockReturnValue({ isDirectory: () => false });
             mockSortList.mockImplementation(arr => [...arr].sort());
             mockRenameSync.mockImplementation(() => {});
-            mockDeleteFolderRecursive.mockImplementation(() => {});
+            mockDeleteFolderRecursive.mockResolvedValue();
 
             PlaylistModule.default('mega add', user, url, filePath, data);
             await new Promise(resolve => setTimeout(resolve, 800));
@@ -2761,7 +2770,7 @@ describe('api-tool-playlist.js', () => {
             mockSortList.mockImplementation(arr => [...arr].sort());
             mockExtType.mockReturnValue({ type: 'video' });
             mockExtTag.mockReturnValue({ def: ['video'], opt: ['hd'] });
-            mockDeleteFolderRecursive.mockImplementation(() => {});
+            mockDeleteFolderRecursive.mockResolvedValue();
 
             // Mock createReadStream and createWriteStream for recur_media
             mockCreateReadStream.mockImplementation(() => {
@@ -3379,7 +3388,7 @@ describe('api-tool-playlist.js', () => {
             mockReaddirSync.mockReturnValue(['file1.mp4', 'file2.mp4']);
             mockLstatSync.mockReturnValue({ isDirectory: () => false });
             mockSortList.mockImplementation(arr => [...arr].sort());
-            mockDeleteFolderRecursive.mockImplementation(() => {});
+            mockDeleteFolderRecursive.mockResolvedValue();
 
             // Mock createReadStream to trigger error
             mockCreateReadStream.mockImplementation(() => {
@@ -3413,7 +3422,7 @@ describe('api-tool-playlist.js', () => {
             mockReaddirSync.mockReturnValue(['file1.mp4', 'file2.mp4']);
             mockLstatSync.mockReturnValue({ isDirectory: () => false });
             mockSortList.mockImplementation(arr => [...arr].sort());
-            mockDeleteFolderRecursive.mockImplementation(() => {});
+            mockDeleteFolderRecursive.mockResolvedValue();
 
             // Mock write stream to trigger error
             mockCreateReadStream.mockImplementation(() => new MockReadStream());

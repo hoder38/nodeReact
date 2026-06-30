@@ -42,6 +42,18 @@ jest.unstable_mockModule('fs', () => ({
   },
 }));
 
+jest.unstable_mockModule('fs/promises', () => ({
+  access: jest.fn((...a) => mockExistsSync(...a) ? Promise.resolve() : Promise.reject(new Error('ENOENT'))),
+  rm: jest.fn(() => Promise.resolve()),
+  readFile: jest.fn(() => Promise.resolve(Buffer.from(''))),
+  writeFile: jest.fn(() => Promise.resolve()),
+  unlink: jest.fn(() => Promise.resolve()),
+  stat: jest.fn((...a) => Promise.resolve((typeof mockStatSync === 'function' ? mockStatSync(...a) : { size: 0, isFile: () => true }))),
+  lstat: jest.fn(() => Promise.resolve({ isDirectory: () => false })),
+  rename: jest.fn((...a) => Promise.resolve(typeof mockRenameSync === 'function' ? mockRenameSync(...a) : undefined)),
+  readdir: jest.fn(() => Promise.resolve([])),
+}));
+
 // --- ver.js ---
 jest.unstable_mockModule('../../../../ver.js', () => ({
   PASSWORD_SALT: 'test_salt_',
