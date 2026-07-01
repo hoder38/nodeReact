@@ -83,7 +83,7 @@ services:
       - /mnt/dev/storage:/mnt/storage
       - /etc/timezone:/etc/timezone:ro
       - /etc/localtime:/etc/localtime:ro
-      - .:/app/
+      - ./src:/app/src
     depends_on:
       redis:
         condition: service_healthy
@@ -108,7 +108,7 @@ services:
       - /mnt/dev/storage:/mnt/storage:ro
       - /etc/timezone:/etc/timezone:ro
       - /etc/localtime:/etc/localtime:ro
-      - .:/app/
+      - ./src:/app/src
     depends_on:
       redis:
         condition: service_healthy
