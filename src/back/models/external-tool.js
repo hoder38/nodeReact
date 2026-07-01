@@ -12,6 +12,7 @@ import { normalize } from '../models/tag-tool.js'
 import Mongo, { objectID } from '../models/mongo-tool.js'
 import { handleError, HoError, toValidName, isValidString, getJson, completeZero, getFileLocation, addPre, torrent2Magnet } from '../util/utility.js'
 import Api from './api-tool.js'
+import { circuitBreaker } from './circuit-breaker.js'
 
 export default {
     //type要補到deltag裡
@@ -21,10 +22,10 @@ export default {
         }
         switch (type) {
             case 'yify':
-            return Api('url', url, {
+            return circuitBreaker('yify', () => Api('url', url, {
                 referer: 'https://yts.ag/',
                 is_json: true,
-            }).then(raw_data => {
+            })).then(raw_data => {
                 if (raw_data['status'] !== 'ok' || !raw_data['data']) {
                     return handleError(new HoError('yify api fail'));
                 }
@@ -50,11 +51,11 @@ export default {
                 }) : [];
             });
             case 'dm5':
-            return Api('url', url, {
+            return circuitBreaker('dm5', () => Api('url', url, {
                 referer: 'http://www.dm5.com/',
                 post,
                 is_dm5: true,
-            }).then(raw_data => {
+            })).then(raw_data => {
                 let list = [];
                 const dom = Htmlparser.parseDOM(raw_data);
                 const $ = cheerio.load(dom);
@@ -128,7 +129,7 @@ export default {
         }
         switch (type) {
             case 'yify':
-            const yifyGetlist = () => Api('url', url, {referer: 'https://yts.ag/'}).then(raw_data => {
+            const yifyGetlist = () => circuitBreaker('yify', () => Api('url', url, {referer: 'https://yts.ag/'})).then(raw_data => {
                 const json_data = getJson(raw_data);
                 if (json_data === false) {
                     return handleError(new HoError('json parse error!!!'));
@@ -187,11 +188,11 @@ export default {
                 return item ? sendList(JSON.parse(item.raw_list), item.is_end === 'false' ? false : item.is_end, item.etime) : yifyGetlist().then(([raw_list, is_end]) => sendList(raw_list, is_end, -1));
             });
             case 'dm5':
-            const madGetlist = () => Api('url', url, {
+            const madGetlist = () => circuitBreaker('dm5', () => Api('url', url, {
                 referer: url,
                 cookie: 'SERVERID=node3; isAdult=1',
                 is_dm5: true,
-            }).then(raw_data => {
+            })).then(raw_data => {
                 const list = [];
                 const $ = cheerio.load(Htmlparser.parseDOM(raw_data));
                 let is_end = false;
@@ -259,7 +260,7 @@ export default {
         let url = null;
         switch (type) {
             case 'yify':
-            const getMid = () => isNaN(id) ? Api('url', `https://yts.ag/movie/${id}`, {referer: 'https://yts.ag/'}).then(raw_data => {
+            const getMid = () => isNaN(id) ? circuitBreaker('yify', () => Api('url', `https://yts.ag/movie/${id}`, {referer: 'https://yts.ag/'})).then(raw_data => {
                 const $ = cheerio.load(Htmlparser.parseDOM(raw_data));
                 return $('body').children('div[id="main-content"]').first()
                     .children('div[id="movie-content"]').first()
@@ -269,7 +270,7 @@ export default {
             }) : Promise.resolve(id);
             return getMid().then(mid => {
                 url = `https://yts.ag/api/v2/movie_details.json?with_cast=true&movie_id=${mid}`;
-                return Api('url', url, {referer: 'https://yts.ag/'}).then(raw_data => {
+                return circuitBreaker('yify', () => Api('url', url, {referer: 'https://yts.ag/'})).then(raw_data => {
                     const json_data = getJson(raw_data);
                     if (json_data === false) {
                         return handleError(new HoError('json parse error!!!'));
@@ -299,7 +300,7 @@ export default {
             });
             case 'dm5':
             url = `http://www.dm5.com/${id}/`;
-            return Api('url', url, {is_dm5: true,}).then(raw_data => {
+            return circuitBreaker('dm5', () => Api('url', url, {is_dm5: true,})).then(raw_data => {
                 const $ = cheerio.load(Htmlparser.parseDOM(raw_data));
                 const divArr = $('body').children('div').toArray();
                 let $info = null;
