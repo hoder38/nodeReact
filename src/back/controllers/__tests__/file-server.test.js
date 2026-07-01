@@ -193,11 +193,12 @@ jest.unstable_mockModule('../../util/sendWs.js', () => ({
   default: jest.fn(),
 }));
 
-// --- connect-multiparty: mock file upload middleware ---
-const mockMultipartyMiddleware = jest.fn((req, res, next) => next());
-const mockMultiparty = jest.fn(() => mockMultipartyMiddleware);
-jest.unstable_mockModule('connect-multiparty', () => ({
-  default: mockMultiparty,
+// --- multer: mock file upload middleware ---
+const mockMulterMiddleware = jest.fn((req, res, next) => next());
+const mockMulterInstance = { single: jest.fn(() => mockMulterMiddleware) };
+const mockMulter = jest.fn(() => mockMulterInstance);
+jest.unstable_mockModule('multer', () => ({
+  default: mockMulter,
 }));
 
 // --- Background jobs: mock all 12 job functions ---
@@ -456,9 +457,10 @@ describe('file-server.js — File/Media Server', () => {
       expect(typeof mockSessionStore.mock.calls[0][0]).toBe('function');
     });
 
-    test('ConnectMultiparty is configured with NAS_TMP uploadDir', () => {
-      expect(mockMultiparty).toHaveBeenCalledTimes(1);
-      expect(mockMultiparty).toHaveBeenCalledWith({ uploadDir: '/test/tmp' });
+    test('Multer is configured with NAS_TMP dest and single("file")', () => {
+      expect(mockMulter).toHaveBeenCalledTimes(1);
+      expect(mockMulter).toHaveBeenCalledWith({ dest: '/test/tmp' });
+      expect(mockMulterInstance.single).toHaveBeenCalledWith('file');
     });
   });
 
@@ -471,15 +473,15 @@ describe('file-server.js — File/Media Server', () => {
       expect(capturedApp._router.stack.length).toBeGreaterThan(0);
     });
 
-    test('middleware order: backslash guard → bodyParser → session → multiparty → passport → CORS → showLog → routes', () => {
+    test('middleware order: backslash guard → bodyParser → session → multer → passport → CORS → showLog → routes', () => {
       const stack = capturedApp._router.stack;
       const names = stack.map((l) => l.name);
 
       const urlencodedIdx = names.indexOf('urlencodedParser');
       const jsonIdx = names.indexOf('jsonParser');
       const sessionIdx = names.indexOf('session');
-      const multipartyIdx = stack.findIndex(
-        (l) => l.handle === mockMultipartyMiddleware
+      const multerIdx = stack.findIndex(
+        (l) => l.handle === mockMulterMiddleware
       );
       const passportInitIdx = names.indexOf('initialize');
       const passportSessionIdx = names.indexOf('authenticate');
@@ -498,16 +500,16 @@ describe('file-server.js — File/Media Server', () => {
       expect(urlencodedIdx).toBeGreaterThan(-1);
       expect(jsonIdx).toBeGreaterThan(urlencodedIdx);
       expect(sessionIdx).toBeGreaterThan(jsonIdx);
-      expect(multipartyIdx).toBeGreaterThan(sessionIdx);
-      expect(passportInitIdx).toBeGreaterThan(multipartyIdx);
+      expect(multerIdx).toBeGreaterThan(sessionIdx);
+      expect(passportInitIdx).toBeGreaterThan(multerIdx);
       expect(passportSessionIdx).toBeGreaterThan(passportInitIdx);
       // CORS and showLog are anonymous, between passport and first router
       expect(firstRouterIdx).toBeGreaterThan(passportSessionIdx);
     });
 
-    test('ConnectMultiparty middleware is in the stack', () => {
+    test('Multer middleware is in the stack', () => {
       const layer = capturedApp._router.stack.find(
-        (l) => l.handle === mockMultipartyMiddleware
+        (l) => l.handle === mockMulterMiddleware
       );
       expect(layer).toBeDefined();
     });

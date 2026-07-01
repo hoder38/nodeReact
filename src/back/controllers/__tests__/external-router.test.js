@@ -307,7 +307,8 @@ function buildApp() {
       req.isAuthenticated = () => false;
     }
     if (req.headers['x-test-file']) {
-      req.files = { file: JSON.parse(req.headers['x-test-file']) };
+      const fileData = JSON.parse(req.headers['x-test-file']);
+      req.file = { path: fileData.path, originalname: fileData.name, size: fileData.size };
     }
     req.session = {};
     next();

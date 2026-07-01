@@ -13,7 +13,7 @@ import ExpressSession from 'express-session'
 import bodyParser from 'body-parser'
 const { urlencoded: BodyParserUrlencoded, json: BodyParserJson } = bodyParser;
 import Passport from 'passport'
-import ConnectMultiparty from 'connect-multiparty'
+import multer from 'multer'
 
 //model
 import SessionStore from '../models/session-tool.js'
@@ -84,7 +84,7 @@ app.use((req, res, next) => /\\|%5c/i.test(req.originalUrl) ? res.status(400).js
 app.use(BodyParserUrlencoded({ extended: true }))
 app.use(BodyParserJson({ extended: true }))
 app.use(ExpressSession(SessionStore(ExpressSession).config))
-app.use(ConnectMultiparty({ uploadDir: NAS_TMP(ENV_TYPE) }))
+app.use(multer({ dest: NAS_TMP(ENV_TYPE) }).single('file'))
 app.use(Passport.initialize())
 app.use(Passport.session())
 app.use(function(req, res, next) {

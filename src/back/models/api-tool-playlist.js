@@ -7,7 +7,28 @@ import { stat, lstat, rename, readdir } from 'fs/promises'
 import pathModule from 'path'
 const { basename: PathBasename, join: PathJoin, dirname: PathDirname } = pathModule
 import { execFileWithHandle } from '../util/exec-safe.js'
-import TorrentStream from 'torrent-stream'
+import WebTorrent from 'webtorrent'
+
+const webtorrentClient = new WebTorrent();
+
+// Adapter: provides torrent-stream compatible interface using webtorrent
+function createTorrentEngine(magnetOrTorrent, opts) {
+    const torrent = webtorrentClient.add(magnetOrTorrent, {
+        path: opts.path,
+        maxConns: opts.connections,
+        announce: opts.trackers,
+    });
+    // Expose torrent-stream compatible .torrent.name (self-reference so engine.torrent.name works)
+    if (!torrent.torrent) {
+        torrent.torrent = torrent;
+    }
+    const origDestroy = torrent.destroy.bind(torrent);
+    torrent.destroy = () => {
+        origDestroy();
+        try { webtorrentClient.remove(torrent); } catch(e) { /* already removed */ }
+    };
+    return torrent;
+}
 import Mkdirp from 'mkdirp'
 //import OpenSubtitle from 'opensubtitles-api'
 import { Mutex } from 'async-mutex'
@@ -176,7 +197,7 @@ const torrentGet = () => torrentMutex.runExclusive(() => {
     if (runNum < TORRENT_LIMIT(ENV_TYPE)) {
         for (let i in torrent_pool) {
             if (torrent_pool[i].hash === hash) {
-                const engine = TorrentStream(torrent_pool[i].torrent, {
+                const engine = createTorrentEngine(torrent_pool[i].torrent, {
                     tmp: NAS_TMP(ENV_TYPE),
                     path: `${getFileLocation(torrent_pool[i].fileOwner, torrent_pool[i].fileId)}/real`,
                     connections: TORRENT_CONNECT,
@@ -766,7 +787,7 @@ function torrentAdd(user, torrent, fileIndex, id, owner, pType=0) {
                 });
             }
             if (runNum < TORRENT_LIMIT(ENV_TYPE)) {
-                engine = TorrentStream(torrent, {
+                engine = createTorrentEngine(torrent, {
                     tmp: NAS_TMP(ENV_TYPE),
                     path: `${filePath}/real`,
                     connections: TORRENT_CONNECT,
@@ -854,7 +875,7 @@ function torrentAdd(user, torrent, fileIndex, id, owner, pType=0) {
 }
 
 function torrentInfo(magnet, filePath) {
-    const engine = TorrentStream(magnet, {
+    const engine = createTorrentEngine(magnet, {
         tmp: NAS_TMP(ENV_TYPE),
         path: `${filePath}/real`,
         connections: TORRENT_CONNECT,

@@ -1555,10 +1555,10 @@ describe('editFile', () => {
 describe('singleDrive', () => {
   const makeMetadata = (overrides = {}) => ({
     id: 'gdrive-id-1',
-    title: 'testfile.mp4',
-    fileSize: 1000,
-    downloadUrl: 'http://dl',
-    userPermission: { role: 'reader' },
+    name: 'testfile.mp4',
+    size: 1000,
+    webContentLink: 'http://dl',
+    permissions: [{ role: 'reader' }],
     ...overrides,
   });
 
@@ -1653,7 +1653,7 @@ describe('singleDrive', () => {
     ]);
     const uploadSpy = jest.spyOn(MediaHandleTool, 'handleMediaUpload').mockResolvedValue();
 
-    const meta = makeMetadata({ userPermission: { role: 'owner' } });
+    const meta = makeMetadata({ permissions: [{ role: 'owner' }] });
     await MediaHandleTool.singleDrive([meta], 0, makeUser(), 'f', 'u', 'h', []);
     expect(mockGoogleApi).toHaveBeenCalledWith('delete', { fileId: 'gdrive-id-1' });
 
@@ -1700,7 +1700,7 @@ describe('singleDrive', () => {
     ]);
     const uploadSpy = jest.spyOn(MediaHandleTool, 'handleMediaUpload').mockResolvedValue();
 
-    const meta = makeMetadata({ title: 'defaultname' });
+    const meta = makeMetadata({ name: 'defaultname' });
     await MediaHandleTool.singleDrive([meta], 0, makeUser(), 'f', 'u', 'h', []);
     expect(mockAddPost).toHaveBeenCalledWith('defaultname', '1');
 
@@ -2096,10 +2096,10 @@ describe('handleMedia — errhandle callbacks (lines 500, 515, 531)', () => {
 describe('singleDrive — video download paths + errDrive (lines 627, 638-641, 652-653, 589-590, 790)', () => {
   const makeMetadata = (overrides = {}) => ({
     id: 'gdrive-id-1',
-    title: 'testfile.mp4',
-    fileSize: 1000,
-    downloadUrl: 'http://dl',
-    userPermission: { role: 'reader' },
+    name: 'testfile.mp4',
+    size: 1000,
+    webContentLink: 'http://dl',
+    permissions: [{ role: 'reader' }],
     ...overrides,
   });
 

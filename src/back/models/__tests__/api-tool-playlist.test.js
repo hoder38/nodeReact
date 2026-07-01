@@ -67,11 +67,12 @@ class MockWriteStream {
     }
 }
 
-// Mock TorrentStream engine
+// Mock TorrentStream engine (WebTorrent compatible)
 class MockTorrentEngine {
     constructor() {
         this.handlers = {};
         this.files = [];
+        this.name = 'test-torrent';
         this.torrent = { name: 'test-torrent' };
         this.destroyed = false;
     }
@@ -223,10 +224,12 @@ jest.unstable_mockModule('../../util/exec-safe.js', () => ({
     appendFile: jest.fn().mockResolvedValue(),
 }));
 
-// Mock torrent-stream
+// Mock webtorrent
+const mockRemove = jest.fn();
 mockTorrentStreamFn = jest.fn(() => new MockTorrentEngine());
-jest.unstable_mockModule('torrent-stream', () => ({
-    default: mockTorrentStreamFn,
+const mockWebtorrentClient = { add: mockTorrentStreamFn, remove: mockRemove };
+jest.unstable_mockModule('webtorrent', () => ({
+    default: jest.fn(() => mockWebtorrentClient),
 }));
 
 // Mock mkdirp

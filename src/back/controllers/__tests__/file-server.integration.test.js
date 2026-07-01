@@ -54,7 +54,7 @@ const TEST_USER_DOC = {
 // =====================================================================
 // BUILD FILE-SERVER EXPRESS APP
 // Same middleware chain as file-server.js, minus:
-//   - HTTPS, Redis sessions, connect-multiparty, WS/TCP, background jobs
+//   - HTTPS, Redis sessions, multer, WS/TCP, background jobs
 // =====================================================================
 function buildFileApp() {
     const app = Express();

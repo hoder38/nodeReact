@@ -411,14 +411,14 @@ router.get('/image/:uid/:type(file|images|resources|\\d+)/:number(image\\d+.png|
 router.post('/upload/file', function(req, res, next) {
     checkLogin(req, res, () => {
         console.log('upload file');
-        console.log(req.files);
+        console.log(req.file);
         const oOID = objectID();
         const filePath = getFileLocation(req.user._id, oOID);
         const mkdir = folderPath => fsExists(folderPath).then(exists => !exists ? Mkdirp(folderPath) : Promise.resolve());
         mkdir(PathDirname(filePath)).then(() => new Promise((resolve, reject) => {
-            const stream = FsCreateReadStream(req.files.file.path);
+            const stream = FsCreateReadStream(req.file.path);
             stream.on('error', err => reject(err));
-            stream.on('close', () => isTorrent(req.files.file.name) ? new Promise((resolve2, reject2) => ReadTorrent(filePath, (err, torrent) => err ? reject2(err) : resolve2(torrent))).then(torrent => {
+            stream.on('close', () => isTorrent(req.file.originalname) ? new Promise((resolve2, reject2) => ReadTorrent(filePath, (err, torrent) => err ? reject2(err) : resolve2(torrent))).then(torrent => {
                 const magnet = torrent2Magnet(torrent);
                 if (!magnet) {
                     return handleError(new HoError('magnet create fail'));
@@ -459,9 +459,9 @@ router.post('/upload/file', function(req, res, next) {
                         }]);
                     });
                 });
-            }) : resolve([req.files.file.name, new Set(), new Set(), {}]));
+            }) : resolve([req.file.originalname, new Set(), new Set(), {}]));
             stream.pipe(FsCreateWriteStream(filePath));
-        })).then(([filename, setTag, optTag, db_obj]) => new Promise((resolve, reject) => FsUnlink(req.files.file.path, err => {
+        })).then(([filename, setTag, optTag, db_obj]) => new Promise((resolve, reject) => FsUnlink(req.file.path, err => {
             if (err) {
                 console.log(filePath);
                 handleError(err, 'Upload file');
@@ -477,7 +477,7 @@ router.post('/upload/file', function(req, res, next) {
                 name: name,
                 owner: req.user._id,
                 utime: Math.round(new Date().getTime() / 1000),
-                size: db_obj['magnet'] ? 0 : req.files.file.size,
+                size: db_obj['magnet'] ? 0 : req.file.size,
                 count: 0,
                 first: 1,
                 recycle: 0,
@@ -553,15 +553,15 @@ router.post('/upload/file', function(req, res, next) {
 router.post('/upload/subtitle/:uid/:index(\\d+)?', function(req, res, next) {
     checkLogin(req, res, () => {
         console.log('upload subtitle');
-        console.log(req.files);
-        if (req.files.file.size > (10 * 1024 * 1024)) {
+        console.log(req.file);
+        if (req.file.size > (10 * 1024 * 1024)) {
             return handleError(new HoError('size too large!!!'), next);
         }
-        const ext = isSub(req.files.file.name);
+        const ext = isSub(req.file.originalname);
         if (!ext) {
             return handleError(new HoError('not valid subtitle!!!'), next);
         }
-        const convertSub = (filePath, id) => new Promise((resolve, reject) => FsUnlink(req.files.file.path, err => err ? reject(err) : resolve())).then(() => SRT2VTT(filePath, ext).then(() => {
+        const convertSub = (filePath, id) => new Promise((resolve, reject) => FsUnlink(req.file.path, err => err ? reject(err) : resolve())).then(() => SRT2VTT(filePath, ext).then(() => {
             sendWs({
                 type: 'sub',
                 data: id,
@@ -582,7 +582,7 @@ router.post('/upload/subtitle/:uid/:index(\\d+)?', function(req, res, next) {
                     await rename(`${filePath}.ssa`, `${filePath}.ssa1`);
                 }
                 return new Promise((resolve, reject) => {
-                    const stream = FsCreateReadStream(req.files.file.path);
+                    const stream = FsCreateReadStream(req.file.path);
                     stream.on('error', err => reject(err));
                     stream.on('close', () => resolve());
                     stream.pipe(FsCreateWriteStream(`${filePath}.${ext}`));

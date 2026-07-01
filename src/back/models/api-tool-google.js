@@ -342,9 +342,9 @@ function upload(data) {
     }
     let param = data['filePath'] ? {
         resource: {
-            title: data['name'],
+            name: data['name'],
             mimeType,
-            parents: [parent],
+            parents: [parent.id],
         },
         media: {
             mimeType,
@@ -352,23 +352,20 @@ function upload(data) {
         },
     } : {
         resource: {
-            title: data['name'],
+            name: data['name'],
             mimeType: 'text/plain',
-            parents: [parent],
+            parents: [parent.id],
         },
         media: {
             mimeType: 'text/plain',
             body: data['body'],
         },
     }
-    if (data['convert'] && data['convert'] === true) {
-        param['convert'] = true;
-    }
     let index = 0;
     const proc = () => new Promise((resolve, reject) => googleapis.drive({
-        version: 'v2',
+        version: 'v3',
         auth: oauth2Client,
-    }).files.insert(param, (err, metadata) => (err && err.code !== 'ECONNRESET') ? reject(err) : resolve(metadata))).then(metadata => {
+    }).files.create(param, (err, metadata) => (err && err.code !== 'ECONNRESET') ? reject(err) : resolve(metadata))).then(metadata => {
         console.log(metadata);
         if (data['rest']) {
             return () => new Promise((resolve, reject) => setTimeout(() => resolve(), 0)).then(() => data['rest'](metadata.data)).catch(err => data['errhandle'](err));
@@ -389,17 +386,17 @@ function list(data) {
     if (!data['folderId']) {
         return handleError(new HoError('list parameter lost!!!'));
     }
-    const find_name = data['name'] ? ` and title = '${data['name']}'` : '';
+    const find_name = data['name'] ? ` and name = '${data['name']}'` : '';
     let index = 0;
     const proc = () => new Promise((resolve, reject) => googleapis.drive({
-        version: 'v2',
+        version: 'v3',
         auth: oauth2Client,
     }).files.list({
         q: `'${data['folderId']}' in parents and trashed = false and mimeType = 'application/vnd.google-apps.folder'${find_name}`,
-        maxResults: data['max'] ? data['max'] : DRIVE_LIMIT,
+        pageSize: data['max'] ? data['max'] : DRIVE_LIMIT,
     }, (err, metadata) => (err && err.code !== 'ECONNRESET') ? reject(err) : resolve(metadata))).then(metadata => {
-        if (metadata && metadata.data && metadata.data.items) {
-            return metadata.data.items;
+        if (metadata && metadata.data && metadata.data.files) {
+            return metadata.data.files;
         } else {
             console.log('drive empty');
             console.log(metadata);
@@ -415,12 +412,13 @@ function listFile(data) {
         return handleError(new HoError('list parameter lost!!!'));
     }
     const proc = (index = 0) => new Promise((resolve, reject) => googleapis.drive({
-        version: 'v2',
+        version: 'v3',
         auth: oauth2Client,
     }).files.list({
         q: `'${data['folderId']}' in parents and trashed = false and mimeType != 'application/vnd.google-apps.folder'`,
-        maxResults: data['max'] ? data['max'] : DRIVE_LIMIT,
-    }, (err, metadata) => (err && err.code !== 'ECONNRESET') ? reject(err) : resolve(metadata))).then(metadata => metadata.data.items).catch(err => (err.code == '401') ? (++index > MAX_RETRY) ? handleError(err) : new Promise((resolve, reject) => setTimeout(() => resolve(proc(index)), OATH_WAITING * 1000)) : handleError(err));
+        pageSize: data['max'] ? data['max'] : DRIVE_LIMIT,
+        fields: 'files(id,name,mimeType,size,webContentLink,webViewLink,exportLinks,videoMediaMetadata,permissions)',
+    }, (err, metadata) => (err && err.code !== 'ECONNRESET') ? reject(err) : resolve(metadata))).then(metadata => metadata.data.files).catch(err => (err.code == '401') ? (++index > MAX_RETRY) ? handleError(err) : new Promise((resolve, reject) => setTimeout(() => resolve(proc(index)), OATH_WAITING * 1000)) : handleError(err));
     return proc(0);
 }
 function create(data) {
@@ -428,12 +426,12 @@ function create(data) {
         return handleError(new HoError('create parameter lost!!!'));
     }
     return new Promise((resolve, reject) => googleapis.drive({
-        version: 'v2',
+        version: 'v3',
         auth: oauth2Client,
-    }).files.insert({resource: {
-        title: data['name'],
+    }).files.create({resource: {
+        name: data['name'],
         mimeType: 'application/vnd.google-apps.folder',
-        parents: [{id: data['parent']}],
+        parents: [data['parent']],
     }}, (err, metadata) => (err && err.code !== 'ECONNRESET') ? reject(err) : resolve(metadata.data)));
 }
 
@@ -477,9 +475,9 @@ function deleteFile(data) {
         return handleError(new HoError('delete parameter lost!!!'));
     }
     return new Promise((resolve, reject) => googleapis.drive({
-        version: 'v2',
+        version: 'v3',
         auth: oauth2Client,
-    }).files.trash({fileId: data['fileId']}, err => (err && err.code !== 'ECONNRESET') ? reject(err) : resolve()));
+    }).files.update({fileId: data['fileId'], resource: {trashed: true}}, err => (err && err.code !== 'ECONNRESET') ? reject(err) : resolve()));
 }
 
 function getFile(data) {
@@ -487,9 +485,12 @@ function getFile(data) {
         return handleError(new HoError('get parameter lost!!!'));
     }
     return new Promise((resolve, reject) => googleapis.drive({
-        version: 'v2',
+        version: 'v3',
         auth: oauth2Client,
-    }).files.get({fileId: data['fileId']}, (err, metadata) => (err && err.code !== 'ECONNRESET') ? reject(err) : resolve(metadata.data ? metadata.data : metadata)));
+    }).files.get({
+        fileId: data['fileId'],
+        fields: 'id,name,mimeType,size,webContentLink,webViewLink,exportLinks,videoMediaMetadata,permissions',
+    }, (err, metadata) => (err && err.code !== 'ECONNRESET') ? reject(err) : resolve(metadata.data ? metadata.data : metadata)));
 }
 
 function copyFile(data) {
@@ -497,7 +498,7 @@ function copyFile(data) {
         return handleError(new HoError('copy parameter lost!!!'));
     }
     return new Promise((resolve, reject) => googleapis.drive({
-        version: 'v2',
+        version: 'v3',
         auth: oauth2Client,
     }).files.copy({fileId: data['fileId']}, (err, metadata) => (err && err.code !== 'ECONNRESET') ? reject(err) : resolve(metadata.data ? metadata.data : metadata)));
 }
@@ -507,9 +508,9 @@ function moveParent(data) {
         return handleError(new HoError('move parent parameter lost!!!'));
     }
     return new Promise((resolve, reject) => googleapis.drive({
-        version: 'v2',
+        version: 'v3',
         auth: oauth2Client,
-    }).files.patch({
+    }).files.update({
         fileId: data['fileId'],
         removeParents: data['rmFolderId'],
         addParents: data['addFolderId'],
@@ -711,7 +712,7 @@ export function userDrive(userlist, index, drive_batch=DRIVE_LIMIT) {
         if (is_root) {
             let templist = [];
             folder_metadataList.forEach(i => {
-                if (i.title !== 'uploaded' && i.title !== 'downloaded' && i.title !== 'handling') {
+                if (i.name !== 'uploaded' && i.name !== 'downloaded' && i.name !== 'handling') {
                     templist.push(i);
                 }
             });
@@ -741,11 +742,11 @@ export function userDrive(userlist, index, drive_batch=DRIVE_LIMIT) {
         if (!current || !current.id) {
             return Promise.resolve();
         }
-        dirpath.push(current.title);
+        dirpath.push(current.title || current.name);
         const data = {folderId: current.id};
         return api('list file', data).then(metadataList => {
             if (metadataList.length > 0) {
-                sendWs(metadataList.reduce((a, v) => `${a} ${v.title}`, `${userlist[index].username}: `), 0, 0, true);
+                sendWs(metadataList.reduce((a, v) => `${a} ${v.name}`, `${userlist[index].username}: `), 0, 0, true);
             }
             if (metadataList.length > 0) {
                 if (metadataList.length > (drive_batch - file_count)) {

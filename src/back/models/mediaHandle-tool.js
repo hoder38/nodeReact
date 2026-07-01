@@ -521,7 +521,7 @@ export default {
                 if (!filedata.exportLinks || !filedata.exportLinks['application/pdf']) {
                     return handleError(new HoError('error type'));
                 }
-                return [filedata.exportLinks['application/pdf'], filedata.alternateLink];
+                return [filedata.exportLinks['application/pdf'], filedata.webViewLink];
             });
             return checkThumb().then(([thumbnail, alternate]) => GoogleApi('download present', {
                 user,
@@ -541,7 +541,7 @@ export default {
         const oOID = objectID();
         const filePath = getFileLocation(user._id, oOID);
         const mkFolder = folderPath => fsExists(folderPath).then(exists => exists ? Promise.resolve() : Mkdirp(folderPath));
-        const handleDelete = () => (!metadata.userPermission || metadata.userPermission.role !== 'owner') ? GoogleApi('move parent', {
+        const handleDelete = () => (!metadata.permissions || !metadata.permissions.some(p => p.role === 'owner')) ? GoogleApi('move parent', {
             fileId: metadata.id,
             rmFolderId: handling,
             addFolderId: uploaded,
@@ -579,7 +579,7 @@ export default {
             });
         });
         const handleFile = () => {
-            let name = toValidName(metadata.title);
+            let name = toValidName(metadata.name);
             if (isDefaultTag(normalize(name))) {
                 name = addPost(name, '1');
             }
@@ -597,7 +597,7 @@ export default {
                 name,
                 owner: user._id,
                 utime: Math.round(new Date().getTime() / 1000),
-                size: metadata.fileSize,
+                size: metadata.size,
                 count: 0,
                 first: 1,
                 recycle: 0,
@@ -628,7 +628,7 @@ export default {
                     errhandle: err => handleError(err, errDrive, metadata.id, folderId),
                 }) : GoogleApi('download', {
                     user,
-                    url: metadata.downloadUrl,
+                    url: metadata.webContentLink,
                     filePath,
                     rest: () => GoogleApi('download media', {
                         user,
@@ -647,7 +647,7 @@ export default {
                     addFolderId: handling,
                 }).then(async () => await fsExists(filePath) ? handleRest(data, name) : GoogleApi('download', {
                     user,
-                    url: metadata.downloadUrl,
+                    url: metadata.webContentLink,
                     filePath,
                     rest: () => handleRest(data, name),
                     errhandle: err => handleError(err, errDrive, metadata.id, folderId),

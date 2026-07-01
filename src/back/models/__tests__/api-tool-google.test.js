@@ -54,12 +54,11 @@ mockGoogleAuth = {
 
 const createMockDriveInstance = () => ({
     files: {
-        insert: jest.fn((p, cb) => cb(null, { data: { id: 'mock-file-id', title: p.resource?.title || 'mock-file' } })),
-        list: jest.fn((p, cb) => cb(null, { data: { items: [] } })),
-        trash: jest.fn((p, cb) => cb(null, {})),
-        get: jest.fn((p, cb) => cb(null, { data: { id: p.fileId, title: 'mock-file' } })),
+        create: jest.fn((p, cb) => cb(null, { data: { id: 'mock-file-id', name: p.resource?.name || 'mock-file' } })),
+        list: jest.fn((p, cb) => cb(null, { data: { files: [] } })),
+        update: jest.fn((p, cb) => cb(null, {})),
+        get: jest.fn((p, cb) => cb(null, { data: { id: p.fileId, name: 'mock-file' } })),
         copy: jest.fn((p, cb) => cb(null, { data: { id: 'mock-copy-id' } })),
-        patch: jest.fn((p, cb) => cb(null, {})),
     },
 });
 const createMockGmailInstance = () => ({
@@ -272,27 +271,27 @@ describe('api-tool-google.js', () => {
     describe('api() Router', () => {
         test('stop', async () => { expect(await api('stop', {})).toBeUndefined(); });
         test('list folder', async () => {
-            mockGoogleDrive.files.list.mockImplementation((p, cb) => cb(null, { data: { items: [{ id: 'f1' }] } }));
+            mockGoogleDrive.files.list.mockImplementation((p, cb) => cb(null, { data: { files: [{ id: 'f1' }] } }));
             expect(await api('list folder', { folderId: 'x' })).toEqual([{ id: 'f1' }]);
         });
         test('list folder no folderId', async () => {
             await expect(api('list folder', {})).rejects.toThrow('list parameter lost');
         });
         test('list file', async () => {
-            mockGoogleDrive.files.list.mockImplementation((p, cb) => cb(null, { data: { items: [{ id: 'f1' }] } }));
+            mockGoogleDrive.files.list.mockImplementation((p, cb) => cb(null, { data: { files: [{ id: 'f1' }] } }));
             expect(await api('list file', { folderId: 'x' })).toEqual([{ id: 'f1' }]);
         });
         test('list file no folderId', async () => {
             await expect(api('list file', {})).rejects.toThrow('list parameter lost');
         });
         test('create', async () => {
-            mockGoogleDrive.files.insert.mockImplementation((p, cb) => cb(null, { data: { id: 'nf' } }));
+            mockGoogleDrive.files.create.mockImplementation((p, cb) => cb(null, { data: { id: 'nf' } }));
             expect((await api('create', { name: 'F', parent: 'p' })).id).toBe('nf');
         });
         test('create no params', async () => { await expect(api('create', { name: 'F' })).rejects.toThrow('create parameter lost'); });
         test('delete', async () => {
             await api('delete', { fileId: 'x' });
-            expect(mockGoogleDrive.files.trash).toHaveBeenCalled();
+            expect(mockGoogleDrive.files.update).toHaveBeenCalled();
         });
         test('delete no fileId', async () => { await expect(api('delete', {})).rejects.toThrow('delete parameter lost'); });
         test('get', async () => { expect((await api('get', { fileId: 'x' })).id).toBe('x'); });
@@ -301,7 +300,7 @@ describe('api-tool-google.js', () => {
         test('copy no fileId', async () => { await expect(api('copy', {})).rejects.toThrow('copy parameter lost'); });
         test('move parent', async () => {
             await api('move parent', { fileId: 'x', rmFolderId: 'r', addFolderId: 'a' });
-            expect(mockGoogleDrive.files.patch).toHaveBeenCalled();
+            expect(mockGoogleDrive.files.update).toHaveBeenCalled();
         });
         test('move parent no params', async () => { await expect(api('move parent', { fileId: 'x' })).rejects.toThrow('move parent parameter lost'); });
         test('send mail', async () => {
@@ -316,12 +315,12 @@ describe('api-tool-google.js', () => {
         test('unknown api', async () => { await expect(api('bogus', {})).rejects.toThrow('unknown api'); });
         test('upload under limit', async () => {
             await api('upload', upData()); await WAIT();
-            expect(mockGoogleDrive.files.insert).toHaveBeenCalled();
+            expect(mockGoogleDrive.files.create).toHaveBeenCalled();
         });
         test('upload queues when busy', async () => {
             // p-queue handles concurrency automatically; just verify upload works
             await api('upload', upData());
-            expect(mockGoogleDrive.files.insert).toHaveBeenCalled();
+            expect(mockGoogleDrive.files.create).toHaveBeenCalled();
         });
         test('download under limit', async () => {
             await api('download', dlData()); await WAIT();
@@ -392,7 +391,7 @@ describe('api-tool-google.js', () => {
     // 3. handle_err
     describe('handle_err', () => {
         test('upload fail → sendWs with user info', async () => {
-            mockGoogleDrive.files.insert.mockImplementation((p, cb) => cb(new Error('boom'), null));
+            mockGoogleDrive.files.create.mockImplementation((p, cb) => cb(new Error('boom'), null));
             await api('upload', upData()); await WAIT(8000);
             expect(mockSendWs).toHaveBeenCalledWith(expect.objectContaining({ type: 'u' }), 0);
         }, 15000);
@@ -401,21 +400,21 @@ describe('api-tool-google.js', () => {
     // 4. Queue concurrency (p-queue)
     describe('Queue concurrency', () => {
         test('upload completes and queue drains', async () => {
-            mockGoogleDrive.files.insert.mockImplementation((p, cb) => cb(null, { data: { id: 'x' } }));
+            mockGoogleDrive.files.create.mockImplementation((p, cb) => cb(null, { data: { id: 'x' } }));
             await api('upload', upData());
             expect(_getState().api_pending).toBe(0);
         });
         test('rest callback called after upload', async () => {
             const restFn = jest.fn().mockResolvedValue();
-            mockGoogleDrive.files.insert.mockImplementation((p, cb) => cb(null, { data: { id: 'x', title: 't' } }));
+            mockGoogleDrive.files.create.mockImplementation((p, cb) => cb(null, { data: { id: 'x', name: 't' } }));
             await api('upload', upData({ rest: restFn, errhandle: jest.fn() }));
             await WAIT();
-            expect(restFn).toHaveBeenCalledWith({ id: 'x', title: 't' });
+            expect(restFn).toHaveBeenCalledWith({ id: 'x', name: 't' });
         });
         test('multiple uploads respect concurrency', async () => {
             const calls = [];
-            mockGoogleDrive.files.insert.mockImplementation((p, cb) => {
-                calls.push(p.resource.title);
+            mockGoogleDrive.files.create.mockImplementation((p, cb) => {
+                calls.push(p.resource.name);
                 cb(null, { data: { id: 'x' } });
             });
             await Promise.all([
@@ -544,7 +543,7 @@ describe('api-tool-google.js', () => {
         });
         test('type=media', async () => {
             mockMediaMIME.mockReturnValue('video/mp4');
-            mockGoogleDrive.files.insert.mockImplementation((p, cb) => { expect(p.resource.parents[0].id).toBe(TEST_CONFIG.GOOGLE_MEDIA_FOLDER); cb(null, { data: { id: 'x' } }); });
+            mockGoogleDrive.files.create.mockImplementation((p, cb) => { expect(p.resource.parents[0]).toBe(TEST_CONFIG.GOOGLE_MEDIA_FOLDER); cb(null, { data: { id: 'x' } }); });
             await api('upload', { user: { username: 'u' }, type: 'media', name: 'v.mp4', filePath: '/f' }); await WAIT();
         });
         test('type=media unknown mime', async () => {
@@ -554,7 +553,7 @@ describe('api-tool-google.js', () => {
         });
         test('type=auto null mediaMIME → text/plain', async () => {
             mockMediaMIME.mockReturnValue(null);
-            mockGoogleDrive.files.insert.mockImplementation((p, cb) => { expect(p.media.mimeType).toBe('text/plain'); cb(null, { data: { id: 'x' } }); });
+            mockGoogleDrive.files.create.mockImplementation((p, cb) => { expect(p.media.mimeType).toBe('text/plain'); cb(null, { data: { id: 'x' } }); });
             await api('upload', upData()); await WAIT();
         });
         test('type=unknown', async () => {
@@ -565,12 +564,12 @@ describe('api-tool-google.js', () => {
             await api('upload', upData({ convert: true })); await WAIT();
         });
         test('body upload', async () => {
-            mockGoogleDrive.files.insert.mockImplementation((p, cb) => { expect(p.media.body).toBe('hi'); cb(null, { data: { id: 'x' } }); });
+            mockGoogleDrive.files.create.mockImplementation((p, cb) => { expect(p.media.body).toBe('hi'); cb(null, { data: { id: 'x' } }); });
             await api('upload', { user: { username: 'u' }, type: 'backup', name: 'f.txt', body: 'hi' }); await WAIT();
         });
         test('rest callback', async () => {
             const restFn = jest.fn().mockResolvedValue();
-            mockGoogleDrive.files.insert.mockImplementation((p, cb) => cb(null, { data: { id: 'mid' } }));
+            mockGoogleDrive.files.create.mockImplementation((p, cb) => cb(null, { data: { id: 'mid' } }));
             await api('upload', upData({ rest: restFn, errhandle: jest.fn() })); await WAIT();
             expect(restFn).toHaveBeenCalledWith({ id: 'mid' });
         });
@@ -632,7 +631,7 @@ describe('api-tool-google.js', () => {
             expect(await api('list folder', { folderId: 'x' })).toEqual([]);
         }, 30000);
         test('list with name', async () => {
-            mockGoogleDrive.files.list.mockImplementation((p, cb) => { expect(p.q).toContain("title = 'up'"); cb(null, { data: { items: [{ id: 'x' }] } }); });
+            mockGoogleDrive.files.list.mockImplementation((p, cb) => { expect(p.q).toContain("name = 'up'"); cb(null, { data: { files: [{ id: 'x' }] } }); });
             await api('list folder', { folderId: 'f', name: 'up' });
         });
         test('listFile 401 retry', async () => {
@@ -786,16 +785,16 @@ describe('api-tool-google.js', () => {
     describe('userDrive', () => {
         const ul = [{ username: 'u1', auto: 'a1' }];
         test('empty → resolves', async () => {
-            mockGoogleDrive.files.list.mockImplementation((p, cb) => cb(null, { data: { items: [] } }));
+            mockGoogleDrive.files.list.mockImplementation((p, cb) => cb(null, { data: { files: [] } }));
             await userDrive(ul, 0, 50);
         });
         test('root filter', async () => {
             let lc = 0;
             mockGoogleDrive.files.list.mockImplementation((p, cb) => {
                 lc++;
-                if (p.q.includes("mimeType != 'application/vnd.google-apps.folder'")) { cb(null, { data: { items: [] } }); }
-                else if (lc <= 2) { cb(null, { data: { items: [{ id: 'up', title: 'uploaded' }, { id: 'dl', title: 'downloaded' }, { id: 'hl', title: 'handling' }, { id: 'r', title: 'myfolder' }] } }); }
-                else { cb(null, { data: { items: [] } }); }
+                if (p.q.includes("mimeType != 'application/vnd.google-apps.folder'")) { cb(null, { data: { files: [] } }); }
+                else if (lc <= 2) { cb(null, { data: { files: [{ id: 'up', name: 'uploaded' }, { id: 'dl', name: 'downloaded' }, { id: 'hl', name: 'handling' }, { id: 'r', name: 'myfolder' }] } }); }
+                else { cb(null, { data: { files: [] } }); }
             });
             await userDrive(ul, 0, 50);
         });
@@ -804,44 +803,44 @@ describe('api-tool-google.js', () => {
             mockGoogleDrive.files.list.mockImplementation((p, cb) => {
                 lc++;
                 if (p.q.includes("mimeType != 'application/vnd.google-apps.folder'")) {
-                    if (lc <= 1) { cb(null, { data: { items: [{ id: 'f1', title: 'd.txt' }] } }); }
-                    else { cb(null, { data: { items: [] } }); }
-                } else if (p.q.includes("title = 'uploaded'")) { cb(null, { data: { items: [{ id: 'uid' }] } }); }
-                else if (p.q.includes("title = 'handling'")) { cb(null, { data: { items: [{ id: 'hid' }] } }); }
-                else { cb(null, { data: { items: [] } }); }
+                    if (lc <= 1) { cb(null, { data: { files: [{ id: 'f1', name: 'd.txt' }] } }); }
+                    else { cb(null, { data: { files: [] } }); }
+                } else if (p.q.includes("name = 'uploaded'")) { cb(null, { data: { files: [{ id: 'uid' }] } }); }
+                else if (p.q.includes("name = 'handling'")) { cb(null, { data: { files: [{ id: 'hid' }] } }); }
+                else { cb(null, { data: { files: [] } }); }
             });
             await userDrive(ul, 0, 50);
             expect(mockMediaHandleTool.singleDrive).toHaveBeenCalled();
         });
         test('multi users', async () => {
-            mockGoogleDrive.files.list.mockImplementation((p, cb) => cb(null, { data: { items: [] } }));
+            mockGoogleDrive.files.list.mockImplementation((p, cb) => cb(null, { data: { files: [] } }));
             await userDrive([{ username: 'u1', auto: 'a1' }, { username: 'u2', auto: 'a2' }], 0, 50);
         });
         test('batch exceeded → splice', async () => {
             let fc = 0;
             mockGoogleDrive.files.list.mockImplementation((p, cb) => {
-                if (p.q.includes("mimeType != 'application/vnd.google-apps.folder'")) { fc++; cb(null, { data: { items: [{ id: 'f' + fc, title: 'f' }, { id: 'f' + fc + 'b', title: 'g' }] } }); }
-                else if (p.q.includes("title = 'uploaded'")) { cb(null, { data: { items: [{ id: 'up' }] } }); }
-                else if (p.q.includes("title = 'handling'")) { cb(null, { data: { items: [{ id: 'hl' }] } }); }
-                else { cb(null, { data: { items: [] } }); }
+                if (p.q.includes("mimeType != 'application/vnd.google-apps.folder'")) { fc++; cb(null, { data: { files: [{ id: 'f' + fc, name: 'f' }, { id: 'f' + fc + 'b', name: 'g' }] } }); }
+                else if (p.q.includes("name = 'uploaded'")) { cb(null, { data: { files: [{ id: 'up' }] } }); }
+                else if (p.q.includes("name = 'handling'")) { cb(null, { data: { files: [{ id: 'hl' }] } }); }
+                else { cb(null, { data: { files: [] } }); }
             });
             await userDrive(ul, 0, 1);
             expect(mockMediaHandleTool.singleDrive).toHaveBeenCalledTimes(1);
         });
         test('uploaded folder missing', async () => {
             mockGoogleDrive.files.list.mockImplementation((p, cb) => {
-                if (p.q.includes("mimeType != 'application/vnd.google-apps.folder'")) { cb(null, { data: { items: [{ id: 'f1', title: 'f' }] } }); }
-                else if (p.q.includes("title = 'uploaded'")) { cb(null, { data: { items: [] } }); }
-                else { cb(null, { data: { items: [] } }); }
+                if (p.q.includes("mimeType != 'application/vnd.google-apps.folder'")) { cb(null, { data: { files: [{ id: 'f1', name: 'f' }] } }); }
+                else if (p.q.includes("name = 'uploaded'")) { cb(null, { data: { files: [] } }); }
+                else { cb(null, { data: { files: [] } }); }
             });
             await expect(userDrive(ul, 0, 50)).rejects.toThrow('do not have uploaded folder');
         });
         test('handling folder missing', async () => {
             mockGoogleDrive.files.list.mockImplementation((p, cb) => {
-                if (p.q.includes("mimeType != 'application/vnd.google-apps.folder'")) { cb(null, { data: { items: [{ id: 'f1', title: 'f' }] } }); }
-                else if (p.q.includes("title = 'uploaded'")) { cb(null, { data: { items: [{ id: 'up' }] } }); }
-                else if (p.q.includes("title = 'handling'")) { cb(null, { data: { items: [] } }); }
-                else { cb(null, { data: { items: [] } }); }
+                if (p.q.includes("mimeType != 'application/vnd.google-apps.folder'")) { cb(null, { data: { files: [{ id: 'f1', name: 'f' }] } }); }
+                else if (p.q.includes("name = 'uploaded'")) { cb(null, { data: { files: [{ id: 'up' }] } }); }
+                else if (p.q.includes("name = 'handling'")) { cb(null, { data: { files: [] } }); }
+                else { cb(null, { data: { files: [] } }); }
             });
             await expect(userDrive(ul, 0, 50)).rejects.toThrow('do not have handling folder');
         });
@@ -849,12 +848,12 @@ describe('api-tool-google.js', () => {
             let folderCalls = 0;
             mockGoogleDrive.files.list.mockImplementation((p, cb) => {
                 if (p.q.includes("mimeType != 'application/vnd.google-apps.folder'")) {
-                    cb(null, { data: { items: [] } });
+                    cb(null, { data: { files: [] } });
                 } else {
                     folderCalls++;
-                    if (folderCalls === 1) { cb(null, { data: { items: [{ id: 'sub1', title: 'sub1' }] } }); }
-                    else if (folderCalls === 2) { cb(null, { data: { items: [{ id: 'subsub1', title: 'subsub1' }] } }); }
-                    else { cb(null, { data: { items: [] } }); }
+                    if (folderCalls === 1) { cb(null, { data: { files: [{ id: 'sub1', name: 'sub1' }] } }); }
+                    else if (folderCalls === 2) { cb(null, { data: { files: [{ id: 'subsub1', name: 'subsub1' }] } }); }
+                    else { cb(null, { data: { files: [] } }); }
                 }
             });
             await userDrive(ul, 0, 50);
@@ -866,7 +865,7 @@ describe('api-tool-google.js', () => {
         test('no pending → false', () => { expect(isApiing()).toBe(false); });
         test('during upload → true', async () => {
             let resolveInsert;
-            mockGoogleDrive.files.insert.mockImplementation((p, cb) => { resolveInsert = () => cb(null, { data: { id: 'x' } }); });
+            mockGoogleDrive.files.create.mockImplementation((p, cb) => { resolveInsert = () => cb(null, { data: { id: 'x' } }); });
             const p = api('upload', upData());
             await WAIT(100);
             expect(isApiing()).toBe(true);
@@ -881,18 +880,18 @@ describe('api-tool-google.js', () => {
     });
     describe('googleBackupDb', () => {
         test('creates and uploads', async () => {
-            mockGoogleDrive.files.insert.mockImplementation((p, cb) => setTimeout(() => cb(null, { data: { id: 'fid', title: p.resource?.title } }), 10));
+            mockGoogleDrive.files.create.mockImplementation((p, cb) => setTimeout(() => cb(null, { data: { id: 'fid', name: p.resource?.name } }), 10));
             mockFsReaddirSync.mockReturnValueOnce(['col1']).mockReturnValueOnce(['f1.bson']);
             await googleBackupDb('2024-01-01'); await WAIT(2000);
-            expect(mockGoogleDrive.files.insert).toHaveBeenCalled();
+            expect(mockGoogleDrive.files.create).toHaveBeenCalled();
         });
         test('empty collections', async () => {
-            mockGoogleDrive.files.insert.mockImplementation((p, cb) => cb(null, { data: { id: 'rid', title: p.resource?.title } }));
+            mockGoogleDrive.files.create.mockImplementation((p, cb) => cb(null, { data: { id: 'rid', name: p.resource?.name } }));
             mockFsReaddirSync.mockReturnValue([]);
             await googleBackupDb('2024-02-01');
         });
         test('multi collections', async () => {
-            mockGoogleDrive.files.insert.mockImplementation((p, cb) => setTimeout(() => cb(null, { data: { id: 'id' + Date.now(), title: p.resource?.title } }), 5));
+            mockGoogleDrive.files.create.mockImplementation((p, cb) => setTimeout(() => cb(null, { data: { id: 'id' + Date.now(), name: p.resource?.name } }), 5));
             mockFsReaddirSync.mockReturnValueOnce(['c1', 'c2']).mockReturnValueOnce(['f1', 'f2']).mockReturnValueOnce(['f3']);
             await googleBackupDb('2024-03-01'); await WAIT(3000);
         });
