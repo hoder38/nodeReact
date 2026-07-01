@@ -265,55 +265,7 @@ const processFilledOrder = (o, lastP, currentPosition, order_recur, nextIndex) =
                 }, 'sell order out of time');
                 item.previous.sell = item.previous.sell.filter(v => (time - v.time < RANGE_INTERVAL) ? true : false);
             }
-            // Calculate profit from position delta
-            /*console.log(lastP);
-            console.log(currentPosition);
-            if (!o.fake && lastP.length > 0) {
-                let pp = 0;
-                let cp = 0;
-                let pa = 0;
-                let peq = false;
-                for (let i = 0; i < lastP.length; i++) {
-                    if (lastP[i].symbol === item.index) {
-                        pa = lastP[i].amount;
-                        pp = lastP[i].amount * lastP[i].price;
-                        break;
-                    }
-                }
-                if (pp !== 0) {
-                    for (let i = 0; i < currentPosition.length; i++) {
-                        if (currentPosition[i].symbol === item.index) {
-                            if (pa === currentPosition[i].amount) {
-                                peq = true;
-                            }
-                            cp = currentPosition[i].amount * currentPosition[i].price;
-                            break;
-                        }
-                    }
-                    console.log(pp);
-                    console.log(cp);
-                    if (!peq) {
-                        let matchCount = 0;
-                        for (let i = fillRevenue.length - 1; i >= 0; i--) {
-                            for (let k = 0; k < item.previous.sell.length; k++) {
-                                if (item.previous.sell[k].price === fillRevenue[i].price && item.previous.sell[k].time === fillRevenue[i].time) {
-                                    matchCount++;
-                                    break;
-                                }
-                            }
-                            if (matchCount < 2) {
-                                profit = profit + fillRevenue[i].revenue * (1 - USSE_FEE);
-                            } else {
-                                break;
-                            }
-                        }
-                        profit = profit - pp + cp;
-                    }
-                    console.log(profit);
-                }
-            }*/
         }
-        //item.profit = item.profit ? item.profit + profit : profit;
         log.debug({ previous: item.previous }, 'updated previous state');
         return Mongo('update', TOTALDB, {_id: item._id}, {$set: {previous: item.previous, profit: item.profit}}).then(() => order_recur(nextIndex));
     });

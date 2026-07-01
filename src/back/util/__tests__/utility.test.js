@@ -29,6 +29,15 @@ let mockObjectID;
 // ─── NAS_PREFIX mock ────────────────────────────────────────────────
 let mockNasPrefix;
 
+// ─── logger mock ────────────────────────────────────────────────────
+const mockLog = {
+    info: jest.fn(),
+    debug: jest.fn(),
+    warn: jest.fn(),
+    error: jest.fn(),
+    trace: jest.fn(),
+};
+
 // ─── Setup mocks BEFORE importing the module under test ─────────────
 
 jest.unstable_mockModule('../../constants.js', () => ({
@@ -38,6 +47,10 @@ jest.unstable_mockModule('../../constants.js', () => ({
 jest.unstable_mockModule('../../../../ver.js', () => ({
     ENV_TYPE: 'test',
     PASSWORD_SALT: 'test_salt_',
+}));
+
+jest.unstable_mockModule('../logger.js', () => ({
+    default: () => mockLog,
 }));
 
 // ─── Redis mock ─────────────────────────────────────────────────────
@@ -136,11 +149,9 @@ let isValidString, toValidName, userPWCheck, checkAdmin, HoError,
     bufferToString, getJson, torrent2Magnet, sortList, completeZero,
     convertTimestampToDate, addPre, isEmptyObject;
 
-let consoleSpy;
 let cryptoModule;
 
 beforeEach(async () => {
-    consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
     jest.clearAllMocks();
 
     const mod = await import('../utility.js');
@@ -173,7 +184,6 @@ beforeEach(async () => {
 });
 
 afterEach(() => {
-    consoleSpy.mockRestore();
     jest.restoreAllMocks();
 });
 
@@ -566,7 +576,14 @@ describe('handleError', () => {
     test('type=other (number) logs Unknown type', () => {
         const err = new HoError('fail');
         handleError(err, 42);
-        expect(consoleSpy).toHaveBeenCalledWith(42);
+        expect(mockLog.warn).toHaveBeenCalledWith(
+            { handlerType: 'number', handlerValue: 42 },
+            'unexpected error handler type',
+        );
+        expect(mockLog.error).toHaveBeenCalledWith(
+            expect.objectContaining({ context: 'Unknown type', errName: 'HoError', errCode: 400, err }),
+            'fail',
+        );
     });
 });
 
@@ -586,17 +603,16 @@ describe('showLog', () => {
                 userPW: 'pw',
                 data: 'value',
             },
-        };
-        showLog(req, next);
-        expect(next).toHaveBeenCalled();
-        const logged = consoleSpy.mock.calls.map(c => c[0]);
-        expect(logged).toContain('/api/test');
-        expect(logged).toContain('name: John');
-        expect(logged).toContain('data: value');
-        expect(logged.some(l => typeof l === 'string' && l.includes('password'))).toBe(false);
-        expect(logged.some(l => typeof l === 'string' && l.includes('newPwd'))).toBe(false);
-        expect(logged.some(l => typeof l === 'string' && l.includes('conPwd'))).toBe(false);
-        expect(logged.some(l => typeof l === 'string' && l.includes('userPW'))).toBe(false);
+            };
+            showLog(req, next);
+            expect(next).toHaveBeenCalled();
+            expect(mockLog.info).toHaveBeenCalledWith({
+                url: '/api/test',
+                body: {
+                    name: 'John',
+                    data: 'value',
+                },
+            }, 'incoming request');
     });
 });
 

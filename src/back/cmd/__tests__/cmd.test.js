@@ -162,6 +162,18 @@ jest.unstable_mockModule('../../models/redis-tool.js', () => ({
   default: jest.fn(() => Promise.resolve(null)),
 }));
 
+// --- logger.js ---
+const mockLog = {
+  info: jest.fn(),
+  debug: jest.fn(),
+  warn: jest.fn(),
+  error: jest.fn(),
+  trace: jest.fn(),
+};
+jest.unstable_mockModule('../../util/logger.js', () => ({
+  default: () => mockLog,
+}));
+
 // =====================================================================
 // IMPORT MODULE UNDER TEST
 // =====================================================================
@@ -257,64 +269,52 @@ describe('cmd.js', () => {
     test('quarter calc — month < 4 (Jan) → Q4 prev year', async () => {
       jest.useFakeTimers();
       jest.setSystemTime(new Date(2026, 0, 15)); // January
-      const consoleSpy = jest.spyOn(console, 'log');
       mockGetStockListV2.mockResolvedValueOnce([]);
       await runCmd('stocklist');
       await flushPromises();
-      expect(consoleSpy).toHaveBeenCalledWith('2025q4');
-      consoleSpy.mockRestore();
+      expect(mockLog.info).toHaveBeenCalledWith({ quarter: '2025q4' }, 'stock list update quarter');
       jest.useRealTimers();
     });
 
     test('quarter calc — month 4-6 (May) → Q1', async () => {
       jest.useFakeTimers();
       jest.setSystemTime(new Date(2026, 4, 15)); // May
-      const consoleSpy = jest.spyOn(console, 'log');
       mockGetStockListV2.mockResolvedValueOnce([]);
       await runCmd('stocklist');
       await flushPromises();
-      expect(consoleSpy).toHaveBeenCalledWith('2026q1');
-      consoleSpy.mockRestore();
+      expect(mockLog.info).toHaveBeenCalledWith({ quarter: '2026q1' }, 'stock list update quarter');
       jest.useRealTimers();
     });
 
     test('quarter calc — month 7-9 (Aug) → Q2', async () => {
       jest.useFakeTimers();
       jest.setSystemTime(new Date(2026, 7, 15)); // August
-      const consoleSpy = jest.spyOn(console, 'log');
       mockGetStockListV2.mockResolvedValueOnce([]);
       await runCmd('stocklist');
       await flushPromises();
-      expect(consoleSpy).toHaveBeenCalledWith('2026q2');
-      consoleSpy.mockRestore();
+      expect(mockLog.info).toHaveBeenCalledWith({ quarter: '2026q2' }, 'stock list update quarter');
       jest.useRealTimers();
     });
 
     test('quarter calc — month >= 10 (Nov) → Q3', async () => {
       jest.useFakeTimers();
       jest.setSystemTime(new Date(2026, 10, 15)); // November
-      const consoleSpy = jest.spyOn(console, 'log');
       mockGetStockListV2.mockResolvedValueOnce([]);
       await runCmd('stocklist');
       await flushPromises();
-      expect(consoleSpy).toHaveBeenCalledWith('2026q3');
-      consoleSpy.mockRestore();
+      expect(mockLog.info).toHaveBeenCalledWith({ quarter: '2026q3' }, 'stock list update quarter');
       jest.useRealTimers();
     });
 
     test('logs each stock index and tag', async () => {
-      const consoleSpy = jest.spyOn(console, 'log');
       mockGetStockListV2.mockResolvedValueOnce([
         { index: '2330', tag: ['semi'] },
         { index: 'AAPL', tag: ['tech'] },
       ]);
       await runCmd('stocklist');
       await flushPromises();
-      expect(consoleSpy).toHaveBeenCalledWith('2330');
-      expect(consoleSpy).toHaveBeenCalledWith(['semi']);
-      expect(consoleSpy).toHaveBeenCalledWith('AAPL');
-      expect(consoleSpy).toHaveBeenCalledWith(['tech']);
-      consoleSpy.mockRestore();
+      expect(mockLog.debug).toHaveBeenCalledWith({ index: '2330', tag: ['semi'] }, 'stock list item');
+      expect(mockLog.debug).toHaveBeenCalledWith({ index: 'AAPL', tag: ['tech'] }, 'stock list item');
     });
 
     test('API failure → handleError catches', async () => {
@@ -727,16 +727,15 @@ describe('cmd.js', () => {
   describe('resetpassword command', () => {
     test('hashes password with bcrypt and updates all users', async () => {
       mockMongo.mockResolvedValueOnce(3);
-      const consoleSpy = jest.spyOn(console, 'log');
       await runCmd('resetpassword myNewPass');
       await flushPromises();
       expect(mockBcryptHash).toHaveBeenCalledWith('test_salt_myNewPass', 10);
       expect(mockMongo).toHaveBeenCalledWith(
         'updateMany', 'user', {}, { $set: { password: '$2b$10$hashed' } },
       );
-      expect(consoleSpy).toHaveBeenCalledWith('resetpassword');
-      expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('Reset'));
-      consoleSpy.mockRestore();
+      expect(mockLog.info).toHaveBeenCalledWith('reset password command started');
+      expect(mockLog.info).toHaveBeenCalledWith(expect.objectContaining({ count: expect.anything() }), 'reset password updated users');
+      expect(mockLog.info).toHaveBeenCalledWith('reset password command done');
     });
 
     test('missing password → handleError', async () => {
@@ -767,44 +766,34 @@ describe('cmd.js', () => {
   // =================================================================
   describe('default (help)', () => {
     test('unknown command → prints help', async () => {
-      const consoleSpy = jest.spyOn(console, 'log');
       await runCmd('foobar');
-      expect(consoleSpy).toHaveBeenCalledWith('help:');
-      consoleSpy.mockRestore();
+      expect(mockLog.info).toHaveBeenCalledWith('help:');
     });
 
     test('empty line → prints help', async () => {
-      const consoleSpy = jest.spyOn(console, 'log');
       await runCmd('');
-      expect(consoleSpy).toHaveBeenCalledWith('help:');
-      consoleSpy.mockRestore();
+      expect(mockLog.info).toHaveBeenCalledWith('help:');
     });
 
     test('case mismatch → prints help', async () => {
-      const consoleSpy = jest.spyOn(console, 'log');
       await runCmd('Stock');
-      expect(consoleSpy).toHaveBeenCalledWith('help:');
-      consoleSpy.mockRestore();
+      expect(mockLog.info).toHaveBeenCalledWith('help:');
     });
 
     test('whitespace only → prints help', async () => {
-      const consoleSpy = jest.spyOn(console, 'log');
       await runCmd('   ');
       // split(' ') → cmd[0] = '' → default
-      expect(consoleSpy).toHaveBeenCalledWith('help:');
-      consoleSpy.mockRestore();
+      expect(mockLog.info).toHaveBeenCalledWith('help:');
     });
 
     test('help text contains command list', async () => {
-      const consoleSpy = jest.spyOn(console, 'log');
       await runCmd('help');
-      expect(consoleSpy).toHaveBeenCalledWith('help:');
-      expect(consoleSpy).toHaveBeenCalledWith('stock type index mode');
-      expect(consoleSpy).toHaveBeenCalledWith('stocklist type');
-      expect(consoleSpy).toHaveBeenCalledWith('dbdump collection');
-      expect(consoleSpy).toHaveBeenCalledWith('dbrestore collection');
-      expect(consoleSpy).toHaveBeenCalledWith('resetpassword <newPassword>');
-      consoleSpy.mockRestore();
+      expect(mockLog.info).toHaveBeenCalledWith('help:');
+      expect(mockLog.info).toHaveBeenCalledWith('stock type index mode');
+      expect(mockLog.info).toHaveBeenCalledWith('stocklist type');
+      expect(mockLog.info).toHaveBeenCalledWith('dbdump collection');
+      expect(mockLog.info).toHaveBeenCalledWith('dbrestore collection');
+      expect(mockLog.info).toHaveBeenCalledWith('resetpassword <newPassword>');
     });
   });
 
@@ -841,23 +830,18 @@ describe('cmd.js', () => {
     };
 
     test('logs error name, message, and stack trace', () => {
-      const consoleSpy = jest.spyOn(console, 'log');
       const handler = getUncaughtHandler();
       const err = new Error('test crash');
       handler(err);
-      expect(consoleSpy).toHaveBeenCalledWith('Threw Exception: Error test crash');
-      expect(consoleSpy).toHaveBeenCalledWith(err.stack);
-      consoleSpy.mockRestore();
+      expect(mockLog.error).toHaveBeenCalledWith({ err }, 'Threw Exception: Error test crash');
+      expect(mockLog.error).toHaveBeenCalledWith({ stack: err.stack }, 'uncaught exception stack');
     });
 
     test('logs error without stack when err.stack is falsy', () => {
-      const consoleSpy = jest.spyOn(console, 'log');
       const handler = getUncaughtHandler();
       handler({ name: 'CustomError', message: 'no stack' });
-      expect(consoleSpy).toHaveBeenCalledWith('Threw Exception: CustomError no stack');
-      // Only one log call (no stack logged)
-      expect(consoleSpy).toHaveBeenCalledTimes(1);
-      consoleSpy.mockRestore();
+      expect(mockLog.error).toHaveBeenCalledWith({ err: { name: 'CustomError', message: 'no stack' } }, 'Threw Exception: CustomError no stack');
+      expect(mockLog.error).toHaveBeenCalledTimes(1);
     });
   });
 });

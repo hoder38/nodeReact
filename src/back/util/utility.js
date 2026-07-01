@@ -15,7 +15,9 @@ const { createReadStream: FsCreateReadStream, createWriteStream: FsCreateWriteSt
 import { access, rm, readFile, writeFile, unlink, stat, lstat, rename, readdir } from 'fs/promises'
 import jsCharDet from 'jschardet'
 import Ass2vtt from 'ass-to-vtt'
+import createLogger from '../util/logger.js'
 
+const log = createLogger('utility')
 
 export function isValidString(str, type) {
     if (typeof str === 'string' || typeof str === 'number') {
@@ -23,7 +25,9 @@ export function isValidString(str, type) {
         switch (type) {
             case 'name':
             const trim = str.trim()
-            //改為 \ / : ? < > * " |  允許 ' ` &
+            /*
+             * Replace \ / : ? < > * " | while allowing ' ` &
+             */
             if (trim !== '.' && trim !== '..') {
                 if (trim.match(/^[^\\\/\|\*\?"<>:]{1,500}$/)) {
                     if (trim.replace(/[\s　]+/g, '') !== '') {
@@ -33,7 +37,9 @@ export function isValidString(str, type) {
             }
             break
             case 'desc':
-            //不合法字元: \ / | * ? ' " < > ` : &
+            /*
+             * Reject these characters: \ / | * ? ' " < > ` : &
+             */
             str = str.replace(/\[\[([^\]]+)\]\]/g, (m, m1) => `[[${encodeURIComponent(m1)}]]`);
             if (str.search(/^[^\\\/\|\*\?\'"<>`:&]{0,500}$/) !== -1) {
                 return str;
@@ -91,7 +97,7 @@ export function isValidString(str, type) {
             return objectID(str)
         }
     }
-    console.log(`invalid string ${type} ${str}`);
+    log.warn({ type, value: str }, 'invalid string')
     return false
 }
 
@@ -125,7 +131,9 @@ export async function userPWCheck (user, pw) {
 
 export const checkAdmin = (perm, user) => (user.perm > 0 && user.perm <= perm) ? true : false
 
-//errorhandle
+/**
+ * Create an application error with an HTTP status code.
+ */
 export function HoError(message, { code=400 } = {}) {
     this.name = 'HoError'
     this.message = message || 'Hoder Message'
@@ -137,25 +145,19 @@ HoError.prototype = Object.create(Error.prototype)
 HoError.prototype.constructor = HoError
 
 function showError(err, type) {
-    console.log(`${type} error: ${err.name} ${err.message||err.msg}`);
-    if (err.code !== undefined) {
-        console.log(err.code);
-    }
-    if (err.stack) {
-        console.log(err.stack);
-    }
+    log.error({ err, errName: err.name, errCode: err.code, context: type }, err.message || err.msg)
 }
 
 export function handleError(err, type=null, ...args) {
     if (type) {
         if (typeof type === 'function') {
             showError(err, 'Delay')
-            console.log(type);
+            log.warn({ context: 'Delay', handler: type.name || 'anonymous' }, 'delayed error handling')
             return type(err, ...args);
         } else if (typeof type === 'string') {
             showError(err, type)
         } else {
-            console.log(type);
+            log.warn({ handlerType: typeof type, handlerValue: type }, 'unexpected error handler type')
             showError(err, 'Unknown type')
         }
     } else {
@@ -164,15 +166,17 @@ export function handleError(err, type=null, ...args) {
     }
 }
 
-//middleware
+/**
+ * Log inbound requests with sensitive password fields removed.
+ */
 export function showLog(req, next) {
-    console.log(new Date().toLocaleString());
-    console.log(req.url);
-    for (let i in req.body) {
-        if (i !== 'password' && i !== 'newPwd' && i !== 'conPwd' && i !== 'userPW') {
-            console.log(`${i}: ${req.body[i]}`);
+    const filteredBody = Object.entries(req.body || {}).reduce((acc, [key, value]) => {
+        if (!['password', 'newPwd', 'conPwd', 'userPW'].includes(key)) {
+            acc[key] = value
         }
-    }
+        return acc
+    }, {})
+    log.info({ url: req.url, body: filteredBody }, 'incoming request')
     next();
 }
 
@@ -181,7 +185,7 @@ export function checkLogin(req, res, next, type=0) {
         if (type) {
             if (new MobileDetect(req.headers['user-agent']).mobile() || req.headers['user-agent'].match(/Firefox/i)|| req.headers['user-agent'].match(/armv7l/i)) {
                 if (/^\/f\/video\//.test(req.path) || /^\/f\/subtitle\//.test(req.path) || /^\/f\/torrent\//.test(req.path)) {
-                    console.log("mobile or firefox");
+                    log.debug({ path: req.path, userAgent: req.headers['user-agent'] }, 'bypassing auth for mobile-compatible media route')
                     next()
                 } else {
                     return handleError(new HoError('auth fail!!!', {code: 401}), err => {throw err})
@@ -193,7 +197,7 @@ export function checkLogin(req, res, next, type=0) {
             return handleError(new HoError('auth fail!!!', {code: 401}), err => {throw err})
         }
     } else {
-        console.log(req.user._id);
+        log.debug({ userId: req.user._id }, 'authenticated request')
         next()
     }
 }
@@ -225,7 +229,7 @@ export function selectRandom(count_arr, select_arr=null) {
     }
     select_arr ? select_arr.forEach((s, i) => i < 1 ? accm_list.push(count_arr[s]) : accm_list.push(accm_list[i-1] + count_arr[s])) : count_arr.forEach((c, i) => i < 1 ? accm_list.push(c) : accm_list.push(accm_list[i-1] + c));
     const rand = Math.random() * accm_list[accm_list.length-1];
-    console.log(rand);
+    log.debug({ rand, accmList: accm_list, selectArr: select_arr }, 'generated weighted random value')
     for (let i in accm_list) {
         if (accm_list[i] >= rand) {
             return select_arr ? select_arr[Number(i)] : Number(i);
@@ -348,7 +352,7 @@ export const getJson = raw_data => {
     try {
         return JSON.parse(raw_data);
     } catch (x) {
-        console.log(raw_data);
+        log.debug({ rawData: raw_data }, 'failed json payload')
         showError(x, 'Json parse');
         return false;
     }
@@ -356,7 +360,7 @@ export const getJson = raw_data => {
 
 export const torrent2Magnet = torInfo => {
     if (!torInfo.infoHash) {
-        console.log('miss infoHash');
+        log.warn({ torInfo }, 'missing infoHash')
         return false;
     }
     let magnet = `magnet:?xt=urn:btih:${torInfo.infoHash}`;
@@ -404,7 +408,9 @@ export const sortList = list => {
                 number: split[2].match(/\d+/g),
             });
         } else {
-            //只比較前面數字
+            /*
+             * Only compare the leading numeric parts.
+             */
             sort_list = sortFile(current_list);
             current = split[1];
             current_list = [{
@@ -414,7 +420,7 @@ export const sortList = list => {
         }
     });
     sort_list = sortFile(current_list);
-    console.log(sort_list);
+    log.trace({ sortList: sort_list }, 'sorted list result')
     return sort_list;
 }
 
@@ -434,8 +440,8 @@ export const completeZero = (number, offset) => {
 export const convertTimestampToDate = (timestamp) => {
   const date = new Date(timestamp * 1000);
   const year = date.getFullYear();
-  const month = ('0' + (date.getMonth() + 1)).slice(-2); // Add leading zero
-  const day = ('0' + date.getDate()).slice(-2); // Add leading zero
+  const month = ('0' + (date.getMonth() + 1)).slice(-2);
+  const day = ('0' + date.getDate()).slice(-2);
   return {year, month, day};
 };
 

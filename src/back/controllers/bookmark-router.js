@@ -6,12 +6,14 @@ import TagTool, { isDefaultTag, normalize } from '../models/tag-tool.js'
 import { checkLogin, handleError, HoError, checkAdmin, isValidString, getStorageItem, getPasswordItem, getStockItem } from '../util/utility.js'
 import { addPost } from '../util/mime.js'
 import Mongo, { objectID } from '../models/mongo-tool.js'
+import createLogger from '../util/logger.js'
 import sendWs from '../util/sendWs.js'
 
 const router = Express.Router();
 const StorageTagTool = TagTool(STORAGEDB);
 const PasswordTagTool = TagTool(PASSWORDDB);
 const StockTagTool = TagTool(STOCKDB);
+const log = createLogger('bookmark-router')
 
 router.use(function(req, res, next) {
     checkLogin(req, res, next);
@@ -19,12 +21,12 @@ router.use(function(req, res, next) {
 
 //storage
 router.get(`/${STORAGEDB}/getList/:sortName(name|mtime)/:sortType(desc|asc)/:page(0)?`, function (req, res, next) {
-    console.log('get storage bookmark list');
+    log.debug('get storage bookmark list');
     StorageTagTool.getBookmarkList(req.params.sortName, req.params.sortType, req.user).then(result => res.json({bookmarkList: result.bookmarkList})).catch(err => handleError(err, next));
 });
 
 router.get(`/${STORAGEDB}/get/:id/:sortName(name|mtime|count)/:sortType(desc|asc)`, function (req, res, next) {
-    console.log('get storage bookmark');
+    log.debug('get storage bookmark');
     StorageTagTool.getBookmark(req.params.id, req.params.sortName, req.params.sortType, req.user, req.session).then(result => res.json({
         itemList: getStorageItem(req.user, result.items, result.mediaHadle),
         parentList: result.parentList,
@@ -34,7 +36,7 @@ router.get(`/${STORAGEDB}/get/:id/:sortName(name|mtime|count)/:sortType(desc|asc
 });
 
 router.post(`/${STORAGEDB}/add`, function (req, res, next) {
-    console.log('storage add bookmark');
+    log.debug('storage add bookmark');
     const name = isValidString(req.body.name, 'name');
     if (!name) {
         return handleError(new HoError('name is not vaild'), next);
@@ -138,8 +140,7 @@ function newBookmarkItem(name, user, session, bpath, bexactly) {
             data['tags'] = setArr;
             data[user._id] = setArr;
             return Mongo('insert', STORAGEDB, data).then(item => {
-                console.log(item);
-                console.log('save end');
+                log.debug({ itemId: item?.[0]?._id }, 'bookmark item saved');
                 sendWs({
                     type: 'file',
                     data: item[0]._id,
@@ -177,12 +178,12 @@ function newBookmarkItem(name, user, session, bpath, bexactly) {
 }
 
 router.delete(`/${STORAGEDB}/del/:id`, function (req, res, next) {
-    console.log('del storage bookmark');
+    log.debug('del storage bookmark');
     StorageTagTool.delBookmark(req.params.id).then(result => res.json({id: result.id})).catch(err => handleError(err, next));
 });
 
 router.get(`/${STORAGEDB}/set/:id/:sortName(name|mtime|count)/:sortType(desc|asc)`, function (req, res, next) {
-    console.log('set storage bookmark');
+    log.debug('set storage bookmark');
     const id = isValidString(req.params.id, 'uid');
     if (!id) {
         return handleError(new HoError('bookmark is not vaild'), next);
@@ -203,7 +204,7 @@ router.get(`/${STORAGEDB}/set/:id/:sortName(name|mtime|count)/:sortType(desc|asc
 });
 
 router.post(`/${STORAGEDB}/subscript/:id`, function(req, res, next) {
-    console.log('subscipt storage bookmark');
+    log.debug('subscipt storage bookmark');
     if (req.body.path.length <= 0 || req.body.exactly.length <= 0) {
         return handleError(new HoError('empty parent list!!!'), next);
     }
@@ -236,12 +237,12 @@ router.post(`/${STORAGEDB}/subscript/:id`, function(req, res, next) {
 
 //password
 router.get(`/${PASSWORDDB}/getList/:sortName(name|mtime)/:sortType(desc|asc)/:page(0)?`, function (req, res, next) {
-    console.log('get password bookmark list');
+    log.debug('get password bookmark list');
     PasswordTagTool.getBookmarkList(req.params.sortName, req.params.sortType, req.user).then(result => res.json({bookmarkList: result.bookmarkList})).catch(err => handleError(err, next));
 });
 
 router.get(`/${PASSWORDDB}/get/:id/:sortName(name|mtime|count)/:sortType(desc|asc)`, function (req, res, next) {
-    console.log('get password bookmark');
+    log.debug('get password bookmark');
     PasswordTagTool.getBookmark(req.params.id, req.params.sortName, req.params.sortType, req.user, req.session).then(result => res.json({
         itemList: getPasswordItem(req.user, result.items),
         parentList: result.parentList,
@@ -251,7 +252,7 @@ router.get(`/${PASSWORDDB}/get/:id/:sortName(name|mtime|count)/:sortType(desc|as
 });
 
 router.post(`/${PASSWORDDB}/add`, function (req, res, next) {
-    console.log('password add bookmark');
+    log.debug('password add bookmark');
     const name = isValidString(req.body.name, 'name');
     if (!name) {
         return handleError(new HoError('name is not vaild'), next);
@@ -260,18 +261,18 @@ router.post(`/${PASSWORDDB}/add`, function (req, res, next) {
 });
 
 router.delete(`/${PASSWORDDB}/del/:id`, function (req, res, next) {
-    console.log('del password bookmark');
+    log.debug('del password bookmark');
     PasswordTagTool.delBookmark(req.params.id).then(result => res.json({id: result.id})).catch(err => handleError(err, next));
 });
 
 //stock
 router.get(`/${STOCKDB}/getList/:sortName(name|mtime)/:sortType(desc|asc)/:page(0)?`, function (req, res, next) {
-    console.log('get stock bookmark list');
+    log.debug('get stock bookmark list');
     StockTagTool.getBookmarkList(req.params.sortName, req.params.sortType, req.user).then(result => res.json({bookmarkList: result.bookmarkList})).catch(err => handleError(err, next));
 });
 
 router.get(`/${STOCKDB}/get/:id/:sortName(name|mtime|count)/:sortType(desc|asc)`, function (req, res, next) {
-    console.log('get stock bookmark');
+    log.debug('get stock bookmark');
     StockTagTool.getBookmark(req.params.id, req.params.sortName, req.params.sortType, req.user, req.session).then(result => res.json({
         itemList: getStockItem(req.user, result.items),
         parentList: result.parentList,
@@ -281,7 +282,7 @@ router.get(`/${STOCKDB}/get/:id/:sortName(name|mtime|count)/:sortType(desc|asc)`
 });
 
 router.post(`/${STOCKDB}/add`, function (req, res, next) {
-    console.log('stock add bookmark');
+    log.debug('stock add bookmark');
     const name = isValidString(req.body.name, 'name');
     if (!name) {
         return handleError(new HoError('name is not vaild'), next);
@@ -290,7 +291,7 @@ router.post(`/${STOCKDB}/add`, function (req, res, next) {
 });
 
 router.delete(`/${STOCKDB}/del/:id`, function (req, res, next) {
-    console.log('del stock bookmark');
+    log.debug('del stock bookmark');
     StockTagTool.delBookmark(req.params.id).then(result => res.json({id: result.id})).catch(err => handleError(err, next));
 });
 

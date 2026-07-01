@@ -6,19 +6,21 @@ import MediaHandleTool, { handleMediaError, completeMedia } from '../models/medi
 import { googleBackup } from '../models/api-tool-google.js'
 import Mongo from '../models/mongo-tool.js'
 import TagTool from '../models/tag-tool.js'
+import createLogger from '../util/logger.js'
 import { checkLogin, handleError, HoError, getFileLocation, checkAdmin, deleteFolderRecursive, isValidString, fsExists } from '../util/utility.js'
 import sendWs from '../util/sendWs.js'
 import { supplyTag, isVideo } from '../util/mime.js'
 
 const router = Express.Router();
 const StorageTagTool = TagTool(STORAGEDB);
+const log = createLogger('file-router');
 
 router.use(function(req, res, next) {
     checkLogin(req, res, next);
 });
 
 router.put('/edit/:uid', function(req, res, next){
-    console.log('edit file');
+    log.debug('edit file');
     MediaHandleTool.editFile(req.params.uid, req.body.name, req.user).then(result => {
         StorageTagTool.setLatest(result.id, req.session).then(() => Mongo('update', STORAGEDB, {_id: result.id}, {$inc: {count: 1}})).catch(err => handleError(err, 'Set latest'));
         sendWs({
@@ -33,7 +35,7 @@ router.put('/edit/:uid', function(req, res, next){
 });
 
 router.delete('/del/:uid/:recycle', function(req, res, next) {
-    console.log('del file');
+    log.debug('del file');
     const id = isValidString(req.params.uid, 'uid');
     if (!id) {
         return handleError(new HoError('uid is not vaild'), next);
@@ -43,7 +45,7 @@ router.delete('/del/:uid/:recycle', function(req, res, next) {
             return handleError(new HoError('file can not be fund!!!'));
         }
         const rest = () => Mongo('deleteMany', STORAGEDB, {_id: items[0]._id}).then(item2 => {
-            console.log('perm delete file');
+            log.info('permanent delete file');
             sendWs({
                 type: 'file',
                 data: items[0]._id,
@@ -73,7 +75,7 @@ router.delete('/del/:uid/:recycle', function(req, res, next) {
                             rIndex++;
                         }
                     }
-                    console.log(del_arr);
+                    log.debug({ deleteTargets: del_arr }, 'files to delete');
                     return Promise.all(del_arr.map(d => new Promise((resolve, reject) => FsUnlink(d, err => err ? reject(err) : resolve())))).then(() => rest());
                 } else {
                     return rest();
@@ -107,7 +109,7 @@ router.delete('/del/:uid/:recycle', function(req, res, next) {
                 if (await fsExists(`${filePath}.vtt`)) {
                     del_arr.push(`${filePath}.vtt`);
                 }
-                console.log(del_arr);
+                log.debug({ deleteTargets: del_arr }, 'files to delete');
                 await Promise.all([
                     deleteFolderRecursive(`${filePath}_doc`),
                     deleteFolderRecursive(`${filePath}_img`),
@@ -139,7 +141,7 @@ router.delete('/del/:uid/:recycle', function(req, res, next) {
                 if (total_file > 0) {
                     const zip_filePath = await fsExists(`${filePath}_zip`) ? `${filePath}_zip` : await fsExists(`${filePath}_7z`) ? `${filePath}_7z` : await fsExists(`${filePath}.1.rar`) ? `${filePath}.1.rar` : null;
                     if (zip_filePath) {
-                        console.log(zip_filePath);
+                        log.debug({ zipPath: zip_filePath }, 'zip file path');
                         return googleBackup(req.user, items[0]._id, items[0].name, zip_filePath, items[0].tags, recycle).then(() => recur_playlist_backup(0));
                     } else {
                         return recur_playlist_backup(0);
@@ -173,7 +175,7 @@ router.delete('/del/:uid/:recycle', function(req, res, next) {
 });
 
 router.get('/media/:action(act|del)/:uid/:index(\\d+|v)?', function(req, res, next) {
-    console.log('handle media');
+    log.debug('handle media');
     if (!checkAdmin(1, req.user)) {
         return handleError(new HoError('permission denied'), next);
     }
@@ -182,7 +184,7 @@ router.get('/media/:action(act|del)/:uid/:index(\\d+|v)?', function(req, res, ne
         return handleError(new HoError('uid is not vaild'), next);
     }
     Mongo('find', STORAGEDB, {_id: id}, {limit: 1}).then(async items => {
-        console.log(items);
+        log.debug({ itemCount: items?.length }, 'media items');
         if (items.length < 1) {
             return handleError(new HoError('cannot find file!!!'));
         }
@@ -264,7 +266,7 @@ router.get('/media/:action(act|del)/:uid/:index(\\d+|v)?', function(req, res, ne
 });
 
 router.get('/feedback', function (req, res, next) {
-    console.log('file feedback');
+    log.debug('file feedback');
     Mongo('find', STORAGEDB, {
         untag: 1,
         owner: req.user._id,

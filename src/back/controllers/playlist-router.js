@@ -13,17 +13,19 @@ import PlaylistApi from '../models/api-tool-playlist.js'
 import TagTool, { isDefaultTag, normalize } from '../models/tag-tool.js'
 import { checkLogin, isValidString, handleError, HoError, getFileLocation, checkAdmin, toValidName, fsExists } from '../util/utility.js'
 import { extType, isVideo, supplyTag, addPost } from '../util/mime.js'
+import createLogger from '../util/logger.js'
 import sendWs from '../util/sendWs.js'
 
 const router = Express.Router();
 const StorageTagTool = TagTool(STORAGEDB);
+const log = createLogger('playlist-router')
 
 router.use(function(req, res, next) {
     checkLogin(req, res, next);
 });
 
 router.put('/join', function(req, res, next){
-    console.log('join playlist');
+    log.debug('join playlist')
     let uids = [];
     req.body.uids.forEach(i => {
         const id = isValidString(i, 'uid');
@@ -86,7 +88,7 @@ router.put('/join', function(req, res, next){
                     const stream = FsCreateReadStream(filePath);
                     return new Promise((resolve, reject) => {
                         stream.on('error', err => {
-                            console.log(`copy file:${filePath} error!!!`);
+                            log.error({ filePath }, 'playlist copy file failed')
                             return reject(err);
                         });
                         stream.on('close', () => {
@@ -119,7 +121,7 @@ router.put('/join', function(req, res, next){
             }
             const filePath = getFileLocation(order_items[1].owner, order_items[1]._id);
             const cFilePath = `${filePath}${ext}_c`;
-            console.log('concatFiles', srcPaths, '>>', cFilePath);
+            log.debug({ srcPaths, target: cFilePath }, 'concatenating files')
             const unlinkC = () => fsExists(cFilePath).then(exists => exists ? new Promise((resolve, reject) => FsUnlink(cFilePath, err => err ? reject(err) : resolve())) : Promise.resolve());
             const mediaType = extType(order_items[1]['name']);
             return unlinkC().then(() => concatFiles(srcPaths, cFilePath)).then(() => MediaHandleTool.handleMediaUpload(mediaType, filePath, order_items[1]._id, req.user).then(() => res.json({
@@ -131,7 +133,7 @@ router.put('/join', function(req, res, next){
 });
 
 router.post('/copy/:uid/:index(\\d+)', function(req, res, next) {
-    console.log('torrent copy');
+    log.debug('torrent copy')
     const index = Number(req.params.index);
     const id = isValidString(req.params.uid, 'uid');
     if (!id) {
@@ -212,8 +214,7 @@ router.post('/copy/:uid/:index(\\d+)', function(req, res, next) {
                     tags: setArr,
                     [req.user._id]: setArr,
                 })).then(item => {
-                    console.log(item);
-                    console.log('save end');
+                    log.debug({ itemId: item?.[0]?._id }, 'playlist item saved')
                     sendWs({
                         type: 'file',
                         data: item[0]._id,
@@ -247,7 +248,7 @@ router.post('/copy/:uid/:index(\\d+)', function(req, res, next) {
 });
 
 router.get('/all/download/:uid', function(req, res, next) {
-    console.log('torrent all downlad');
+    log.debug('torrent all download')
     const id = isValidString(req.params.uid, 'uid');
     if (!id) {
         return handleError(new HoError('uid is not vaild'), next);
@@ -270,7 +271,7 @@ router.get('/all/download/:uid', function(req, res, next) {
         }
         StorageTagTool.setLatest(items[0]._id, req.session).then(() => Mongo('update', STORAGEDB, {_id: items[0]._id}, {$inc: {count: 1}})).catch(err => handleError(err, 'Set latest'));
         if (queueItems.length > 0) {
-            console.log(queueItems);
+            log.debug({ queueCount: queueItems?.length }, 'torrent queue items')
             const recur_queue = (index, pType) => {
                 const qt = () => items[0]['magnet'] ? PlaylistApi('torrent add', req.user, decodeURIComponent(items[0]['magnet']), queueItems[index], items[0]._id, items[0].owner, pType) : PlaylistApi('zip add', req.user, queueItems[index], items[0]._id, items[0].owner, items[0]['playList'][queueItems[index]], items[0].pwd);
                 return qt().then(() => {
@@ -288,7 +289,7 @@ router.get('/all/download/:uid', function(req, res, next) {
 });
 
 router.get('/check/:uid/:index(\\d+|v)/:size(\\d+)', function(req, res, next) {
-    console.log('torrent check');
+    log.debug('torrent check')
     let index = !isNaN(req.params.index) ? Number(req.params.index) : 0;
     const bufferSize = Number(req.params.size);
     const id = isValidString(req.params.uid, 'uid');
@@ -323,7 +324,7 @@ router.get('/check/:uid/:index(\\d+|v)/:size(\\d+)', function(req, res, next) {
             });
         } else if (await fsExists(bufferPath)) {
             const total = (await stat(bufferPath)).size;
-            console.log(total);
+            log.debug({ total }, 'torrent total')
             res.json({
                 newBuffer: (total > bufferSize + 10 * 1024 * 1024) ? true : false,
                 complete: false,

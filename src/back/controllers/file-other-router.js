@@ -17,13 +17,15 @@ import TagTool, { isDefaultTag, normalize } from '../models/tag-tool.js'
 import { checkLogin, isValidString, handleError, getFileLocation, HoError, checkAdmin, toValidName, getJson, torrent2Magnet, sortList, completeZero, SRT2VTT, fsExists } from '../util/utility.js'
 import { isVideo, isImage, isMusic, addPost, supplyTag, isTorrent, extTag, extType, isDoc, isZipbook, isSub } from '../util/mime.js'
 import sendWs from '../util/sendWs.js'
+import createLogger from '../util/logger.js'
 
 const router = Express.Router();
 const StorageTagTool = TagTool(STORAGEDB);
+const log = createLogger('file-other-router');
 
 router.get('/preview/:uid', function(req, res, next) {
     checkLogin(req, res, () => {
-        console.log('preview file');
+        log.debug('preview file');
         const id = isValidString(req.params.uid, 'uid');
         if (!id) {
             return handleError(new HoError('uid is not vaild'), next);
@@ -47,7 +49,7 @@ router.get('/preview/:uid', function(req, res, next) {
                 previewPath = `${filePath}${(items[0].status === 2) ? '.jpg' : '_s.jpg'}`;
             }
             if (!await fsExists(previewPath)) {
-                console.log(previewPath);
+                log.debug({ previewPath }, 'preview file path');
                 return handleError(new HoError('cannot find file!!!'));
             }
             res.writeHead(200, {
@@ -63,7 +65,7 @@ router.get('/preview/:uid', function(req, res, next) {
 
 router.get('/download/:uid', function(req, res, next) {
     checkLogin(req, res, () => {
-        console.log('download file');
+        log.debug('download file');
         const id = isValidString(req.params.uid, 'uid');
         if (!id) {
             return handleError(new HoError('uid is not vaild'), next);
@@ -73,7 +75,7 @@ router.get('/download/:uid', function(req, res, next) {
                 return handleError(new HoError('cannot find file!!!'));
             }
             let filePath = getFileLocation(items[0].owner, items[0]._id);
-            console.log(filePath);
+            log.debug({ filePath }, 'file path');
             let ret_string = null;
             if (items[0].status === 9) {
                 if (items[0].magnet) {
@@ -115,11 +117,11 @@ router.get('/download/:uid', function(req, res, next) {
 
 router.get('/subtitle/:uid/:lang/:index(\\d+|v)/:fresh(0+)?', function(req, res, next) {
     checkLogin(req, res, () => {
-        console.log('subtitle file');
+        log.debug('subtitle file');
         const sendSub = async (filePath, fileIndex=false) => {
             filePath = fileIndex === false ? filePath : `${filePath}/${fileIndex}`;
             const subPath = req.params.lang === 'en' ? `${filePath}.en` : filePath;
-            console.log(subPath);
+            log.debug({ subPath }, 'subtitle path');
             res.writeHead(200, {
                 'X-Forwarded-Path': await fsExists(`${subPath}.vtt`) ? `${subPath}.vtt` : `${STATIC_PATH}/123.vtt`,
                 'X-Forwarded-Type': 'text/vtt',
@@ -174,7 +176,7 @@ router.get('/subtitle/:uid/:lang/:index(\\d+|v)/:fresh(0+)?', function(req, res,
 
 router.get('/video/:uid/file', function(req, res, next) {
     checkLogin(req, res, () => {
-        console.log('video');
+        log.debug('video');
         const id = isValidString(req.params.uid, 'uid');
         if (!id) {
             return handleError(new HoError('uid is not vaild'), next);
@@ -184,7 +186,7 @@ router.get('/video/:uid/file', function(req, res, next) {
                 return handleError(new HoError('cannot find video!!!'));
             }
             const videoPath = getFileLocation(items[0].owner, items[0]._id);
-            console.log(videoPath);
+            log.debug({ videoPath }, 'video path');
             let finalPath = `${videoPath}_complete`;
             if (!await fsExists(finalPath)) {
                 if (!await fsExists(videoPath)) {
@@ -227,7 +229,7 @@ router.get('/video/:uid/file', function(req, res, next) {
 
 router.get('/torrent/:index(\\d+|v)/:uid/:type(images|resources|\\d+)/:number(image\\d+.png|sheet\.css|0+)?', function (req, res, next) {
     checkLogin(req, res, () => {
-        console.log('torrent');
+        log.debug('torrent');
         let fileIndex = !isNaN(req.params.index) ? Number(req.params.index) : 0;
         const id = isValidString(req.params.uid, 'uid');
         if (!id) {
@@ -253,7 +255,7 @@ router.get('/torrent/:index(\\d+|v)/:uid/:type(images|resources|\\d+)/:number(im
                 if (await fsExists(`${bufferPath}_error`) || !outputPath) {
                     return handleError(new HoError('video error!!!'));
                 }
-                console.log(outputPath);
+                log.debug({ outputPath }, 'output path');
                 res.writeHead(200, {
                     'X-Forwarded-Path': outputPath,
                     'X-Forwarded-Type': 'video/mp4',
@@ -315,7 +317,7 @@ router.get('/torrent/:index(\\d+|v)/:uid/:type(images|resources|\\d+)/:number(im
                     }
                 }
                 return torrentDoc().then(async ([docFilePath, docMime]) => {
-                    console.log(docFilePath);
+                    log.debug({ docPath: docFilePath }, 'document file path');
                     if (!await fsExists(docFilePath)) {
                         return handleError(new HoError('cannot find file!!!'));
                     }
@@ -354,7 +356,7 @@ router.get('/torrent/:index(\\d+|v)/:uid/:type(images|resources|\\d+)/:number(im
 
 router.get('/image/:uid/:type(file|images|resources|\\d+)/:number(image\\d+.png||sheet\.css)?', function(req, res, next) {
     checkLogin(req, res, () => {
-        console.log('image');
+        log.debug('image');
         const id = isValidString(req.params.uid, 'uid');
         if (!id) {
             return handleError(new HoError('uid is not vaild'), next);
@@ -374,7 +376,7 @@ router.get('/image/:uid/:type(file|images|resources|\\d+)/:number(image\\d+.png|
                     }
                     return Promise.resolve((req.params.type === 'images') ? [`${filePath}_doc/images/${req.params.number}`, 'image/jpeg'] : [`${filePath}_doc/resources/sheet.css`, 'text/css']);
                 } else if (!isNaN(req.params.type)) {
-                    console.log('image record');
+                    log.debug('image record');
                     const data = (req.params.type === '1' || req.params.type === items[0].present.toString()) ? [
                         'hdel',
                         items[0]._id.toString(),
@@ -387,12 +389,12 @@ router.get('/image/:uid/:type(file|images|resources|\\d+)/:number(image\\d+.png|
                     }
                     return Redis(data[0], `record: ${req.user._id}`, data[1]).then(() => items[0].status === 6 ? [`${filePath}_present/${req.params.type}.svg`, 'image/svg+xml'] : items[0].status === 5 ? [`${filePath}_doc/doc${req.params.type}.html`, 'text/html'] : items[0].status === 10 ? [`${filePath}_pdf/${completeZero(req.params.type, 3)}.pdf`, 'application/pdf'] : [`${filePath}_img/${req.params.type}`, 'image/jpeg']);
                 } else {
-                    console.log('image settime');
+                    log.debug('image settime');
                     return Redis('hget', `record: ${req.user._id}`, items[0]._id.toString()).then(item => items[0].status === 6 ? [item ? `${filePath}_present/${item}.svg` : `${filePath}_present/1.svg`, 'image/svg+xml'] : items[0].status === 5 ? [(item && item !== '1') ? `${filePath}_doc/doc${item}.html` : `${filePath}_doc/doc.html`, 'text/html'] : items[0].status === 10 ? [item ? `${filePath}_pdf/${completeZero(item, 3)}.pdf` : `${filePath}_pdf/001.pdf`, 'application/pdf'] : [item ? `${filePath}_img/${item}}` : `${filePath}_img/1`, 'image/jpeg']);
                 }
             }
             return getRecord().then(async ([docFilePath, docMime]) => {
-                console.log(docFilePath);
+                log.debug({ docPath: docFilePath }, 'document file path');
                 if (!await fsExists(docFilePath)) {
                     return handleError(new HoError('cannot find file!!!'));
                 }
@@ -410,8 +412,8 @@ router.get('/image/:uid/:type(file|images|resources|\\d+)/:number(image\\d+.png|
 
 router.post('/upload/file', function(req, res, next) {
     checkLogin(req, res, () => {
-        console.log('upload file');
-        console.log(req.file);
+        log.debug('upload file');
+        log.debug({ file: req.file?.originalname }, 'uploaded file');
         const oOID = objectID();
         const filePath = getFileLocation(req.user._id, oOID);
         const mkdir = folderPath => fsExists(folderPath).then(exists => !exists ? Mkdirp(folderPath) : Promise.resolve());
@@ -423,7 +425,7 @@ router.post('/upload/file', function(req, res, next) {
                 if (!magnet) {
                     return handleError(new HoError('magnet create fail'));
                 }
-                console.log(magnet);
+                log.debug({ magnet }, 'magnet link');
                 const encodeTorrent = isValidString(magnet, 'url');
                 if (encodeTorrent === false) {
                     return handleError(new HoError('magnet is not vaild'));
@@ -440,7 +442,7 @@ router.post('/upload/file', function(req, res, next) {
                         let setTag = new Set(['torrent', 'playlist', '播放列表']);
                         let optTag = new Set();
                         let playList = info.files.map(file => {
-                            console.log(file.name);
+                            log.debug({ fileName: file.name }, 'torrent file');
                             const mediaType = extType(file.name);
                             if (mediaType) {
                                 const mediaTag = extTag(mediaType['type']);
@@ -463,7 +465,7 @@ router.post('/upload/file', function(req, res, next) {
             stream.pipe(FsCreateWriteStream(filePath));
         })).then(([filename, setTag, optTag, db_obj]) => new Promise((resolve, reject) => FsUnlink(req.file.path, err => {
             if (err) {
-                console.log(filePath);
+                log.debug({ filePath }, 'file path');
                 handleError(err, 'Upload file');
             }
             return resolve();
@@ -516,8 +518,7 @@ router.post('/upload/file', function(req, res, next) {
                     tags: setArr,
                     [req.user._id]: setArr,
                 }, db_obj)).then(item => {
-                    console.log(item);
-                    console.log('save end');
+                    log.debug({ itemId: item?.[0]?._id }, 'item saved');
                     sendWs({
                         type: 'file',
                         data: item[0]._id,
@@ -552,8 +553,8 @@ router.post('/upload/file', function(req, res, next) {
 
 router.post('/upload/subtitle/:uid/:index(\\d+)?', function(req, res, next) {
     checkLogin(req, res, () => {
-        console.log('upload subtitle');
-        console.log(req.file);
+        log.debug('upload subtitle');
+        log.debug({ file: req.file?.originalname }, 'uploaded file');
         if (req.file.size > (10 * 1024 * 1024)) {
             return handleError(new HoError('size too large!!!'), next);
         }

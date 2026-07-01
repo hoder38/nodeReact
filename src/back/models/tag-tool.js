@@ -3,6 +3,9 @@ import { HINT } from '../config.js'
 import { STORAGEDB, STOCKDB, PASSWORDDB, DEFAULT_TAGS, STORAGE_PARENT, PASSWORD_PARENT, STOCK_PARENT, HANDLE_TIME, UNACTIVE_DAY, UNACTIVE_HIT, QUERY_LIMIT, RELATIVE_LIMIT, RELATIVE_UNION, RELATIVE_INTER, GENRE_LIST, GENRE_LIST_CH, BOOKMARK_LIMIT, ADULTONLY_PARENT, GAME_LIST, GAME_LIST_CH, MEDIA_LIST, MEDIA_LIST_CH, DM5_ORI_LIST, DM5_CH_LIST, DM5_LIST, DM5_AREA_LIST, DM5_TAG_LIST } from '../constants.js'
 import { checkAdmin, isValidString, selectRandom, handleError, HoError } from '../util/utility.js'
 import Mongo, { objectID } from '../models/mongo-tool.js'
+import createLogger from '../util/logger.js'
+
+const log = createLogger('tag-tool')
 
 export default function process(collection) {
     let getQuerySql = null;
@@ -41,8 +44,6 @@ export default function process(collection) {
     };
     const getLatest = bookmark => Mongo('find', `${collection}User`, {_id: objectID(bookmark)}, {limit: 1}).then(items => {
         if (items.length > 0 && items[0].latest) {
-            //const youtubeMatch = items[0].latest.toString().match(/^y_(.*)$/);
-            //return youtubeMatch ? youtubeMatch[1] : items[0].latest;
             return items[0].latest;
         } else {
             return false;
@@ -183,7 +184,7 @@ export default function process(collection) {
                 if (genre) {
                     url = `${url}&genre=${genre}`;
                 }
-                console.log(url);
+                log.debug({ url }, 'tag URL');
                 return url;
             } else {
                 return false;
@@ -227,7 +228,7 @@ export default function process(collection) {
                 query_term = a18 ? null : query_term;
                 if (query_term) {
                     const url = `http://www.dm5.com/search.ashx?d=1549960254987&language=1&t=${encodeURIComponent(query_term)}`;
-                    console.log(url);
+                    log.debug({ url }, 'tag URL');
                     return url;
                 } else {
                     if (a18) {
@@ -241,7 +242,7 @@ export default function process(collection) {
                     let s = (sortName === 'mtime') ? '-s2' : '';
                     let p = (page > 1) ? `-p${page}` : '';
                     let url = `http://www.dm5.com/manhua-list${area}${tag}${group}${st}${s}${p}/`;
-                    console.log(url);
+                    log.debug({ url }, 'tag URL');
                     return url;
                 }
             } else {
@@ -259,7 +260,7 @@ export default function process(collection) {
                 if (name === false) {
                     return Promise.resolve(pre_arr);
                 }
-                console.log(name);
+                log.debug({ name }, 'tag name');
                 normal = normalize(name);
                 if (isDefaultTag(normal)) {
                     return Promise.resolve(pre_arr);
@@ -367,7 +368,7 @@ export default function process(collection) {
             }
             let tagType = getQueryTag(user, name);
             if (!tagType.type) {
-                console.log(tagType);
+                log.debug({ tagType }, 'tag type resolved');
                 return handleError(new HoError('not authority set default tag!!!'));
             }
             if (tagType.type === 2) {
@@ -408,7 +409,7 @@ export default function process(collection) {
                     }
                 });
             } else {
-                console.log(tagType);
+                log.debug({ tagType }, 'tag type resolved');
                 return handleError(new HoError('unknown add tag type!!!'));
             }
         },
@@ -426,7 +427,7 @@ export default function process(collection) {
             }
             let tagType = getQueryTag(user, name, 0);
             if (!tagType.type) {
-                console.log(tagType);
+                log.debug({ tagType }, 'tag type resolved');
                 return handleError(new HoError('not authority delete default tag!!!'));
             }
             return Mongo('find', collection, {_id: id}, {limit: 1}).then(items => {
@@ -441,12 +442,11 @@ export default function process(collection) {
                     }));
                 } else if (tagType.type === 1) {
                     if (tagType.tag.tags === normalize(items[0].name)) {
-                        console.log(tagType.tag.tags);
-                        console.log(normalize(items[0].name));
+                        log.debug({ tags: tagType.tag.tags, normalized: normalize(items[0].name) }, 'authority tag check');
                         return handleError(new HoError('can not delete file name!!!'));
                     }
                     if (checkAdmin(1, user)) {
-                        console.log('authority del tag');
+                        log.debug('authority del tag');
                         if (!items[0].tags.includes(tagType.tag.tags)) {
                             return {
                                 id: items[0]._id,
@@ -482,7 +482,7 @@ export default function process(collection) {
                         }
                     }
                 } else {
-                    console.log(tagType);
+                    log.debug({ tagType }, 'tag type resolved');
                     return handleError(new HoError('unknown del tag type!!!'));
                 }
             });
@@ -623,7 +623,7 @@ export default function process(collection) {
                 }
             };
         },
-        //bookmark
+        // bookmark
         getBookmarkList: function(sortName, sortType, user) {
             return Mongo('find', `${collection}User`, {userId: user._id}, {sort: [[
                 sortName,
@@ -678,7 +678,7 @@ export default function process(collection) {
                 return {apiOk: true};
             }) : Mongo('count', `${collection}User`, {userId: user._id}).then(count => {
                 if (count >= BOOKMARK_LIMIT) {
-                    console.log(count);
+                    log.debug({ count }, 'query count');
                     return handleError(new HoError('too much bookmark!!!'));
                 }
                 return Mongo('insert', `${collection}User`, {
@@ -719,11 +719,11 @@ export default function process(collection) {
             if (!inParentArray(name)) {
                 if (checkAdmin(2, user)) {
                     if(!inAdultonlyArray(name)) {
-                        console.log(name);
+                        log.debug({ name }, 'tag name');
                         return handleError(new HoError('name is not allow'));
                     }
                 } else {
-                    console.log(name);
+                    log.debug({ name }, 'tag name');
                     return handleError(new HoError('name is not allow'));
                 }
             }
@@ -762,11 +762,11 @@ export default function process(collection) {
             if (!inParentArray(name)) {
                 if (checkAdmin(2, user)) {
                     if(!inAdultonlyArray(name)) {
-                        console.log(name);
+                        log.debug({ name }, 'tag name');
                         return handleError(new HoError('name is not allow'));
                     }
                 } else {
-                    console.log(name);
+                    log.debug({ name }, 'tag name');
                     return handleError(new HoError('name is not allow'));
                 }
             }
@@ -792,7 +792,7 @@ export default function process(collection) {
         },
         delParent: function(uid, user) {
             if (!checkAdmin(1, user)) {
-                console.log(user);
+                log.debug({ userId: user?._id }, 'user context');
                 return handleError(new HoError('permission denied'));
             }
             const id = isValidString(uid, 'uid');
@@ -851,27 +851,17 @@ function inAdultonlyArray(parent) {
     return false;
 }
 
-//stotage sql
+// storage query SQL
 const escapeRegExp = str => str.replace(/[\-\[\]\/\{\}\(\)\*\+\?\.\\\^\$\|]/g, "\\$&")
 
 const getStorageQuerySql = function(user, tagList, exactly) {
     let nosql = {};
     let and = [];
     let is_first = true;
-    //let is_adultonly = false;
     let is_adultonly = true;
     let is_tags = false;
     let skip = 0;
     nosql['adultonly'] = 0;
-    /*if (tagList.length < 1) {
-        if (!checkAdmin(2, user)) {
-            nosql['adultonly'] = 0;
-            is_adultonly = true;
-        }
-        if (!checkAdmin(1, user)) {
-            nosql['recycle'] = 0;
-        }
-    } else {*/
         nosql['adultonly'] = 0;
         for (let [i, tag] of Object.entries(tagList)) {
             const normal = normalize(tag);
@@ -886,20 +876,14 @@ const getStorageQuerySql = function(user, tagList, exactly) {
             } else if (index.index === 0) {
                 if (checkAdmin(2, user)) {
                     nosql['adultonly'] = 1;
-                    //is_adultonly = true;
                 }
-            /*} else if (index.index === 17) {
-                if (checkAdmin(2, user)) {
-                    nosql['adultonly'] = 0;
-                    is_adultonly = true;
-                }*/
             } else if (index.index === 1) {
                 if (checkAdmin(1, user)) {
                     const ret = {nosql: {
                         mediaType: {$exists: true},
                         utime: {$lt: Math.round(new Date().getTime() / 1000) - HANDLE_TIME},
                     }}
-                    console.log(ret.nosql);
+                    log.debug({ nosql: ret.nosql }, 'query nosql');
                     return ret;
                 }
             } else if (index.index === 2) {
@@ -909,7 +893,7 @@ const getStorageQuerySql = function(user, tagList, exactly) {
                         count: {$lt: user.unHit? user.unHit: UNACTIVE_HIT},
                         utime: {$lt: Math.round(new Date().getTime() / 1000) - unDay * 86400},
                     }};
-                    console.log(ret.nosql);
+                    log.debug({ nosql: ret.nosql }, 'query nosql');
                     return ret;
                 }
             } else if (index.index === 8) {
@@ -920,7 +904,7 @@ const getStorageQuerySql = function(user, tagList, exactly) {
                         utime: {$lt: Math.round(new Date().getTime() / 1000) - unDay * 86400},
                         tags: 'playlist',
                     }};
-                    console.log(ret.nosql);
+                    log.debug({ nosql: ret.nosql }, 'query nosql');
                     return ret;
                 }
             } else if (index.index === 3) {
@@ -929,14 +913,14 @@ const getStorageQuerySql = function(user, tagList, exactly) {
                         recycle: {$ne: 0},
                         utime: {$lt: Math.round(new Date().getTime() / 1000) - HANDLE_TIME},
                     }};
-                    console.log(ret.nosql);
+                    log.debug({ nosql: ret.nosql }, 'query nosql');
                     return ret;
                 }
             } else if (index.index === 4 || index.index === 6 || index.index === 9 || index.index === 10) {
             } else if (index.index === 5) {
                 is_first = false;
             } else if (index.index === 7) {
-                console.log('no local');
+                log.debug('skipping local search');
                 return false;
             } else {
                 if (exactly[i]) {
@@ -950,11 +934,6 @@ const getStorageQuerySql = function(user, tagList, exactly) {
         if (!checkAdmin(1, user)) {
             nosql['recycle'] = 0;
         }
-        /*if (!checkAdmin(2, user)) {
-            nosql['adultonly'] = 0;
-            is_adultonly = true;
-        }
-    }*/
     if (is_first) {
         nosql['first'] = 1;
     }
@@ -963,8 +942,8 @@ const getStorageQuerySql = function(user, tagList, exactly) {
     }
     const hint = Object.assign({}, is_adultonly ? {adultonly: 1} : {}, is_tags ? {tags: 1} : {}, is_first ? {first: 1} : {}, {name: 1});
     const ret = Object.assign({nosql}, HINT(ENV_TYPE) ? {hint} : {}, skip ? {skip} : {});
-    console.log(ret);
-    console.log(ret.nosql);
+    log.debug({ query: ret }, 'tag query result');
+    log.debug({ nosql: ret.nosql }, 'query nosql');
     return ret;
 }
 
@@ -1043,8 +1022,8 @@ function getPasswordQuerySql(user, tagList, exactly) {
         prePassword: 0,
         owner: 0,
     }}, HINT(ENV_TYPE) ? {hint} : {}, skip ? {skip} : {});
-    console.log(ret);
-    console.log(ret.nosql);
+    log.debug({ query: ret }, 'tag query result');
+    log.debug({ nosql: ret.nosql }, 'query nosql');
     return ret;
 }
 
@@ -1094,12 +1073,6 @@ function getStockQuerySql(user, tagList, exactly) {
             } else if (index.index === 31) {
                 if (index[1] === '') {
                     skip = Number(index[1]);
-                /*} else if (index[1] === 'profit') {
-                    nosql['profitIndex'] = {$gte: Number(index[1])};
-                } else if (index[1] === 'safety') {
-                    nosql['safetyIndex'] = {$gte: Number(index[1])};
-                } else if (index[1] === 'manag') {
-                    nosql['managementIndex'] = {$gte: Number(index[1])};*/
                 } else if (index[1] === 'profit') {
                     nosql['per'] = {$gte: Number(index[1])};
                 } else if (index[1] === 'safety') {
@@ -1123,13 +1096,9 @@ function getStockQuerySql(user, tagList, exactly) {
         nosql.$and = and;
     }
     const hint = Object.assign({}, is_tags ? {tags: 1} : {}, is_important ? {important: 1} : {}, {per: 1});
-    const ret = Object.assign({nosql}/*, select: {
-        cash: 0,
-        asset: 0,
-        sales: 0,
-    }*/, HINT(ENV_TYPE) ? {hint} : {}, skip ? {skip} : {});
-    console.log(ret);
-    console.log(ret.nosql);
+    const ret = Object.assign({nosql}, HINT(ENV_TYPE) ? {hint} : {}, skip ? {skip} : {});
+    log.debug({ query: ret }, 'tag query result');
+    log.debug({ nosql: ret.nosql }, 'query nosql');
     return ret;
 }
 
@@ -1164,7 +1133,7 @@ function getStockSortName(sortName) {
     }
 }
 
-//default tag
+// default tag
 export function isDefaultTag(tag) {
     let ret = {index: DEFAULT_TAGS.indexOf(tag)}
     if (ret.index !== -1) {
@@ -1238,7 +1207,7 @@ function cn2ArabNum(cn) {
     return arab
 }
 
-//[^\x00-\x7F]+ 非英數
+// [^\x00-\x7F]+ non-alphanumeric characters
 function denormalize(tag) {
     const r = ['零', '一', '二', '三', '四', '五', '六', '七', '八', '九', '十', '百', '千', '萬'];
     [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 100, 1000, 10000].forEach((v, i) => tag = tag.replace(new RegExp('(^|[^\x00-\x7F])' + v + '([^\x00-\x7F]|$)'), `$1${r[i]}$2`));
@@ -1280,16 +1249,16 @@ export const completeMimeTag = add => {
                     return recur_item(index);
                 } else {
                     search_number += items.length;
-                    console.log(search_number);
+                    log.debug({ searchNumber: search_number }, 'search number filter');
                     if (items.length < RELATIVE_LIMIT) {
-                        console.log('end');
+                        log.debug('tag search ended');
                     } else {
                         return recur_com();
                     }
                 }
             }
             if (items.length === 0) {
-                console.log('end');
+                log.debug('tag search ended');
             } else {
                 items[index].tags.forEach(i => {
                     const tran_tag = getTag(i, DM5_ORI_LIST, DM5_CH_LIST);
@@ -1307,8 +1276,7 @@ export const completeMimeTag = add => {
                     }
                 });
                 if (complete_tag.length > 0) {
-                    console.log(items[index].name);
-                    console.log(complete_tag);
+                    log.debug({ itemName: items[index].name, completeTag: complete_tag }, 'completing tag');
                     const recur_add = tIndex => tool.addTag(items[index]._id, complete_tag[tIndex].tag, {
                         _id: complete_tag[tIndex].owner,
                         perm: 1,

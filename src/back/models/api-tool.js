@@ -14,13 +14,15 @@ import utf8 from 'utf8';
 import { stat, rename } from 'fs/promises'
 import { handleError, HoError, big5Encode, bufferToString, isEmptyObject, fsExists } from '../util/utility.js'
 import sendWs from '../util/sendWs.js'
+import createLogger from '../util/logger.js'
+
+const log = createLogger('api-tool')
 
 let api_ing = 0;
 let api_pool = [];
 let api_duration = 0;
 let api_lock = false;
 
-// Test helpers — expose internal state for white-box testing
 export function _resetState() {
     api_ing = 0;
     api_pool = [];
@@ -38,13 +40,12 @@ export function _setState(overrides) {
 }
 
 const setLock = () => {
-    console.log(api_lock);
+    log.trace({ api_lock }, 'checking lock state');
     return api_lock ? new Promise((resolve, reject) => setTimeout(() => resolve(setLock()), 500)) : Promise.resolve(api_lock = true);
 }
 
 export default function(name, ...args) {
-    console.log(name);
-    console.log(args);
+    log.debug({ action: name, argCount: args.length }, 'api-tool invoked');
     switch (name) {
         case 'stop':
         return stopApi();
@@ -52,11 +53,11 @@ export default function(name, ...args) {
         return download(false, ...args);
         case 'download':
         if (api_ing >= API_LIMIT(ENV_TYPE)) {
-            console.log(`reach limit ${api_ing} ${api_pool.length}`);
+            log.warn({ active: api_ing, queued: api_pool.length }, 'api pool limit reached');
             expire(name, args).catch(err => handleError(err, 'Api'));
         } else {
             api_ing++;
-            console.log(`go ${api_ing} ${api_pool.length}`);
+            log.debug({ active: api_ing, queued: api_pool.length }, 'api download started');
             download(...args).catch(err => handle_err(err, args[0])).then(rest => get(rest)).catch(err => handleError(err, 'Api'));
         }
         return new Promise((resolve, reject) => setTimeout(() => resolve(), 500));
@@ -70,7 +71,7 @@ function get(rest=null) {
     if (api_ing > 0) {
         api_ing--;
     }
-    console.log(`get ${api_ing} ${api_pool.length}`);
+    log.debug({ active: api_ing, queued: api_pool.length }, 'api download completed');
     if (rest && typeof rest === 'function') {
         rest().catch(err => handleError(err, 'Api rest'));
     }
@@ -85,7 +86,7 @@ function get(rest=null) {
             }
         }
     }
-    console.log(`empty ${api_ing} ${api_pool.length}`);
+    log.debug({ active: api_ing, queued: api_pool.length }, 'api pool idle');
     return Promise.resolve();
 }
 
@@ -98,7 +99,7 @@ function handle_err(err, user) {
 }
 
 function expire(name, args) {
-    console.log(`expire ${api_ing} ${api_pool.length}`);
+    log.warn({ active: api_ing, queued: api_pool.length }, 'api task expired');
     return setLock().then(go => {
         if (!go) {
             return Promise.resolve();
@@ -126,7 +127,7 @@ function expire(name, args) {
             }
         }
         api_lock = false;
-        console.log(`empty ${api_ing} ${api_pool.length}`);
+        log.debug({ active: api_ing, queued: api_pool.length }, 'api pool idle');
         return Promise.resolve();
     });
 }
@@ -187,10 +188,10 @@ function download(user, url, { filePath=null, is_check=true, referer=null, is_js
         if (err.code === 'HPE_INVALID_CONSTANT') {
             return handleError(err);
         }
-        console.log(index);
+        log.warn({ retryIndex: index }, 'fetch retry');
         handleError(err, 'Fetch');
         if (++index > MAX_RETRY) {
-            console.log(url);
+            log.error({ url }, 'fetch max retries exceeded');
             return handleError(new HoError('timeout'), errHandle);
         }
         return new Promise((resolve, reject) => setTimeout(() => resolve(proc()), index * 1000));

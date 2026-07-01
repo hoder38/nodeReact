@@ -5,15 +5,17 @@ import bcryptModule from 'bcrypt'
 import { checkAdmin, checkLogin, HoError, handleError, isValidString, userPWCheck } from '../util/utility.js'
 import Mongo from '../models/mongo-tool.js'
 import { isDefaultTag, normalize } from '../models/tag-tool.js'
+import createLogger from '../util/logger.js'
 
 const router = Express.Router()
+const log = createLogger('user-router')
 
 router.use(function(req, res, next) {
     checkLogin(req, res, next)
 })
 
 router.route('/act/:uid?').get(function(req, res, next) {
-    console.log('user info');
+    log.debug({ userId: req.user._id }, 'get user info');
     !checkAdmin(1, req.user) ? Mongo('find', USERDB, {_id: req.user._id}, {limit: 1}).then(users => users.length < 1 ? handleError(new HoError('Could not find user!')) : res.json({user_info: [{
         name: users[0].username,
         id: users[0]._id,
@@ -47,7 +49,7 @@ router.route('/act/:uid?').get(function(req, res, next) {
         delable: true,
     }))]})).catch(err => handleError(err, next))
 }).put(async function(req, res, next) {
-    console.log('user edit');
+    log.debug({ userId: req.user._id }, 'edit user');
     let userPW = '';
     if (req.body.userPW) {
         userPW = isValidString(req.body.userPW, 'passwd');
@@ -174,26 +176,26 @@ router.route('/act/:uid?').get(function(req, res, next) {
             limit: 1,
         }).then(users => {
             if (users.length > 0) {
-                console.log(users);
+                log.debug({ users }, 'duplicate username check');
                 return handleError(new HoError('already has one!!!'))
             }
             data['username'] = ret['name'] = name
             if (req.user._id.equals(id)) {
                 ret.owner = name
             }
-            console.log(data);
+            log.debug({ updateFields: Object.keys(data) }, 'user update data');
             return Mongo('update', USERDB, {_id: id}, {$set: data})
         }).then(user => res.json(ret)).catch(err => handleError(err, next))
     } else {
         if (Object.getOwnPropertyNames(data).length === 0) {
             return handleError(new HoError('nothing to change!!!'), next);
         }
-        console.log(data);
-        console.log(id);
+        log.debug({ updateFields: Object.keys(data) }, 'user update data');
+        log.debug({ targetId: id }, 'updating user');
         Mongo('update', USERDB, {_id: id}, {$set: data}).then(user => Object.getOwnPropertyNames(ret).length === 0 ? res.json({apiOK: true}) : res.json(ret)).catch(err => handleError(err, next));
     }
 }).post(async function(req, res, next) {
-    console.log('add user');
+    log.info({ requestedBy: req.user._id }, 'add new user');
     if (!checkAdmin(1, req.user)) {
         return handleError(new HoError('unknown type in edituser', {code: 403}), next);
     }
@@ -219,7 +221,7 @@ router.route('/act/:uid?').get(function(req, res, next) {
         limit: 1,
     }).then(async users => {
         if (users.length > 0) {
-            console.log(users);
+            log.debug({ users }, 'duplicate username check');
             return handleError(new HoError('already has one!!!'));
         }
         const newPwd = isValidString(req.body.newPwd, 'passwd');
@@ -264,7 +266,7 @@ router.route('/act/:uid?').get(function(req, res, next) {
 });
 
 router.put('/del/:uid', async function(req, res, next) {
-    console.log('deluser');
+    log.info({ userId: req.params.uid, requestedBy: req.user._id }, 'delete user');
     if (!checkAdmin(1, req.user)) {
         return handleError(new HoError('unknown type in edituser', {code: 403}), next);
     }

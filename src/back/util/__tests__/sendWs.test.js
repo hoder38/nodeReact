@@ -88,6 +88,18 @@ jest.unstable_mockModule('../utility.js', () => ({
     handleError: mockHandleError,
 }));
 
+// --- logger.js ---
+const mockLog = {
+    info: jest.fn(),
+    debug: jest.fn(),
+    warn: jest.fn(),
+    error: jest.fn(),
+    trace: jest.fn(),
+};
+jest.unstable_mockModule('../logger.js', () => ({
+    default: () => mockLog,
+}));
+
 // =====================================================================
 // Dynamic import after mocks are registered
 // =====================================================================
@@ -152,28 +164,21 @@ describe('mainInit', () => {
 
         test('1.2.1 — valid JSON WS message: logs raw + parsed', () => {
             const msgCb = mockWsSocket.on.mock.calls.find(c => c[0] === 'message')[1];
-            const spy = jest.spyOn(console, 'log').mockImplementation();
             msgCb('{"hello":"world"}');
-            expect(spy).toHaveBeenCalledWith('{"hello":"world"}');
-            expect(spy).toHaveBeenCalledWith({ hello: 'world' });
-            spy.mockRestore();
+            expect(mockLog.debug).toHaveBeenCalledWith({ rawMessage: '{"hello":"world"}' }, 'ws message received');
+            expect(mockLog.debug).toHaveBeenCalledWith({ parsed: { hello: 'world' } }, 'ws message parsed');
         });
 
         test('1.2.2 — invalid JSON WS message: calls handleError', () => {
             const msgCb = mockWsSocket.on.mock.calls.find(c => c[0] === 'message')[1];
-            const spy = jest.spyOn(console, 'log').mockImplementation();
             msgCb('not-json');
             expect(mockHandleError).toHaveBeenCalledWith(expect.any(SyntaxError), 'Web socket');
-            spy.mockRestore();
         });
 
         test('1.2.3 — WS client disconnect: logs reason', () => {
             const closeCb = mockWsSocket.on.mock.calls.find(c => c[0] === 'close')[1];
-            const spy = jest.spyOn(console, 'log').mockImplementation();
             closeCb(1001, 'Going Away');
-            expect(spy).toHaveBeenCalledWith(expect.stringContaining('1001'));
-            expect(spy).toHaveBeenCalledWith(expect.stringContaining('Going Away'));
-            spy.mockRestore();
+            expect(mockLog.info).toHaveBeenCalledWith({ reasonCode: 1001, description: 'Going Away' }, 'ws peer disconnected');
         });
     });
 
@@ -198,20 +203,18 @@ describe('mainInit', () => {
             const mockWsClient = { send: jest.fn() };
             mockWsClients.add(mockWsClient);
 
-            const spy = jest.spyOn(console, 'log').mockImplementation();
             dataCb(Buffer.from(JSON.stringify({
                 send: 'web',
                 data: { type: 'file', id: '123' },
                 adultonly: 0,
                 auth: 0,
             })));
-            expect(spy).toHaveBeenCalledWith('websocket: web');
+            expect(mockLog.debug).toHaveBeenCalledWith({ channel: 'web' }, 'tcp→ws relay');
             // sendWs was invoked → client got a message
             expect(mockWsClient.send).toHaveBeenCalledTimes(1);
             const sent = JSON.parse(mockWsClient.send.mock.calls[0][0]);
             expect(sent.type).toBe('file');
             expect(sent.level).toBe(0);
-            spy.mockRestore();
         });
 
         test('1.4.2 — invalid JSON TCP data calls handleError', () => {
@@ -219,12 +222,10 @@ describe('mainInit', () => {
             tcpServerConnectionCb(mockTcpClient);
             const dataCb = mockTcpClient.on.mock.calls.find(c => c[0] === 'data')[1];
 
-            const spy = jest.spyOn(console, 'log').mockImplementation();
             const badData = Buffer.from('not-json');
             dataCb(badData);
             expect(mockHandleError).toHaveBeenCalledWith(expect.any(SyntaxError), 'Client');
-            expect(spy).toHaveBeenCalledWith(badData);
-            spy.mockRestore();
+            expect(mockLog.error).toHaveBeenCalledWith({ rawData: 'not-json' }, 'tcp parse failed');
         });
 
         test('1.4.3 — TCP data with adultonly=1, auth=1 → level 2', () => {
@@ -235,11 +236,9 @@ describe('mainInit', () => {
             const mockWsClient = { send: jest.fn() };
             mockWsClients.add(mockWsClient);
 
-            const spy = jest.spyOn(console, 'log').mockImplementation();
             dataCb(Buffer.from(JSON.stringify({ send: 'web', data: { x: 1 }, adultonly: 1, auth: 1 })));
             const sent = JSON.parse(mockWsClient.send.mock.calls[0][0]);
             expect(sent.level).toBe(2);
-            spy.mockRestore();
         });
 
         test('1.4.4 — TCP data with adultonly=1, auth=0 → level 1', () => {
@@ -250,11 +249,9 @@ describe('mainInit', () => {
             const mockWsClient = { send: jest.fn() };
             mockWsClients.add(mockWsClient);
 
-            const spy = jest.spyOn(console, 'log').mockImplementation();
             dataCb(Buffer.from(JSON.stringify({ send: 'web', data: { x: 1 }, adultonly: 1, auth: 0 })));
             const sent = JSON.parse(mockWsClient.send.mock.calls[0][0]);
             expect(sent.level).toBe(1);
-            spy.mockRestore();
         });
 
         test('1.4.5 — TCP data with adultonly=0, auth=0 → level 0', () => {
@@ -265,11 +262,9 @@ describe('mainInit', () => {
             const mockWsClient = { send: jest.fn() };
             mockWsClients.add(mockWsClient);
 
-            const spy = jest.spyOn(console, 'log').mockImplementation();
             dataCb(Buffer.from(JSON.stringify({ send: 'web', data: { x: 1 }, adultonly: 0, auth: 0 })));
             const sent = JSON.parse(mockWsClient.send.mock.calls[0][0]);
             expect(sent.level).toBe(0);
-            spy.mockRestore();
         });
 
         test('1.5.2 — TCP receives empty buffer → handleError', () => {
@@ -277,10 +272,9 @@ describe('mainInit', () => {
             tcpServerConnectionCb(mockTcpClient);
             const dataCb = mockTcpClient.on.mock.calls.find(c => c[0] === 'data')[1];
 
-            const spy = jest.spyOn(console, 'log').mockImplementation();
             dataCb(Buffer.from(''));
             expect(mockHandleError).toHaveBeenCalledWith(expect.any(SyntaxError), 'Client');
-            spy.mockRestore();
+            expect(mockLog.error).toHaveBeenCalledWith({ rawData: '' }, 'tcp parse failed');
         });
 
         test('1.5.3 — TCP receives partial JSON → handleError + logs raw data', () => {
@@ -288,12 +282,10 @@ describe('mainInit', () => {
             tcpServerConnectionCb(mockTcpClient);
             const dataCb = mockTcpClient.on.mock.calls.find(c => c[0] === 'data')[1];
 
-            const spy = jest.spyOn(console, 'log').mockImplementation();
             const partial = Buffer.from('{"send":"we');
             dataCb(partial);
             expect(mockHandleError).toHaveBeenCalledWith(expect.any(SyntaxError), 'Client');
-            expect(spy).toHaveBeenCalledWith(partial);
-            spy.mockRestore();
+            expect(mockLog.error).toHaveBeenCalledWith({ rawData: '{"send":"we' }, 'tcp parse failed');
         });
     });
 });
@@ -317,19 +309,15 @@ describe('init', () => {
 
     test('2.1.3 — logs connection success', () => {
         init();
-        const spy = jest.spyOn(console, 'log').mockImplementation();
         clientConnectCb();
-        expect(spy).toHaveBeenCalledWith('connected to server!');
-        spy.mockRestore();
+        expect(mockLog.info).toHaveBeenCalledWith('tcp client connected to file-server');
     });
 
     test('2.2.1 — end event logs disconnection', () => {
         init();
         const endCb = mockClientOn.mock.calls.find(c => c[0] === 'end')[1];
-        const spy = jest.spyOn(console, 'log').mockImplementation();
         endCb();
-        expect(spy).toHaveBeenCalledWith('disconnected from server');
-        spy.mockRestore();
+        expect(mockLog.warn).toHaveBeenCalledWith('tcp client disconnected');
     });
 
     test('2.2.2 — close event triggers auto-reconnect via setTimeout', () => {
@@ -337,10 +325,8 @@ describe('init', () => {
         init();
         const closeCb = mockClientOn.mock.calls.find(c => c[0] === 'close')[1];
 
-        const spy = jest.spyOn(console, 'log').mockImplementation();
         closeCb();
-        expect(spy).toHaveBeenCalledWith('reconnect in 10 seconds');
-        spy.mockRestore();
+        expect(mockLog.info).toHaveBeenCalledWith({ delaySec: 10 }, 'tcp reconnecting');
 
         // Before timer fires, no new connect call
         const callsBefore = mockNetConnect.mock.calls.length;
@@ -357,10 +343,8 @@ describe('init', () => {
         init();
         const closeCb = mockClientOn.mock.calls.find(c => c[0] === 'close')[1];
 
-        const spy = jest.spyOn(console, 'log').mockImplementation();
         closeCb();
         closeCb();
-        spy.mockRestore();
 
         const callsBefore = mockNetConnect.mock.calls.length;
         jest.advanceTimersByTime(10000);

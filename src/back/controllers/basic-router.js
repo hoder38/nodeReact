@@ -3,14 +3,16 @@ import { ENV_TYPE } from '../../../ver.js'
 import { EXTENT_FILE_IP, EXTENT_FILE_PORT, WS_PORT } from '../config.js'
 import Express from 'express'
 import TagTool from '../models/tag-tool.js'
+import createLogger from '../util/logger.js'
 import { checkAdmin, checkLogin } from '../util/utility.js'
 
 const router = Express.Router();
 const StorageTagTool = TagTool(STORAGEDB);
+const log = createLogger('basic-router');
 
 router.route('/getuser').get(function(req, res, next) {
     checkLogin(req, res, () => {
-        console.log('get basic');
+        log.debug({ userId: req.user.username }, 'get basic user config');
         res.json({
             id: req.user.username,
             ws_url: `wss://${EXTENT_FILE_IP(ENV_TYPE)}:${WS_PORT(ENV_TYPE)}/f`,
@@ -36,4 +38,3 @@ router.get('/getPath', function(req, res, next) {
 });
 
 export default router
-

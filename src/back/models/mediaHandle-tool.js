@@ -11,6 +11,9 @@ import TagTool, { normalize, isDefaultTag } from '../models/tag-tool.js'
 import { isValidString, handleError, HoError, checkAdmin, getFileLocation, deleteFolderRecursive, sortList, toValidName, fsExists } from '../util/utility.js'
 import { extTag, extType, isImage, addPost } from '../util/mime.js'
 import sendWs from '../util/sendWs.js'
+import createLogger from '../util/logger.js'
+
+const log = createLogger('media-handle')
 
 const StorageTagTool = TagTool(STORAGEDB);
 
@@ -39,7 +42,7 @@ export default {
                     items[0][user._id.toString()].splice(0, 0, result.tag);
                 }
                 const filePath = getFileLocation(items[0].owner, items[0]._id);
-                console.log(items[0]);
+                log.debug({ item: items[0] }, 'media item found');
                 return this.handleTag(filePath, {
                     utime: Math.round(new Date().getTime() / 1000),
                     untag: 1,
@@ -48,7 +51,7 @@ export default {
                 }, newName, items[0].name, items[0].status).then(([mediaType, mediaTag, DBdata]) => {
                     mediaTag.def = mediaTag.def.filter(i => !items[0].tags.includes(i));
                     mediaTag.opt = mediaTag.opt.filter(i => !items[0].tags.includes(i));
-                    console.log(DBdata);
+                    log.debug({ DBdata }, 'DB update data');
                     const tagsAdd = (mediaTag.def.length > 0) ? {
                         $set: DBdata,
                         $addToSet: {
@@ -175,9 +178,9 @@ export default {
                     case 'video':
                     case 'music':
                     if (!DBdata['height'] && !DBdata['time'] && await fsExists(filePath)) {
-                        console.log(filePath);
+                        log.debug({ filePath }, 'media file path');
                         return new Ffmpeg(filePath).then(info => {
-                            console.log(info.metadata);
+                            log.debug({ metadata: info.metadata }, 'ffmpeg metadata');
                             if (info.metadata.video) {
                                 if (info.metadata.video.codec === 'h264') {
                                     DBdata['status'] = 3;
@@ -238,7 +241,7 @@ export default {
             filePath = mediaType['realPath'] ? `${filePath}/${mediaType['fileIndex']}` : filePath;
             const comPath = mediaType['realPath'] ? `${filePath}_complete` : filePath;
             const pdfPath = `${filePath}_pdf`;
-            console.log(pdfPath);
+            log.debug({ pdfPath }, 'PDF path');
             await deleteFolderRecursive(pdfPath);
             return Mkdirp(pdfPath).then(() => execSafe('qpdf', [comPath, '--split-pages=1', '--', `${pdfPath}/%d.pdf`], { allowExitCode: [3] })).then(async () => {
                 const files = (await readdir(pdfPath))
@@ -276,7 +279,7 @@ export default {
                     zipPath = `${filePath}_7z_c`;
                 }
                 const [extractCmd, extractArgs] = (mediaType['ext'] === 'rar' || mediaType['ext'] === 'cbr') ? ['7za', ['x', zipPath, `-o${tempPath}`, '-p123']] : (mediaType['ext'] === '7z') ? ['7za', ['x', zipPath, `-o${tempPath}`, '-p123']] : [PathJoin(__dirname, 'util/myuzip.py'), [zipPath, tempPath, '123']];
-                console.log(extractCmd, extractArgs);
+                log.debug({ cmd: extractCmd, args: extractArgs }, 'extract command');
                 return execSafe(extractCmd, extractArgs).then(async output => {
                     let zip_arr = [];
                     const recurFolder = async (indexFolder, initFolder, preFolder) => {
@@ -304,7 +307,7 @@ export default {
                     if (!is_processed) {
                         await rename(zipPath, (zip_type === 2) ? `${filePath}.1.rar` : (zip_type === 3) ? `${filePath}_7z` : `${filePath}_zip`);
                     }
-                    console.log(zip_arr);
+                    log.debug({ zipEntries: zip_arr }, 'zip file list');
                     return GoogleApi('upload', {
                         type: 'media',
                         name: `${fileID.toString()}.${isImage(zip_arr[0])}`,
@@ -342,7 +345,7 @@ export default {
             }
             const archivePath = `${filePath}${append}`;
             const [listCmd, listArgs] = is7za ? ['7za', ['l', archivePath]] : [PathJoin(__dirname, 'util/myuzip.py'), [archivePath]];
-            console.log(listCmd, listArgs);
+            log.debug({ cmd: listCmd, args: listArgs }, 'list command');
             return execSafe(listCmd, listArgs).then(output => {
                 const tmplist = output.match(/[^\r\n]+/g);
                 if (!tmplist) {
@@ -428,17 +431,19 @@ export default {
                 mediaType['ext'] = 'txt';
             }
             const addNoise = async () => {
-                if (add_noise && mediaType['type'] === 'video') {
-                    console.log(`appendFile ${STATIC_PATH}/noise >> "${uploadPath}"`);
-                    return appendFile(`${STATIC_PATH}/noise`, uploadPath).then(() => GoogleApi('delete', {fileId: add_noise}));
-                } else if (mediaType['type'] === 'video' && (await stat(uploadPath)).size > NOISE_SIZE) {
-                    console.log(`appendFile ${STATIC_PATH}/noise >> "${uploadPath}"`);
+                const appendNoise = () => {
+                    log.debug({ target: uploadPath }, 'appending noise to file');
                     return appendFile(`${STATIC_PATH}/noise`, uploadPath);
+                }
+                if (add_noise && mediaType['type'] === 'video') {
+                    return appendNoise().then(() => GoogleApi('delete', {fileId: add_noise}));
+                } else if (mediaType['type'] === 'video' && (await stat(uploadPath)).size > NOISE_SIZE) {
+                    return appendNoise();
                 } else {
                     return Promise.resolve();
                 }
             }
-            console.log(uploadPath);
+            log.debug({ uploadPath }, 'upload path');
             return addNoise().then(() => GoogleApi('upload', Object.assign({
                 type: 'media',
                 name: `${fileID.toString()}.${mediaType['ext']}`,
@@ -468,7 +473,7 @@ export default {
     handleMedia: function (mediaType, filePath, fileID, key, user) {
         if (mediaType['type'] === 'image' || mediaType['type'] === 'zipbook') {
             const checkThumb = () => mediaType['thumbnail'] ? Promise.resolve(mediaType['thumbnail']) : GoogleApi('get', {fileId: key}).then(filedata => {
-                console.log(filedata);
+                log.debug({ filedata }, 'file data');
                 if (!filedata['thumbnailLink']) {
                     return handleError(new HoError('error type'));
                 }
@@ -486,7 +491,7 @@ export default {
             }));
         } else if (mediaType['type'] === 'video') {
             if (!mediaType.hasOwnProperty('time') && !mediaType.hasOwnProperty('hd')) {
-                console.log(mediaType);
+                log.debug({ mediaType }, 'media type');
                 return handleError(new HoError('video can not be decoded!!!'));
             }
             return GoogleApi('download media', {
@@ -502,7 +507,7 @@ export default {
             });
         } else if (mediaType['type'] === 'doc' || mediaType['type'] === 'rawdoc' || mediaType['type'] === 'sheet') {
             const checkThumb = () => mediaType['thumbnail'] ? Promise.resolve(mediaType['thumbnail']) : GoogleApi('get', {fileId: key}).then(filedata => {
-                console.log(filedata);
+                log.debug({ filedata }, 'file data');
                 if (!filedata.exportLinks || !filedata.exportLinks['application/pdf']) {
                     return handleError(new HoError('error type'));
                 }
@@ -517,7 +522,7 @@ export default {
             }));
         } else if (mediaType['type'] === 'present') {
             const checkThumb = () => mediaType['thumbnail'] ? Promise.resolve([mediaType['thumbnail'], mediaType['alternate']]) : GoogleApi('get', {fileId: key}).then(filedata => {
-                console.log(filedata);
+                log.debug({ filedata }, 'file data');
                 if (!filedata.exportLinks || !filedata.exportLinks['application/pdf']) {
                     return handleError(new HoError('error type'));
                 }
@@ -534,10 +539,9 @@ export default {
         }
     },
     singleDrive: function(metadatalist, index, user, folderId, uploaded, handling, dirpath) {
-        console.log('singleDrive');
-        console.log(new Date().toLocaleString());
+        log.info('singleDrive sync started');
         const metadata = metadatalist[index];
-        console.log(metadata);
+        log.debug({ metadata }, 'drive metadata');
         const oOID = objectID();
         const filePath = getFileLocation(user._id, oOID);
         const mkFolder = folderPath => fsExists(folderPath).then(exists => exists ? Promise.resolve() : Mkdirp(folderPath));
@@ -569,8 +573,7 @@ export default {
                 tags: setArr,
                 [user._id]: setArr,
             }, status ? {status} : {})).then(item => {
-                console.log(item);
-                console.log('save end');
+                log.debug({ itemId: item?.[0]?._id }, 'media item saved');
                 sendWs({
                     type: 'file',
                     data: item[0]._id,
@@ -702,7 +705,7 @@ export default {
                         }
                     }
                 });
-                console.log(timeoutItems);
+                log.debug({ timeoutCount: timeoutItems?.length }, 'timeout items');
                 if (timeoutItems.length > 0) {
                     const recur_check = index => {
                         const single_check = async () => {
@@ -759,7 +762,7 @@ export const completeMedia = (fileID, status, fileIndex, number=0) => Mongo('upd
     if (items.length < 1) {
         return handleError(new HoError('cannot find file!!!'));
     }
-    console.log(items);
+    log.debug({ itemCount: items?.length }, 'media check items');
     sendWs(`${items[0].name} complete!!!`, 0, 0, true);
     sendWs({
         type: 'file',

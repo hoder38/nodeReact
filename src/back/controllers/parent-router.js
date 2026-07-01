@@ -1,12 +1,14 @@
 import { STORAGEDB, PASSWORDDB, STOCKDB } from '../constants.js'
 import Express from 'express'
 import TagTool from '../models/tag-tool.js'
+import createLogger from '../util/logger.js'
 import { checkLogin, checkAdmin, handleError, getStorageItem, getPasswordItem, getStockItem } from '../util/utility.js'
 
 const router = Express.Router();
 const StorageTagTool = TagTool(STORAGEDB);
 const PasswordTagTool = TagTool(PASSWORDDB);
 const StockTagTool = TagTool(STOCKDB);
+const log = createLogger('parent-router')
 
 router.use(function(req, res, next) {
     checkLogin(req, res, next);
@@ -14,7 +16,7 @@ router.use(function(req, res, next) {
 
 //storage
 router.get(`/${STORAGEDB}/list`, function(req, res, next) {
-    console.log('storage parent list');
+    log.debug('storage parent list');
     res.json({parentList: StorageTagTool.parentList().concat(checkAdmin(2, req.user) ? StorageTagTool.adultonlyParentList() : []).map(l => ({
         name: l.name,
         show: l.tw,
@@ -22,12 +24,12 @@ router.get(`/${STORAGEDB}/list`, function(req, res, next) {
 });
 
 router.get(`/${STORAGEDB}/taglist/:name/:sortName(name|mtime)/:sortType(desc|asc)/:page(\\d+)`, function(req, res, next) {
-    console.log('storage show taglist');
+    log.debug('storage show taglist');
     StorageTagTool.parentQuery(req.params.name, req.params.sortName, req.params.sortType, Number(req.params.page), req.user).then(result => res.json(result)).catch(err => handleError(err, next));
 });
 
 router.get(`/${STORAGEDB}/query/:id/:sortName(name|mtime|count)/:sortType(desc|asc)/:single?`, function(req, res, next) {
-    console.log('storage parent query');
+    log.debug('storage parent query');
     StorageTagTool.queryParentTag(req.params.id, req.params.single, req.params.sortName, req.params.sortType, req.user, req.session).then(result => res.json({
         itemList: getStorageItem(req.user, result.items, result.mediaHadle),
         parentList: result.parentList,
@@ -37,18 +39,18 @@ router.get(`/${STORAGEDB}/query/:id/:sortName(name|mtime|count)/:sortType(desc|a
 });
 
 router.post(`/${STORAGEDB}/add`, function(req, res,next) {
-    console.log('storage parent add');
+    log.debug('storage parent add');
     StorageTagTool.addParent(req.body.name, req.body.tag, req.user).then(result => res.json(result)).catch(err => handleError(err, next));
 });
 
 router.delete(`/${STORAGEDB}/del/:id`, function(req, res, next) {
-    console.log('storage parent del');
+    log.debug('storage parent del');
     StorageTagTool.delParent(req.params.id, req.user).then(result => res.json(result)).catch(err => handleError(err, next));
 });
 
 //password
 router.get(`/${PASSWORDDB}/list`, function(req, res, next) {
-    console.log('password parent list');
+    log.debug('password parent list');
     res.json({parentList: PasswordTagTool.parentList().map(l => ({
         name: l.name,
         show: l.tw,
@@ -56,12 +58,12 @@ router.get(`/${PASSWORDDB}/list`, function(req, res, next) {
 });
 
 router.get(`/${PASSWORDDB}/taglist/:name/:sortName(name|mtime)/:sortType(desc|asc)/:page(\\d+)`, function(req, res, next) {
-    console.log('password show taglist');
+    log.debug('password show taglist');
     PasswordTagTool.parentQuery(req.params.name, req.params.sortName, req.params.sortType, Number(req.params.page), req.user).then(result => res.json(result)).catch(err => handleError(err, next));
 });
 
 router.get(`/${PASSWORDDB}/query/:id/:sortName(name|mtime|count)/:sortType(desc|asc)/:single?`, function(req, res, next) {
-    console.log('password parent query');
+    log.debug('password parent query');
     PasswordTagTool.queryParentTag(req.params.id, req.params.single, req.params.sortName, req.params.sortType, req.user, req.session).then(result => res.json({
         itemList: getPasswordItem(req.user, result.items),
         parentList: result.parentList,
@@ -71,18 +73,18 @@ router.get(`/${PASSWORDDB}/query/:id/:sortName(name|mtime|count)/:sortType(desc|
 });
 
 router.post(`/${PASSWORDDB}/add`, function(req, res,next) {
-    console.log('password parent add');
+    log.debug('password parent add');
     PasswordTagTool.addParent(req.body.name, req.body.tag, req.user).then(result => res.json(result)).catch(err => handleError(err, next));
 });
 
 router.delete(`/${PASSWORDDB}/del/:id`, function(req, res, next) {
-    console.log('storage parent del');
+    log.debug('storage parent del');
     PasswordTagTool.delParent(req.params.id, req.user).then(result => res.json(result)).catch(err => handleError(err, next));
 });
 
 //stock
 router.get(`/${STOCKDB}/list`, function(req, res, next) {
-    console.log('stock parent list');
+    log.debug('stock parent list');
     res.json({parentList: StockTagTool.parentList().map(l => ({
         name: l.name,
         show: l.tw,
@@ -90,12 +92,12 @@ router.get(`/${STOCKDB}/list`, function(req, res, next) {
 });
 
 router.get(`/${STOCKDB}/taglist/:name/:sortName(name|mtime)/:sortType(desc|asc)/:page(\\d+)`, function(req, res, next) {
-    console.log('stock show taglist');
+    log.debug('stock show taglist');
     StockTagTool.parentQuery(req.params.name, req.params.sortName, req.params.sortType, Number(req.params.page), req.user).then(result => res.json(result)).catch(err => handleError(err, next));
 });
 
 router.get(`/${STOCKDB}/query/:id/:sortName(name|mtime|count)/:sortType(desc|asc)/:single?`, function(req, res, next) {
-    console.log('stock parent query');
+    log.debug('stock parent query');
     StockTagTool.queryParentTag(req.params.id, req.params.single, req.params.sortName, req.params.sortType, req.user, req.session).then(result => res.json({
         itemList: getStockItem(req.user, result.items),
         parentList: result.parentList,
@@ -105,12 +107,12 @@ router.get(`/${STOCKDB}/query/:id/:sortName(name|mtime|count)/:sortType(desc|asc
 });
 
 router.post(`/${STOCKDB}/add`, function(req, res,next) {
-    console.log('stock parent add');
+    log.debug('stock parent add');
     StockTagTool.addParent(req.body.name, req.body.tag, req.user).then(result => res.json(result)).catch(err => handleError(err, next));
 });
 
 router.delete(`/${STOCKDB}/del/:id`, function(req, res, next) {
-    console.log('stock parent del');
+    log.debug('stock parent del');
     StockTagTool.delParent(req.params.id, req.user).then(result => res.json(result)).catch(err => handleError(err, next));
 });
 

@@ -20,8 +20,20 @@ jest.unstable_mockModule('node-fetch', () => ({
 
 jest.unstable_mockModule('../../../../ver.js', () => ({
     PASSWORD_SALT: 'test_salt_',
+    ENV_TYPE: 'dev',
     DISCORD_TOKEN,
     DISCORD_CHANNEL,
+}));
+
+const mockLog = {
+    info: jest.fn(),
+    debug: jest.fn(),
+    warn: jest.fn(),
+    error: jest.fn(),
+    trace: jest.fn(),
+};
+jest.unstable_mockModule('../../util/logger.js', () => ({
+    default: () => mockLog,
 }));
 
 mockGenerateAuthUrl = jest.fn();
@@ -83,19 +95,15 @@ describe('discord-tool.js', () => {
         });
 
         test('shardError event → logs error', () => {
-            const spy = jest.spyOn(console, 'error').mockImplementation(() => {});
             init();
             eventHandlers['shardError'](new Error('ws fail'));
-            expect(spy).toHaveBeenCalledWith(expect.stringContaining('discord websocket'), expect.any(Error));
-            spy.mockRestore();
+            expect(mockLog.error).toHaveBeenCalledWith({ err: expect.any(Error) }, 'Discord WebSocket error');
         });
 
         test('error event → logs error', () => {
-            const spy = jest.spyOn(console, 'error').mockImplementation(() => {});
             init();
             eventHandlers['error'](new Error('general'));
-            expect(spy).toHaveBeenCalledWith(expect.stringContaining('discord error'), expect.any(Error));
-            spy.mockRestore();
+            expect(mockLog.error).toHaveBeenCalledWith({ err: expect.any(Error) }, 'Discord client error');
         });
     });
 

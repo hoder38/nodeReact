@@ -4,6 +4,9 @@ import googleapisModule from 'googleapis'
 const { google: googleapis } = googleapisModule;
 import readline from 'readline'
 const { createInterface } = readline;
+import createLogger from '../util/logger.js'
+
+const log = createLogger('googledrive-cli')
 
 const rl = createInterface({
     input: process.stdin,
@@ -18,14 +21,14 @@ const url = oauth2Client.generateAuthUrl({
     access_type: 'offline',
 });
 
-console.log('Visit the url: ', url);
+log.info({ url }, 'visit this URL to authorize')
 
 const getAccessToken = code => {
     oauth2Client.getToken(code, (err, tokens) => {
         if (err) {
-            console.log('Error while trying to retrieve access token', err);
+            log.error({ err }, 'failed to retrieve access token')
         } else {
-            console.log(tokens);
+            log.info({ tokens }, 'tokens received')
             oauth2Client.credentials = tokens;
         }
     });

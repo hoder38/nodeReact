@@ -1,24 +1,17 @@
 import fsModule from 'fs'
 const { readFileSync: FsReadFileSync } = fsModule;
 
-//config
-import { ENV_TYPE, CA, CERT, PKEY/*, PKEY_PWD*/ } from '../../../ver.js'
+import { ENV_TYPE, CA, CERT, PKEY } from '../../../ver.js'
 import { NAS_TMP, EXTENT_FILE_IP, EXTENT_FILE_PORT, FILE_IP, FILE_PORT } from '../config.js'
-
-//external
 import httpsModule from 'https'
-const { Agent: HttpsAgent, createServer: HttpsCreateServer } = httpsModule;
+const { createServer: HttpsCreateServer } = httpsModule;
 import Express from 'express'
 import ExpressSession from 'express-session'
 import bodyParser from 'body-parser'
 const { urlencoded: BodyParserUrlencoded, json: BodyParserJson } = bodyParser;
 import Passport from 'passport'
 import multer from 'multer'
-
-//model
 import SessionStore from '../models/session-tool.js'
-
-//router
 import LoginRouter from './login-router.js'
 import BasicRouter from './file-basic-router.js'
 import OtherRouter from './file-other-router.js'
@@ -26,19 +19,15 @@ import FileRouter from './file-router.js'
 import ExternalRouter from './external-router.js'
 import PlaylistRouter from './playlist-router.js'
 import BitfinexRouter from './bitfinex-router.js'
-
-//util
+import createLogger from '../util/logger.js'
 import { handleError, HoError, showLog } from '../util/utility.js'
 import { mainInit } from '../util/sendWs.js'
-
-//background
-import { autoUpload, checkMedia/*, updateExternal*/, updateStock, filterStock, dbBackup, checkStock, rateCalculator, setUserOffer, filterBitfinex, usseInit, twseInit, updateStockList } from '../cmd/background.js'
-//global
+import { autoUpload, checkMedia, updateStock, filterStock, dbBackup, checkStock, rateCalculator, setUserOffer, filterBitfinex, usseInit, twseInit, updateStockList } from '../cmd/background.js'
+const log = createLogger('file-server')
 const credentials = {
     cert: FsReadFileSync(CERT),
     ca: FsReadFileSync(CA),
     key: FsReadFileSync(PKEY),
-    //passphrase: FsReadFileSync(PKEY_PWD, 'utf-8').slice(0, -1),
     ciphers: [
         "ECDHE-RSA-AES256-SHA384",
         "DHE-RSA-AES256-SHA384",
@@ -59,15 +48,11 @@ const credentials = {
     ].join(':'),
     honorCipherOrder: true,
 }
-//credentials.agent = new HttpsAgent(credentials)
 const app = Express()
 const server = HttpsCreateServer(credentials, app)
-//const server = HttpsCreateServer({}, app)
 mainInit(server);
-//mainInit(app);
 autoUpload();
 checkMedia();
-//updateExternal();
 updateStock();
 updateStockList();
 filterStock();
@@ -100,34 +85,24 @@ app.use(function(req, res, next) {
 });
 
 app.use('/f/api', BasicRouter);
-//torrent
 app.use('/f/api/torrent', PlaylistRouter);
-//external&subtitle&upload
 app.use('/f/api/external', ExternalRouter);
-//file&media
 app.use('/f/api/file', FileRouter);
-//bitfinex
 app.use('/f/api/bitfinex', BitfinexRouter);
-//other&stock
 app.use('/f', OtherRouter);
-//login
 app.use('/f', LoginRouter());
 
-//view
 app.all('*', function(req, res, next) {
     return handleError(new HoError('page not found', {code: 404}), next);
 });
 
-//error handle
 app.use(function(err, req, res, next) {
     handleError(err, 'Send');
     err.name === 'HoError' ? res.status(err.code).send(err.message.toString()) : res.status(500).send('server error occur');
 });
-//為了連接非認證的tls
+// Allow connections to untrusted TLS endpoints (internal services)
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 process.on('uncaughtException', err => handleError(err, 'Threw exception'));
 
 server.listen(FILE_PORT(ENV_TYPE), FILE_IP(ENV_TYPE));
-//app.listen(FILE_PORT(ENV_TYPE), FILE_IP(ENV_TYPE));
-console.log('start express server\n');
-console.log(`Server running at https://${EXTENT_FILE_IP(ENV_TYPE)}:${EXTENT_FILE_PORT(ENV_TYPE)} ${new Date()}`);
+log.info({ url: `https://${EXTENT_FILE_IP(ENV_TYPE)}:${EXTENT_FILE_PORT(ENV_TYPE)}` }, 'file server started')

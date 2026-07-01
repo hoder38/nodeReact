@@ -7,17 +7,19 @@ import Mongo from '../models/mongo-tool.js'
 import Redis from '../models/redis-tool.js'
 import { getOptionTag, isImage, isMusic, isVideo, isDoc, isZipbook } from '../util/mime.js'
 import sendWs from '../util/sendWs.js'
+import createLogger from '../util/logger.js'
 
 const OPTION_TAG = getOptionTag();
 const router = Express.Router();
 const StorageTagTool = TagTool(STORAGEDB);
+const log = createLogger('storage-router')
 
 router.use(function(req, res, next) {
     checkLogin(req, res, next);
 });
 
 router.get('/reset/:sortName(name|mtime|count)/:sortType(desc|asc)', function(req, res, next){
-    console.log('storage reset');
+    log.debug('storage reset');
     StorageTagTool.resetQuery(req.params.sortName, req.params.sortType, req.user, req.session).then(result => res.json({
         itemList: getStorageItem(req.user, result.items),
         parentList: result.parentList,
@@ -25,7 +27,7 @@ router.get('/reset/:sortName(name|mtime|count)/:sortType(desc|asc)', function(re
 });
 
 router.get('/get/:sortName(name|mtime|count)/:sortType(desc|asc)/:page(\\d+)/:name?/:exactly(true|false)?/:index(\\d+)?', function(req, res, next) {
-    console.log('storage');
+    log.debug('storage query');
     StorageTagTool.tagQuery(Number(req.params.page), req.params.name, req.params.exactly === 'true' ? true : false, Number(req.params.index), req.params.sortName, req.params.sortType, req.user, req.session).then(result => res.json({
         itemList: getStorageItem(req.user, result.items, result.mediaHadle),
         parentList: result.parentList,
@@ -35,7 +37,7 @@ router.get('/get/:sortName(name|mtime|count)/:sortType(desc|asc)/:page(\\d+)/:na
 });
 
 router.get('/getSingle/:sortName(name|mtime|count)/:sortType(desc|asc)/:page(\\d+)/:name?/:exactly(true|false)?/:index(\\d+)?', function(req, res, next) {
-    console.log('storage get single');
+    log.debug('storage get single');
     const page = Number(req.params.page);
     if (page === 0 && req.params.name) {
         StorageTagTool.searchTags(req.session).resetArray();
@@ -49,7 +51,7 @@ router.get('/getSingle/:sortName(name|mtime|count)/:sortType(desc|asc)/:page(\\d
 });
 
 router.get('/getRandom/:sortName(name|mtime|count)/:sortType(desc|asc)/:page(\\d+)', function(req, res, next){
-    console.log('storage random');
+    log.debug('storage random');
     Redis('hgetall', `tag: ${req.user._id}`).then(items => {
         const count_list = OPTION_TAG.map(t => {
             let ret = 1;
@@ -204,12 +206,12 @@ router.get('/getRandom/:sortName(name|mtime|count)/:sortType(desc|asc)/:page(\\d
 });
 
 router.get('/single/:uid', function(req, res, next) {
-    console.log('storage single');
+    log.debug('storage single');
     StorageTagTool.singleQuery(req.params.uid, req.user, req.session).then(result => result.empty ? res.json(result) : res.json({item: getStorageItem(req.user, [result.item], result.mediaHadle)[0]})).catch(err => handleError(err, next));
 });
 
 router.get('/external/get/:sortName(name|mtime|count)/:pageToken?', function(req, res, next) {
-    console.log('external get');
+    log.debug('external get');
     const parentList = StorageTagTool.searchTags(req.session).getArray();
     const index = req.params.pageToken ? Number(req.params.pageToken.match(/^\d+/)) : 1;
     const pageToken = req.params.pageToken ? req.params.pageToken.match(/[^\d]+$/) : false;
@@ -275,7 +277,7 @@ router.get('/external/get/:sortName(name|mtime|count)/:pageToken?', function(req
 }*/
 
 router.post('/getOptionTag', function(req, res, next) {
-    console.log('storage option tag');
+    log.debug('storage option tag');
     let optionList = checkAdmin(2, req.user) ? new Set(['first item', '18+']) : new Set(['first item']);
     req.body.tags.length > 0 ? StorageTagTool.getRelativeTag(req.body.tags, req.user, [...optionList]).then(relative => {
         const reli = relative.length < 5 ? relative.length : 5;
@@ -299,7 +301,7 @@ router.post('/getOptionTag', function(req, res, next) {
 });
 
 router.put('/addTag/:tag', function(req, res, next) {
-    console.log('storage addTag');
+    log.debug('storage addTag');
     const recur = index => (index >= req.body.uids.length) ? Promise.resolve(res.json({apiOK: true})) : StorageTagTool.addTag(req.body.uids[index], req.params.tag, req.user, false).then(result => {
         if (result.id) {
             sendWs({
@@ -313,7 +315,7 @@ router.put('/addTag/:tag', function(req, res, next) {
 });
 
 router.put('/sendTag/:uid', function(req, res, next){
-    console.log('storage sendTag');
+    log.debug('storage sendTag');
     StorageTagTool.sendTag(req.params.uid, req.body.name, req.body.tags, req.user).then(result => {
         sendWs({
             type: 'file',
@@ -324,12 +326,12 @@ router.put('/sendTag/:uid', function(req, res, next){
 });
 
 router.put('/addTagUrl', function(req, res, next) {
-    console.log('storage addTagUrl');
+    log.debug('storage addTagUrl');
     handleError(new HoError('not support!!!'), next);
 });
 
 router.put('/delTag/:tag', function(req, res, next) {
-    console.log('storage delTag');
+    log.debug('storage delTag');
     const recur = index => (index >= req.body.uids.length) ? Promise.resolve(res.json({apiOK: true})) : StorageTagTool.delTag(req.body.uids[index], req.params.tag, req.user, false).then(result => {
         if (result.id) {
             sendWs({
@@ -343,9 +345,9 @@ router.put('/delTag/:tag', function(req, res, next) {
 });
 
 router.put('/recover/:uid', function(req, res, next) {
-    console.log('storage recover file');
+    log.debug('storage recover file');
     if (!checkAdmin(1, req.user)) {
-        console.log(req.user);
+        log.debug({ user: req.user._id }, 'recover user');
         return handleError(new HoError('permission denied'), next);
     }
     const id = isValidString(req.params.uid, 'uid');
@@ -370,7 +372,7 @@ router.put('/recover/:uid', function(req, res, next) {
 });
 
 router.post('/media/saveParent/:sortName(name|mtime|count)/:sortType(desc|asc)', function(req, res, next) {
-    console.log('media saveParent');
+    log.debug('media saveParent');
     const name = isValidString(req.body.name, 'name');
     if (!name) {
         return handleError(new HoError('name is not vaild'), next);
@@ -380,7 +382,7 @@ router.post('/media/saveParent/:sortName(name|mtime|count)/:sortType(desc|asc)',
 });
 
 router.get('/media/setTime/:id/:type/:obj?/:pageToken?/:back(back)?', function(req, res, next){
-    console.log('media setTime');
+    log.debug('media setTime');
     //let id = req.params.id.match(/^(you|ypl|yif)_(.*)$/);
     let id = req.params.id.match(/^(yif|mad)_(.*)$/);
     let playlist = 0;
@@ -510,7 +512,7 @@ router.get('/media/setTime/:id/:type/:obj?/:pageToken?/:back(back)?', function(r
 });
 
 router.get('/media/record/:id/:time/:pId?', function(req, res, next) {
-    console.log('media record');
+    log.debug('media record');
     if (!req.params.time.match(/^\d+(&\d+|\.\d+)?$/)) {
         return handleError(new HoError('timestamp is not vaild'), next);
     }
@@ -529,7 +531,7 @@ router.get('/media/record/:id/:time/:pId?', function(req, res, next) {
 });
 
 router.get('/media/more/:type(\\d+)/:page(\\d+)/:back(back)?', function(req, res, next) {
-    console.log('more media');
+    log.debug('more media');
     let saveName = '';
     let type = Number(req.params.type);
     switch (type) {
@@ -549,7 +551,7 @@ router.get('/media/more/:type(\\d+)/:page(\\d+)/:back(back)?', function(req, res
     if (!sql) {
         return handleError(new HoError('query error'), next);
     }
-    console.log(sql);
+    log.debug({ sql }, 'query sql');
     if (sql.empty) {
         res.json({itemList: []});
     } else {
@@ -566,7 +568,7 @@ router.get('/media/more/:type(\\d+)/:page(\\d+)/:back(back)?', function(req, res
 });
 
 router.get('/torrent/query/:id', function (req, res,next) {
-    console.log('torrent query');
+    log.debug('torrent query');
     const id = isValidString(req.params.id, 'uid');
     if (!id) {
         return handleError(new HoError('file is not vaild'), next);
@@ -599,7 +601,7 @@ router.get('/torrent/query/:id', function (req, res,next) {
 });
 
 router.put('/zipPassword/:uid', function (req, res, next){
-    console.log('zip password');
+    log.debug('zip password');
     const id = isValidString(req.params.uid, 'uid');
     if (!id) {
         return handleError(new HoError('file is not vaild'), next);

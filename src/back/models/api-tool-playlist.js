@@ -38,6 +38,9 @@ import { handleError, HoError, getFileLocation, checkAdmin, deleteFolderRecursiv
 import { isVideo, isDoc, isZipbook, extType, extTag } from '../util/mime.js'
 //import computeHash from '../util/os-torrent-hash.js'
 import sendWs from '../util/sendWs.js'
+import createLogger from '../util/logger.js'
+
+const log = createLogger('playlist')
 
 let torrent_pool = [];
 let zip_pool = [];
@@ -66,7 +69,7 @@ export function _setPools(overrides) {
 }
 
 const megaGet = (rest=null) => megaMutex.runExclusive(() => {
-    console.log('mega get');
+    log.info('mega download started')
     const afterRest = (rest && typeof rest === 'function')
         ? rest().catch(err => { handleError(err, 'Mega api rest'); })
         : Promise.resolve();
@@ -84,8 +87,7 @@ const megaGet = (rest=null) => megaMutex.runExclusive(() => {
             }
         }
     }
-    console.log(choose);
-    console.log(time);
+    log.debug({ priority: choose, time }, 'pool item timing')
     if (!time) {
         return Promise.resolve();
     }
@@ -111,7 +113,7 @@ const megaGet = (rest=null) => megaMutex.runExclusive(() => {
 });
 
 const zipGet = () => zipMutex.runExclusive(() => {
-    console.log('zip get');
+    log.info('zip extraction started')
     let time = 0;
     let choose = -1;
     for (let i in zip_pool) {
@@ -125,8 +127,7 @@ const zipGet = () => zipMutex.runExclusive(() => {
             }
         }
     }
-    console.log(choose);
-    console.log(time);
+    log.debug({ priority: choose, time }, 'pool item timing')
     if (!time) {
         return Promise.resolve();
     }
@@ -154,7 +155,7 @@ const zipGet = () => zipMutex.runExclusive(() => {
 });
 
 const torrentGet = () => torrentMutex.runExclusive(() => {
-    console.log('torrent get');
+    log.info('torrent download started')
     let pri = 0;
     let time = 0;
     let hash = null;
@@ -182,9 +183,7 @@ const torrentGet = () => torrentMutex.runExclusive(() => {
             }
         }
     }
-    console.log(pri);
-    console.log(time);
-    console.log(hash);
+    log.debug({ priority: pri, time, hash }, 'torrent pool item')
     if (!hash) {
         return Promise.resolve();
     }
@@ -204,7 +203,7 @@ const torrentGet = () => torrentMutex.runExclusive(() => {
                     uploads: TORRENT_UPLOAD,
                     trackers: BEST_TRACKER_LIST,
                 });
-                console.log('new engine');
+                log.info('new torrent engine created')
                 torrent_pool[i].engine = engine;
                 torrent_pool[i].start = Math.round(new Date().getTime() / 1000);
                 const runIndex = torrent_pool[i].index;
@@ -213,7 +212,7 @@ const torrentGet = () => torrentMutex.runExclusive(() => {
                 const runHash = torrent_pool[i].hash;
                 const runUser = torrent_pool[i].user;
                 const startEngine = index => engine ? (engine.files && engine.files.length > 0) ? startTorrent(runUser, runId, runOwner, index, runHash, engine) : new Promise((resolve, reject) => engine.on('ready', () => {
-                    console.log('torrent ready');
+                    log.info('torrent ready to download')
                     return resolve(startTorrent(runUser, runId, runOwner, index, runHash, engine));
                 })) : Promise.resolve();
                 return Promise.all(runIndex.map(v => startEngine(v))).catch(err => handle_err(err, runUser, 'Torrent api')).then(() => torrentGet());
@@ -225,11 +224,13 @@ const torrentGet = () => torrentMutex.runExclusive(() => {
 });
 
 export default function process(action, ...args) {
-    console.log(`torrent: ${torrent_pool.length}`);
-    console.log(`zip: ${zip_pool.length}`);
-    console.log(`mega: ${mega_pool.length}`);
-    console.log(action);
-    console.log(args);
+    log.debug({
+        torrentPool: torrent_pool.length,
+        zipPool: zip_pool.length,
+        megaPool: mega_pool.length,
+        action,
+        args,
+    }, 'pool status')
     switch (action) {
         case 'playlist kick':
         return playlistKick(...args);
@@ -268,9 +269,8 @@ function handle_err(err, user, type, id=false) {
 
 const startMega = (user, url, filePath, data) => {
     const real = `${filePath}/real`;
-    console.log(real);
+    log.info({ path: real, url }, 'megadl command started')
     return Mkdirp(real).then(() => {
-        console.log('megadl', ['--no-progress', '--path', real, url]);
         const { chp, promise } = execFileWithHandle('megadl', ['--no-progress', '--path', real, url]);
         const wrappedPromise = promise.catch(err => megaComplete().then(() => Promise.reject(err)));
         megaMutex.runExclusive(() => {
@@ -316,11 +316,11 @@ const startMega = (user, url, filePath, data) => {
                     const readStream = FsCreateReadStream(`${real}/${playList[index]}`);
                     const writeStream = FsCreateWriteStream(`${filePath}/${index}_complete`);
                     readStream.on('error', err => {
-                        console.log('save mega read error!!!');
+                        log.error('mega file read error')
                         megaComplete().then(() => reject(err));
                     });
                     writeStream.on('error', err => {
-                        console.log('save mega write error!!!');
+                        log.error('mega file write error')
                         megaComplete().then(() => reject(err));
                     });
                     writeStream.on('close', () => resolve());
@@ -354,7 +354,7 @@ const startMega = (user, url, filePath, data) => {
     });
     function megaComplete(is_success=false) {
         return megaMutex.runExclusive(() => {
-            console.log('mega kill');
+            log.warn('mega process killed')
             for (let i in mega_pool) {
                 if (url === mega_pool[i].url) {
                     const entry = mega_pool[i];
@@ -382,7 +382,7 @@ const megaAdd = (user, url, filePath, data={})  => megaMutex.runExclusive(async 
             filePath = i.filePath;
             data = i.data;
             const real = `${filePath}/real`;
-            console.log(real);
+            log.debug({ path: real }, 'mega queue path')
             let filename = 'Mega file';
             let size = 0;
             const recur_size = async previous => {
@@ -413,7 +413,7 @@ const megaAdd = (user, url, filePath, data={})  => megaMutex.runExclusive(async 
     }
     const is_run = (runNum < MEGA_LIMIT(ENV_TYPE)) ? true : false;
     if (!is_run) {
-        console.log('mega wait');
+        log.debug('mega: waiting')
     }
     if (!is_queue) {
         mega_pool.push(Object.assign({
@@ -455,7 +455,7 @@ const startZip = (user, index, id, owner, name, pwd, zip_type) => Mongo('update'
             extractCmd = PathJoin(__dirname, 'util/myuzip.py');
             extractArgs = [`${filePath}_zip`, realPath, name, password];
         }
-        console.log(extractCmd, extractArgs);
+        log.debug({ cmd: extractCmd, args: extractArgs }, 'zip extract command')
         const realName = `${realPath}/${name}`;
         const unReal = () => fsExists(realName).then(exists => exists ? new Promise((resolve, reject) => FsUnlink(realName, err => err ? zipComplete().then(() => reject(err)) : resolve())) : Promise.resolve());
         return unReal().then(() => {
@@ -479,7 +479,7 @@ const startZip = (user, index, id, owner, name, pwd, zip_type) => Mongo('update'
     }
     function zipComplete(is_success=false) {
         return zipMutex.runExclusive(() => {
-            console.log('zip complete');
+            log.info('zip extraction complete')
             for (let i in zip_pool) {
                 if (id.equals(zip_pool[i].fileId) && zip_pool[i].index === index) {
                     if (zip_pool[i].chp) {
@@ -496,7 +496,7 @@ const startZip = (user, index, id, owner, name, pwd, zip_type) => Mongo('update'
                         mediaType['realPath'] = name;
                         DBdata['status'] = 9;
                         DBdata[`mediaType.${index}`] = mediaType;
-                        console.log(DBdata);
+                        log.debug({ DBdata }, 'zip DB update')
                         return Mongo('update', STORAGEDB, {_id: id}, {$set: DBdata}).then(() => MediaHandleTool.handleMediaUpload(mediaType, filePath, id, user).catch(err => handleError(err, errorMedia, id, mediaType['fileIndex'])));
                     });
                 }
@@ -533,7 +533,7 @@ function zipAdd(user, index, id, owner, name, pwd='') {
         }
         const is_run = (runNum < ZIP_LIMIT(ENV_TYPE)) ? true : false;
         if (!is_run) {
-            console.log('zip wait');
+            log.debug('zip: waiting')
         }
         if (!is_queue) {
             zip_pool.push(Object.assign({
@@ -575,14 +575,15 @@ const startTorrent = (user, id, owner, index, hash, engine) => Mongo('update', S
         return torrentComplete().then(() => handleError(new HoError('unknown index')));
     } else {
         const file = engine.files[tIndex];
-        console.log(tIndex);
-        console.log(file.name);
-        console.log(file.length);
-        console.log('torrent real start');
-        console.log(bufferPath);
+        log.info({
+            fileIndex: tIndex,
+            fileName: file.name,
+            fileSize: file.length,
+            bufferPath,
+        }, 'torrent file download started')
         if (await fsExists(bufferPath)) {
             const size = (await stat(bufferPath)).size;
-            console.log(size);
+            log.debug({ size }, 'file size check')
             return (size >= file.length) ? torrentComplete(true, file.path) : new Promise((resolve, reject) => {
                 const fileStream = file.createReadStream({start: size});
                 fileStream.pipe(FsCreateWriteStream(bufferPath, {flags: 'a'}));
@@ -591,7 +592,7 @@ const startTorrent = (user, id, owner, index, hash, engine) => Mongo('update', S
         } else {
             /*if (isVideo(file.name)) {
                 new Promise((resolve, reject) => computeHash(tIndex, engine, (err, hash_ret) => err ? reject(err) : resolve(hash_ret))).then(hash_ret => {
-                    console.log(hash_ret);
+                    log.debug({ hash: hash_ret }, 'file hash computed')
                     const openSubtitles = new OpenSubtitle({
                         useragent: 'hoder agent v0.1',
                         ssl: true,
@@ -602,7 +603,7 @@ const startTorrent = (user, id, owner, index, hash, engine) => Mongo('update', S
                         filesize: hash_ret.fileSize.toString(),
                     });
                 }).then(subtitles => {
-                    console.log(subtitles);
+                    log.debug({ subtitleCount: subtitles?.length }, 'subtitles found')
                     const sub_url = subtitles.ze ? subtitles.ze.url : subtitles.zt ? subtitles.zt.url : subtitles.zh ? subtitles.zh.url :null;
                     const sub_en_url = subtitles.en ? subtitles.en.url : null;
                     function chsub(lang='') {
@@ -636,13 +637,15 @@ const startTorrent = (user, id, owner, index, hash, engine) => Mongo('update', S
                             type: 'sub',
                             data: id,
                         }, 0, 0);
-                        console.log('sub end');
+                        log.debug('subtitle download complete')
                     });
                 }).catch(error => {
-                    console.log('error:', error);
-                    console.log('req headers:', error.req && error.req._header);
-                    console.log('res code:', error.res && error.res.statusCode);
-                    console.log('res body:', error.body);
+                    log.error({
+                        err: error,
+                        reqHeader: error.req?._header,
+                        resCode: error.res?.statusCode,
+                        resBody: error.body,
+                    }, 'subtitle download error')
                     handleError(error, 'Open srt');
                 });
             }*/
@@ -655,7 +658,7 @@ const startTorrent = (user, id, owner, index, hash, engine) => Mongo('update', S
     }
     async function torrentComplete(is_success=false, exitPath=bufferPath) {
         return torrentMutex.runExclusive(async () => {
-            console.log('torrent complete');
+            log.info('torrent download complete')
             for (let i in torrent_pool) {
                 if (torrent_pool[i].hash === hash) {
                     const pindex = torrent_pool[i].index.indexOf(index);
@@ -680,7 +683,7 @@ const startTorrent = (user, id, owner, index, hash, engine) => Mongo('update', S
                         mediaType['realPath'] = exitPath;
                         DBdata['status'] = 9;
                         DBdata[`mediaType.${index}`] = mediaType;
-                        console.log(DBdata);
+                        log.debug({ DBdata }, 'database update data')
                         return Mongo('update', STORAGEDB, {_id: id}, {$set: DBdata}).then(() => MediaHandleTool.handleMediaUpload(mediaType, filePath, id, user).catch(err => handleError(err, errorMedia, id, mediaType['fileIndex'])));
                     });
                 }
@@ -749,7 +752,7 @@ function torrentAdd(user, torrent, fileIndex, id, owner, pType=0) {
                                         percent = Math.ceil((await stat(bufferPath)).size / torrent_pool[i].engine.files[tIndex].length * 100);
                                     }
                                 }
-                                console.log(percent);
+                                log.trace({ percent }, 'torrent progress')
                                 sendWs({
                                     type: user.username,
                                     data: `${torrent_pool[i].engine.files[tIndex].path}: ${percent}%`,
@@ -764,11 +767,11 @@ function torrentAdd(user, torrent, fileIndex, id, owner, pType=0) {
         }
         let comPath = `${bufferPath}_complete`;
         const startEngine = index => engine ? (engine.files && engine.files.length > 0) ? startTorrent(user, id, owner, index, shortTorrent, engine) : new Promise((resolve, reject) => engine.on('ready', () => {
-            console.log('torrent ready');
+            log.info('torrent ready to download')
             return resolve(startTorrent(user, id, owner, index, shortTorrent, engine));
         })) : Promise.resolve();
         if (engine){
-            console.log('torrent go');
+            log.debug('torrent: proceeding')
             return startEngine(fileIndex);
         } else {
             let runNum = 0;
@@ -794,7 +797,7 @@ function torrentAdd(user, torrent, fileIndex, id, owner, pType=0) {
                     uploads: TORRENT_UPLOAD,
                     trackers: BEST_TRACKER_LIST,
                 });
-                console.log('new engine');
+                log.info('new torrent engine created')
                 const rest = () => torrentMutex.runExclusive(() => {
                     //剔除超過的
                     runNum = 0;
@@ -814,9 +817,7 @@ function torrentAdd(user, torrent, fileIndex, id, owner, pType=0) {
                                 }
                             }
                         });
-                        console.log('torrent kick');
-                        console.log(time);
-                        console.log(out_shortTorrent);
+                        log.warn({ time, timedOut: out_shortTorrent }, 'torrent kicked')
                         for (let i = torrent_pool.length - 1; i >= 0; i--) {
                             if (out_shortTorrent === torrent_pool[i].hash) {
                                 if (torrent_pool[i].engine) {
@@ -830,7 +831,7 @@ function torrentAdd(user, torrent, fileIndex, id, owner, pType=0) {
                     return Promise.resolve(true);
                 });
                 if (!is_queue) {
-                    console.log('torrent new');
+                    log.debug('torrent: new item in pool')
                     torrent_pool.push({
                         hash: shortTorrent,
                         index: [fileIndex],
@@ -844,7 +845,7 @@ function torrentAdd(user, torrent, fileIndex, id, owner, pType=0) {
                     });
                     return startEngine(fileIndex).then(() => rest());
                 } else {
-                    console.log('torrent old');
+                    log.debug('torrent: continuing existing')
                     for (let i in torrent_pool) {
                         if (torrent_pool[i].hash === shortTorrent) {
                             torrent_pool[i].engine = engine;
@@ -854,9 +855,9 @@ function torrentAdd(user, torrent, fileIndex, id, owner, pType=0) {
                     }
                 }
             } else {
-                console.log('torrent wait');
+                log.debug('torrent: waiting')
                 if (!is_queue) {
-                    console.log('torrent new');
+                    log.debug('torrent: new item in pool')
                     torrent_pool.push({
                         hash: shortTorrent,
                         index: [fileIndex],
@@ -895,7 +896,7 @@ function torrentInfo(magnet, filePath) {
             if (settled) return;
             settled = true;
             clearTimeout(timer);
-            console.log(engine);
+            log.debug({ engine }, 'torrent engine state')
             const data = {
                 files: engine.files,
                 name: engine.torrent.name ? engine.torrent.name : 'torrent',
@@ -916,10 +917,9 @@ function torrentInfo(magnet, filePath) {
 function torrentStop(user, index=false) {
     if (user) {
         const toRemove = [];
-        torrent_pool.forEach(i => {
+        torrent_pool.forEach((i, poolIndex) => {
             if (user._id.equals(i.user._id)) {
-                console.log('engine stop');
-                console.log(i);
+                log.info({ index: poolIndex }, 'torrent engine stopped')
                 if (i.engine) {
                     i.engine.destroy();
                 }
@@ -933,7 +933,7 @@ function torrentStop(user, index=false) {
         }
     } else {
         if (torrent_pool[index]) {
-            console.log(torrent_pool[index]);
+            log.debug({ poolItem: torrent_pool[index] }, 'torrent pool item state')
             if (torrent_pool[index].engine) {
                 torrent_pool[index].engine.destroy();
             }
@@ -952,10 +952,9 @@ function torrentStop(user, index=false) {
 function zipStop(user, index=false) {
     if (user) {
         const toRemove = [];
-        zip_pool.forEach(i => {
+        zip_pool.forEach((i, poolIndex) => {
             if (user._id.equals(i.user._id)) {
-                console.log('zip stop');
-                console.log(i);
+                log.info({ index: poolIndex }, 'zip stopped')
                 if (i.run && i.chp) {
                     i.chp.kill('SIGKILL');
                 }
@@ -969,7 +968,7 @@ function zipStop(user, index=false) {
         }
     } else {
         if (zip_pool[index]) {
-            console.log(zip_pool[index]);
+            log.debug({ poolItem: zip_pool[index] }, 'zip pool item state')
             if (zip_pool[index].run && zip_pool[index].chp) {
                 zip_pool[index].chp.kill('SIGKILL');
             }
@@ -988,10 +987,9 @@ function zipStop(user, index=false) {
 async function megaStop(user, index=false) {
     if (user) {
         const toRemove = [];
-        for (const i of mega_pool) {
+        for (const [poolIndex, i] of mega_pool.entries()) {
             if (user._id.equals(i.user._id)) {
-                console.log('mega stop');
-                console.log(i);
+                log.info({ index: poolIndex }, 'mega stopped')
                 if (i.run && i.chp) {
                     i.chp.kill('SIGKILL');
                 }
@@ -1006,7 +1004,7 @@ async function megaStop(user, index=false) {
         }
     } else {
         if (mega_pool[index]) {
-            console.log(mega_pool[index]);
+            log.debug({ poolItem: mega_pool[index] }, 'mega pool item state')
             if (mega_pool[index].run && mega_pool[index].chp) {
                 mega_pool[index].chp.kill('SIGKILL');
                 await deleteFolderRecursive(mega_pool[index].filePath);

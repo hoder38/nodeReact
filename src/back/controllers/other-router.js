@@ -1,29 +1,29 @@
 import { STORAGEDB } from '../constants.js'
-import Express from 'express'
-import httpsModule from 'https'
-const { request: HttpsRequest } = httpsModule;
 import Mongo from '../models/mongo-tool.js'
+import Express from 'express'
+import createLogger from '../util/logger.js'
 import { handleError, HoError } from '../util/utility.js'
 
 const router = Express.Router();
+const log = createLogger('other-router');
 
 router.get('/refresh', function(req, res, next) {
-    console.log('refresh');
+    log.debug('refresh endpoint hit');
     res.end('refresh');
 });
 
 router.get('/privacy', function(req, res, next) {
-    console.log('privacy');
+    log.debug('privacy endpoint hit');
     res.end('privacy');
 });
 
 router.get('/homepage', function(req, res, next) {
-    console.log('utility');
+    log.debug('homepage endpoint hit');
     res.end('homepage');
 });
 
 router.get('/s', function(req, res, next) {
-    console.log('short');
+    log.debug('short URL redirect');
     Mongo('find', STORAGEDB, {status: 7}, {
         sort: [[
             'utime',
@@ -44,28 +44,5 @@ router.get('/s', function(req, res, next) {
         res.end(`302. Redirecting to ${url}`);
     }).catch(err => handleError(err, next));
 });
-
-/*router.get('/subtitle/:uid/:lang/:index(\\d+|v)/:fresh(0+)?', function(req, res, next) {
-    checkLogin(req, res, () => {
-        console.log('subtitle');
-        const subReq = HttpsRequest({
-            host: EXTENT_FILE_IP(ENV_TYPE),
-            port: EXTENT_FILE_PORT(ENV_TYPE),
-            path: `/subtitle/${req.params.uid}/${req.params.lang}/${req.params.index}`,
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-                'Referer' : req.headers['referer'],
-                'User-Agent' : 'Mozilla/5.0 (Windows NT 6.1; rv:40.0) Gecko/20100101 Firefox/40.0',
-            }
-        }, sub => {
-            if (sub.statusCode === 200) {
-                res.writeHead(200, { 'Content-Type': 'text/vtt' });
-                sub.pipe(res);
-            }
-        });
-        subReq.end();
-    });
-});*/
 
 export default router

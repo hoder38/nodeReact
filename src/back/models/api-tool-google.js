@@ -19,6 +19,9 @@ import MediaHandleTool from '../models/mediaHandle-tool.js'
 import { handleError, HoError, isValidString, fsExists } from '../util/utility.js'
 import { mediaMIME, isKindle } from '../util/mime.js'
 import sendWs from '../util/sendWs.js'
+import createLogger from '../util/logger.js'
+
+const log = createLogger('google-api')
 
 const OAuth2 = googleapis.auth.OAuth2;
 const oauth2Client = new OAuth2(GOOGLE_ID, GOOGLE_SECRET, GOOGLE_REDIRECT);
@@ -40,8 +43,7 @@ export function _setState(overrides) {
 }
 
 export default function api(name, data) {
-    console.log(name);
-    console.log(data);
+    log.debug({ action: name, dataKeys: Object.keys(data || {}) }, 'google API called');
     return checkOauth().then(() => {
         if (name.match(/^y /)) {
             return youtubeAPI(name, data);
@@ -101,9 +103,9 @@ const checkOauth = () => oauthMutex.runExclusive(() => {
 			if (token.length === 0) {
 				return handleError(new HoError('can not find token'));
 			}
-			console.log('first');
+			log.info('first-time Google auth token fetch');
 			tokens = token[0];
-			console.log(tokens);
+			log.debug({ hasAccessToken: !!tokens.access_token }, 'tokens received');
 		}).then(() => setToken());
 	}
 	return setToken();
@@ -112,9 +114,7 @@ const checkOauth = () => oauthMutex.runExclusive(() => {
 const setToken = () => {
     oauth2Client.setCredentials(tokens);
     return tokens.expiry_date < (Date.now() + 600000) ? new Promise((resolve, reject) => oauth2Client.refreshAccessToken((err, refresh_tokens)=> err ? reject(err) : resolve(refresh_tokens))).then(token => Mongo('update', 'accessToken', {api: 'google'}, {$set: token}).then(result => {
-        console.log('expire');
-        console.log(result);
-        console.log(token);
+        log.debug({ expired: true }, 'token expired, refreshing');
         tokens = token;
         oauth2Client.setCredentials(tokens);
     })) : Promise.resolve();
@@ -177,7 +177,6 @@ function sendName(data) {
     }
     data['name'] = data['append'] ? `${Buffer.from(data['text'], 'base64')} ${data['append']}` : Buffer.from(data['text'], 'base64');
     const subject = data['append'] ? `${data['title']} ${data['append']}` : data['title'];
-    //console.log(data['text']);
     const gmail = googleapis.gmail({
         version: 'v1',
         auth: oauth2Client,
@@ -308,7 +307,7 @@ function youtubeAPI(method, data) {
             metadata.prevPageToken,
         ])));
         default:
-        console.log(method);
+        log.debug({ method }, 'Drive API method');
         return handleError(new HoError('youtube api unknown!!!'));
     }
 }
@@ -366,15 +365,15 @@ function upload(data) {
         version: 'v3',
         auth: oauth2Client,
     }).files.create(param, (err, metadata) => (err && err.code !== 'ECONNRESET') ? reject(err) : resolve(metadata))).then(metadata => {
-        console.log(metadata);
+        log.debug({ metadata }, 'Drive file metadata');
         if (data['rest']) {
             return () => new Promise((resolve, reject) => setTimeout(() => resolve(), 0)).then(() => data['rest'](metadata.data)).catch(err => data['errhandle'](err));
         }
     }).catch(err => {
-        console.log(index);
+        log.debug({ index }, 'Drive operation index');
         handleError(err, 'google upload');
         if (++index > MAX_RETRY) {
-            console.log(data);
+            log.debug({ data }, 'Drive response data');
             return handleError(err, data['errhandle']);
         }
         return new Promise((resolve, reject) => setTimeout(() => resolve(checkOauth()), index * 1000)).then(() => proc());
@@ -398,9 +397,7 @@ function list(data) {
         if (metadata && metadata.data && metadata.data.files) {
             return metadata.data.files;
         } else {
-            console.log('drive empty');
-            console.log(metadata);
-            console.log(index);
+            log.warn({ metadata, index }, 'Drive returned empty');
             return (++index > MAX_RETRY) ? [] : new Promise((resolve, reject) => setTimeout(() => resolve(proc()), 3000));
         }
     });
@@ -459,10 +456,10 @@ function download(data) {
             return () => new Promise((resolve, reject) => setTimeout(() => resolve(), 0)).then(() => data['rest']()).catch(err => data['errhandle'](err));
         }
     })).catch(err => {
-        console.log(index);
+        log.debug({ index }, 'Drive operation index');
         handleError(err, 'Google Fetch');
         if (++index > MAX_RETRY) {
-            console.log(data['url']);
+            log.debug({ url: data['url'] }, 'YouTube URL');
             return handleError(new HoError('timeout'), data['errhandle']);
         }
         return new Promise((resolve, reject) => setTimeout(() => resolve(proc()), (data['_retryDelay'] ? data['_retryDelay'](index) : index * 1000)));
@@ -528,7 +525,7 @@ function downloadMedia(data) {
         noWarnings: true,
         addHeader: ['referer:youtube.com', 'user-agent:googlebot']
     }).then(output => {
-        console.log(output.formats);
+        log.debug({ formatCount: output.formats?.length }, 'YouTube formats');
         let media_id = null;
         let currentHeight = 0;
         for (let fmt of output.formats) {
@@ -541,7 +538,7 @@ function downloadMedia(data) {
                 }
             }
         }
-        console.log(media_id);
+        log.debug({ media_id }, 'media ID');
         if (!media_id) {
             return handleError(new HoError('quality low'));
         }
@@ -562,10 +559,10 @@ function downloadMedia(data) {
             });
         }));
     }).catch(err => {
-        console.log(index);
+        log.debug({ index }, 'Drive operation index');
         handleError(err, 'Youtubedl Fetch');
         if (++index > MAX_RETRY) {
-            console.log(data['key']);
+            log.debug({ key: data['key'] }, 'media key');
             return handleError(new HoError('timeout'), data['errhandle']);
         }
         return new Promise((resolve, reject) => setTimeout(() => resolve(proc()), (data['_retryDelay'] ? data['_retryDelay'](index) : Math.pow(2, index) * 40 * 1000)));
@@ -587,7 +584,7 @@ function downloadPresent(data) {
         const dir = `${data['filePath']}_present`;
         const presentDir = () => fsExists(dir).then(exists => exists ? Promise.resolve() : Mkdirp(dir));
         const recur_present = () => execSafe('grep', ['-o', `12,"p[0-9][0-9]*",${number},0`, present_html]).then(output => {
-            console.log(output);
+            log.debug({ output }, 'download output');
             number++;
             const pageid = output.match(/\"p(\d+)\"/);
             if (!pageid) {
@@ -696,9 +693,7 @@ export async function googleBackup(user, id, name, filePath, tags, recycle, appe
 
 
 export function userDrive(userlist, index, drive_batch=DRIVE_LIMIT) {
-    console.log('userDrive');
-    console.log(new Date().toLocaleString());
-    console.log(userlist[index].username);
+    log.info({ user: userlist[index].username }, 'userDrive sync started');
     let folderlist = [{
         id: userlist[index].auto,
         title: 'drive upload',
@@ -801,7 +796,7 @@ export const googleBackupDb = backupDate => api('create', {name: backupDate, par
     }
     const create_collection = index => {
         if (index >= backup_collection.length) {
-            console.log(backup_collection);
+            log.debug({ collection: backup_collection }, 'Google backup collection');
             return upload_db(0, 0);
         }
         return api('create', {name: backup_collection[index].name, parent: metadata.id}).then(metadata2 => {

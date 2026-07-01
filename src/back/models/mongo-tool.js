@@ -4,6 +4,9 @@ import mongodb from 'mongodb'
 const { MongoClient, ObjectId } = mongodb;
 import bcryptModule from 'bcrypt'
 import { handleError, HoError } from '../util/utility.js'
+import createLogger from '../util/logger.js'
+
+const log = createLogger('mongo')
 
 let mongo = null;
 let _client = null;
@@ -29,7 +32,7 @@ MongoClient.connect(`mongodb://${DB_USERNAME}:${DB_PWD}@${DB_IP(ENV_TYPE)}:${DB_
             }
             mongo = db;
             _client = client;
-            console.log('database connected');
+            log.info('MongoDB connected')
             db.collection('user', (err, collection) => {
                 if (err) {
                     return handleError(err, 'DB connect');
@@ -38,14 +41,14 @@ MongoClient.connect(`mongodb://${DB_USERNAME}:${DB_PWD}@${DB_IP(ENV_TYPE)}:${DB_
                     if (err) {
                         return handleError(err, 'DB connect');
                     }
-                    console.log(count);
+                    log.info({ userCount: count }, 'user collection count')
                     if (count === 0) {
                         bcryptModule.hash(PASSWORD_SALT + DEFAULT_PASS, 10).then(hash => {
                             collection.insertOne(Object.assign({}, ROOT_USER, {password: hash}), (err, user) => {
                                 if (err) {
                                     return handleError(err, 'DB connect');
                                 }
-                                console.log(user);
+                                log.info({ userId: user[0]?._id }, 'root user seeded')
                             });
                         }).catch(err => handleError(err, 'DB connect'));
                     }
@@ -62,7 +65,7 @@ MongoClient.connect(`mongodb://${DB_USERNAME}:${DB_PWD}@${DB_IP(ENV_TYPE)}:${DB_
         }
         mongo = db;
         _client = client;
-        console.log('database connected');
+        log.info('MongoDB connected')
         db.collection('user', (err, collection) => {
             if (err) {
                 return handleError(err, 'DB connect');
@@ -71,14 +74,14 @@ MongoClient.connect(`mongodb://${DB_USERNAME}:${DB_PWD}@${DB_IP(ENV_TYPE)}:${DB_
                 if (err) {
                     return handleError(err, 'DB connect');
                 }
-                console.log(count);
+                log.info({ userCount: count }, 'user collection count')
                 if (count === 0) {
                     bcryptModule.hash(PASSWORD_SALT + DEFAULT_PASS, 10).then(hash => {
                         collection.insertOne(Object.assign({}, ROOT_USER, {password: hash}), (err, user) => {
                             if (err) {
                                 return handleError(err, 'DB connect');
                             }
-                            console.log(user);
+                            log.info({ userId: user[0]?._id }, 'root user seeded')
                         });
                     }).catch(err => handleError(err, 'DB connect'));
                 }
@@ -131,4 +134,3 @@ export default function(functionName, name, ...args) {
         })
     }
 }
-

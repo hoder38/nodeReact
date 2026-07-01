@@ -1,0 +1,268 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`extTag snapshot for type "doc" 1`] = `
+Object {
+  "def": Array [
+    "文件",
+    "doc",
+  ],
+  "opt": Array [
+    "書籍",
+    "book",
+    "小說",
+    "novel",
+  ],
+}
+`;
+
+exports[`extTag snapshot for type "image" 1`] = `
+Object {
+  "def": Array [
+    "圖片",
+    "image",
+  ],
+  "opt": Array [
+    "相片",
+    "photo",
+    "漫畫",
+    "comic",
+  ],
+}
+`;
+
+exports[`extTag snapshot for type "music" 1`] = `
+Object {
+  "def": Array [
+    "音頻",
+    "audio",
+  ],
+  "opt": Array [
+    "歌曲",
+    "song",
+    "音樂",
+    "music",
+    "有聲書",
+    "audio book",
+  ],
+}
+`;
+
+exports[`extTag snapshot for type "pdf" 1`] = `
+Object {
+  "def": Array [
+    "文件",
+    "doc",
+  ],
+  "opt": Array [
+    "書籍",
+    "book",
+    "小說",
+    "novel",
+  ],
+}
+`;
+
+exports[`extTag snapshot for type "present" 1`] = `
+Object {
+  "def": Array [
+    "簡報",
+    "presentation",
+  ],
+  "opt": Array [],
+}
+`;
+
+exports[`extTag snapshot for type "rawdoc" 1`] = `
+Object {
+  "def": Array [
+    "文件",
+    "doc",
+  ],
+  "opt": Array [
+    "書籍",
+    "book",
+    "小說",
+    "novel",
+    "程式碼",
+    "code",
+    "網頁",
+    "web",
+  ],
+}
+`;
+
+exports[`extTag snapshot for type "sheet" 1`] = `
+Object {
+  "def": Array [
+    "試算表",
+    "sheet",
+  ],
+  "opt": Array [],
+}
+`;
+
+exports[`extTag snapshot for type "url" 1`] = `
+Object {
+  "def": Array [
+    "網址",
+    "url",
+  ],
+  "opt": Array [
+    "論壇",
+    "forum",
+    "維基",
+    "wiki",
+  ],
+}
+`;
+
+exports[`extTag snapshot for type "video" 1`] = `
+Object {
+  "def": Array [
+    "影片",
+    "video",
+  ],
+  "opt": Array [
+    "電影",
+    "movie",
+    "動畫",
+    "animation",
+    "電視劇",
+    "tv show",
+  ],
+}
+`;
+
+exports[`extTag snapshot for type "zip" 1`] = `
+Object {
+  "def": Array [
+    "壓縮檔",
+    "zip",
+    "播放列表",
+    "playlist",
+  ],
+  "opt": Array [],
+}
+`;
+
+exports[`extTag snapshot for type "zipbook" 1`] = `
+Object {
+  "def": Array [
+    "圖片集",
+    "image book",
+    "圖片",
+    "image",
+  ],
+  "opt": Array [
+    "相片",
+    "photo",
+    "漫畫",
+    "comic",
+  ],
+}
+`;
+
+exports[`getOptionTag snapshot stability 1`] = `
+Array [
+  "圖片",
+  "相片",
+  "漫畫",
+  "圖片集",
+  "影片",
+  "電影",
+  "動畫",
+  "電視劇",
+  "音頻",
+  "歌曲",
+  "音樂",
+  "有聲書",
+  "文件",
+  "書籍",
+  "小說",
+  "簡報",
+  "試算表",
+  "程式碼",
+  "網頁",
+  "網址",
+  "論壇",
+  "維基",
+  "壓縮檔",
+  "播放列表",
+  "動作",
+  "冒險",
+  "動畫",
+  "傳記",
+  "喜劇",
+  "犯罪",
+  "記錄",
+  "劇情",
+  "家庭",
+  "奇幻",
+  "黑色電影",
+  "歷史",
+  "恐怖",
+  "音樂",
+  "音樂劇",
+  "神祕",
+  "浪漫",
+  "科幻",
+  "運動",
+  "驚悚",
+  "戰爭",
+  "西部",
+  "休閒",
+  "冒險",
+  "動作",
+  "大型多人連線",
+  "模擬",
+  "獨立",
+  "競速",
+  "策略",
+  "角色扮演",
+  "運動",
+  "avant-garde",
+  "blues",
+  "children's",
+  "classical",
+  "comedy or spoken",
+  "country",
+  "easy listening",
+  "electronic",
+  "folk",
+  "holiday",
+  "international",
+  "jazz",
+  "latin",
+  "new age",
+  "pop or rock",
+  "r&b",
+  "rap",
+  "reggae",
+  "religious",
+  "stage and screen",
+  "vocal",
+  "ol",
+  "中出",
+  "同人誌",
+  "多p",
+  "多人合集",
+  "女僕",
+  "學生",
+  "巨乳",
+  "教師",
+  "泳裝",
+  "溫泉",
+  "無碼",
+  "熟女",
+  "特殊制服",
+  "痴女",
+  "痴漢",
+  "素人",
+  "美腿",
+  "藝能人",
+  "護士",
+  "野外",
+  "風俗店",
+  "魔物",
+]
+`;

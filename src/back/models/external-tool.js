@@ -11,8 +11,11 @@ import GoogleApi from '../models/api-tool-google.js'
 import { normalize } from '../models/tag-tool.js'
 import Mongo, { objectID } from '../models/mongo-tool.js'
 import { handleError, HoError, toValidName, isValidString, getJson, completeZero, getFileLocation, addPre, torrent2Magnet } from '../util/utility.js'
+import createLogger from '../util/logger.js'
 import Api from './api-tool.js'
 import { circuitBreaker } from './circuit-breaker.js'
+
+const log = createLogger('external-tool')
 
 export default {
     //type要補到deltag裡
@@ -114,7 +117,7 @@ export default {
         } else {
             return handleError(new HoError('index invalid'));
         }
-        console.log(url);
+        log.debug({ url }, 'getting external single id')
         const saveList = (getlist, raw_list, is_end, etime) => {
             const exGet = () => (etime === -1) ? Promise.resolve([raw_list, is_end]) : (!etime || etime < (new Date().getTime()/1000)) ? getlist() : Promise.resolve([[], false]);
             exGet().then(([raw_list, is_end]) => {

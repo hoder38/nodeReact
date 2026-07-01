@@ -8,26 +8,17 @@
  */
 import { jest, describe, test, expect, beforeEach, afterEach } from '@jest/globals';
 
-import {
-    getOptionTag,
-    addPost,
-    extTag,
-    extType,
-    isVideo,
-    isImage,
-    isMusic,
-    isTorrent,
-    isZip,
-    isZipbook,
-    isDoc,
-    isSub,
-    isKindle,
-    isCSV,
-    mediaMIME,
-    supplyTag,
-    changeExt,
-    getExtname,
-} from '../mime.js';
+const mockLog = {
+    info: jest.fn(),
+    debug: jest.fn(),
+    warn: jest.fn(),
+    error: jest.fn(),
+    trace: jest.fn(),
+};
+
+jest.unstable_mockModule('../logger.js', () => ({
+    default: () => mockLog,
+}));
 
 import {
     MEDIA_LIST_CH,
@@ -46,6 +37,31 @@ import {
     SUB_EXT,
     KINDLE_EXT,
 } from '../../constants.js';
+
+const {
+    getOptionTag,
+    addPost,
+    extTag,
+    extType,
+    isVideo,
+    isImage,
+    isMusic,
+    isTorrent,
+    isZip,
+    isZipbook,
+    isDoc,
+    isSub,
+    isKindle,
+    isCSV,
+    mediaMIME,
+    supplyTag,
+    changeExt,
+    getExtname,
+} = await import('../mime.js');
+
+beforeEach(() => {
+    jest.clearAllMocks();
+});
 
 
 // ===========================================================================
@@ -213,11 +229,9 @@ describe('extTag', () => {
         expect(extTag('')).toEqual({});
     });
 
-    test('console.log called on invalid type', () => {
-        const spy = jest.spyOn(console, 'log').mockImplementation();
+    test('logger.warn called on invalid type', () => {
         extTag('nonexistent');
-        expect(spy).toHaveBeenCalledWith(undefined);
-        spy.mockRestore();
+        expect(mockLog.warn).toHaveBeenCalledWith({ type: 'nonexistent' }, 'failed to clone MEDIA_TAG entry');
     });
 });
 

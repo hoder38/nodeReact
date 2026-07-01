@@ -4,16 +4,18 @@ import TagTool from '../models/tag-tool.js'
 import StockTool from '../models/stock-tool.js'
 import { checkLogin, handleError, getStockItem, isValidString, HoError } from '../util/utility.js'
 import sendWs from '../util/sendWs.js'
+import createLogger from '../util/logger.js'
 
 const router = Express.Router();
 const StockTagTool = TagTool(STOCKDB);
+const log = createLogger('stock-router')
 
 router.use(function(req, res, next) {
     checkLogin(req, res, next);
 });
 
 router.get('/get/:sortName(name|mtime|count)/:sortType(desc|asc)/:page(\\d+)/:name?/:exactly(true|false)?/:index(\\d+)?', function(req, res, next) {
-    console.log('stock');
+    log.debug('stock query');
     StockTagTool.tagQuery(Number(req.params.page), req.params.name, req.params.exactly === 'true' ? true : false, Number(req.params.index), req.params.sortName, req.params.sortType, req.user, req.session).then(result => res.json({
         itemList: getStockItem(req.user, result.items),
         parentList: result.parentList,
@@ -23,7 +25,7 @@ router.get('/get/:sortName(name|mtime|count)/:sortType(desc|asc)/:page(\\d+)/:na
 });
 
 router.get('/getSingle/:sortName(name|mtime|count)/:sortType(desc|asc)/:page(\\d+)/:name?/:exactly(true|false)?/:index(\\d+)?', function(req, res, next) {
-    console.log('stock get single');
+    log.debug('stock get single');
     const page = Number(req.params.page);
     if (page === 0 && req.params.name) {
         StockTagTool.searchTags(req.session).resetArray();
@@ -37,7 +39,7 @@ router.get('/getSingle/:sortName(name|mtime|count)/:sortType(desc|asc)/:page(\\d
 });
 
 router.get('/reset/:sortName(name|mtime|count)/:sortType(desc|asc)', function(req, res, next){
-    console.log('stock reset');
+    log.debug('stock reset');
     StockTagTool.resetQuery(req.params.sortName, req.params.sortType, req.user, req.session).then(result => res.json({
         itemList: getStockItem(req.user, result.items),
         parentList: result.parentList,
@@ -45,7 +47,7 @@ router.get('/reset/:sortName(name|mtime|count)/:sortType(desc|asc)', function(re
 });
 
 router.post('/getOptionTag', function(req, res,next) {
-    console.log('stock option tag');
+    log.debug('stock option tag');
     let optionList = new Set(['important']);
     req.body.tags.length > 0 ? StockTagTool.getRelativeTag(req.body.tags, req.user, [...optionList]).then(relative => {
         const reli = relative.length < 5 ? relative.length : 5;
@@ -57,12 +59,12 @@ router.post('/getOptionTag', function(req, res,next) {
 });
 
 router.get('/single/:uid', function(req, res, next) {
-    console.log('stock single');
+    log.debug('stock single');
     StockTagTool.singleQuery(req.params.uid, req.user, req.session).then(result => result.empty ? res.json(result) : res.json({item: getStockItem(req.user, [result.item])})).catch(err => handleError(err, next));
 });
 
 router.put('/addTag/:tag', function(req, res, next) {
-    console.log('stock addTag');
+    log.debug('stock addTag');
     const recur = index => (index >= req.body.uids.length) ? Promise.resolve(res.json({apiOK: true})) : StockTagTool.addTag(req.body.uids[index], req.params.tag, req.user, false).then(result => {
         if (result.id) {
             sendWs({
@@ -76,7 +78,7 @@ router.put('/addTag/:tag', function(req, res, next) {
 });
 
 router.put('/delTag/:tag', function(req, res, next) {
-    console.log('stock delTag');
+    log.debug('stock delTag');
     const recur = index => (index >= req.body.uids.length) ? Promise.resolve(res.json({apiOK: true})) : StockTagTool.delTag(req.body.uids[index], req.params.tag, req.user, false).then(result => {
         if (result.id) {
             sendWs({
@@ -90,7 +92,7 @@ router.put('/delTag/:tag', function(req, res, next) {
 });
 
 router.get('/querySimple/:uid', function(req, res,next) {
-    console.log('stock query simple');
+    log.debug('stock query simple');
     const id = isValidString(req.params.uid, 'uid');
     if (!id) {
         return handleError(new HoError('uid is not vaild'), next);
@@ -99,7 +101,7 @@ router.get('/querySimple/:uid', function(req, res,next) {
 });
 
 router.get('/getPER/:uid', function(req, res,next) {
-    console.log('stock get per');
+    log.debug('stock get per');
     const id = isValidString(req.params.uid, 'uid');
     if (!id) {
         return handleError(new HoError('uid is not vaild'), next);
@@ -111,7 +113,7 @@ router.get('/getPER/:uid', function(req, res,next) {
 });
 
 /*router.get('/getPredictPER/:uid', function(req, res,next) {
-    console.log('stock get predict');
+    log.debug('stock get predict');
     const id = isValidString(req.params.uid, 'uid');
     if (!id) {
         return handleError(new HoError('uid is not vaild'), next);
@@ -120,7 +122,7 @@ router.get('/getPER/:uid', function(req, res,next) {
 });
 
 router.get('/getPoint/:uid/:price?', function(req, res, next) {
-    console.log('stock get point');
+    log.debug('stock get point');
     const id = isValidString(req.params.uid, 'uid', 'uid is not vaild');
     if (!id) {
         return handleError(new HoError('uid is not vaild'), next);
@@ -136,7 +138,7 @@ router.get('/getPoint/:uid/:price?', function(req, res, next) {
 });*/
 
 router.get('/getInterval/:uid', function(req, res,next) {
-    console.log('stock get interval');
+    log.debug('stock get interval');
     const id = isValidString(req.params.uid, 'uid');
     if (!id) {
         return handleError(new HoError('uid is not vaild'), next);
@@ -145,7 +147,7 @@ router.get('/getInterval/:uid', function(req, res,next) {
 });
 
 /*router.put('/filter/:tag/:sortName(name|mtime|count)/:sortType(desc|asc)', function(req, res, next) {
-    console.log('stock filter');
+    log.debug('stock filter');
     const name = isValidString(req.params.tag, 'name');
     if (!name) {
         return  handleError(new HoError('name is not vaild'), next);
@@ -236,12 +238,12 @@ router.get('/getInterval/:uid', function(req, res,next) {
 });*/
 
 router.get('/getTotal', function(req, res,next) {
-    console.log('stock get total');
+    log.debug('stock get total');
     StockTool.getStockTotal(req.user).then(result => res.json(result)).catch(err => handleError(err, next));
 });
 
 router.put('/updateTotal/:real(1|0)?', function(req, res,next) {
-    console.log('stock update total');
+    log.debug('stock update total');
     StockTool.updateStockTotal(req.user, req.body.info, (req.params.real === '1') ? true : false).then(result => res.json(result)).catch(err => handleError(err, next));
 });
 

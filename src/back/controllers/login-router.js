@@ -6,13 +6,17 @@ import passportLocal from 'passport-local'
 const { Strategy } = passportLocal;
 import bcryptModule from 'bcrypt'
 import Mongo, { objectID } from '../models/mongo-tool.js'
+import createLogger from '../util/logger.js'
 import { handleError, HoError, isValidString } from '../util/utility.js'
 
 const router = Express.Router()
+const log = createLogger('auth')
 
-//passport
+/**
+ * Configure local username and password authentication.
+ */
 Passport.use(new Strategy(async function(username, password, done){
-    console.log('login');
+    log.info({ username }, 'login attempt');
     try {
         const validUsername = isValidString(username, 'name');
         if (!validUsername) {
@@ -50,10 +54,15 @@ Passport.deserializeUser(function(id, done) {
     })).catch(err => handleError(err, done))
 })
 
-//login
+/**
+ * Build authentication routes.
+ *
+ * @param {string | null} url redirect URL returned after successful auth
+ * @returns {import('express').Router}
+ */
 export default function(url=null) {
     router.get('/api/logout', function(req, res, next) {
-        console.log('logout');
+        log.info('user logout');
         if (req.isAuthenticated()) {
             req.session.destroy()
         }
@@ -68,7 +77,7 @@ export default function(url=null) {
             if (err) return handleError(err, next);
             req.logIn(user, function(err) {
                 if (err) return handleError(err, next);
-                console.log('auth ok');
+                log.info({ userId: req.user.username }, 'auth succeeded');
                 res.json(Object.assign({
                     loginOK: true,
                     id: req.user.username,
