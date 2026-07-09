@@ -750,7 +750,7 @@ describe('handleMediaUpload', () => {
     expect(mockExecSafe.mock.calls[0][1]).toContain('/f/2_complete');
   });
 
-  test('zipbook type (rar) → 7za extract + Google upload', async () => {
+  test('zipbook type (rar) → unrar extract + Google upload', async () => {
     mockExecSafe.mockResolvedValue('ok');
     mockReaddirSync.mockReturnValue(['img1.jpg', 'img2.jpg']);
     mockLstatSync.mockReturnValue({ isDirectory: () => false });
@@ -765,7 +765,7 @@ describe('handleMediaUpload', () => {
     mockMongo.mockResolvedValue({});
     const mt = { type: 'zipbook', ext: 'rar' };
     await MediaHandleTool.handleMediaUpload(mt, '/f', 'fid', makeUser());
-    expect(mockExecSafe.mock.calls[0][0]).toBe('7za');
+    expect(mockExecSafe.mock.calls[0][0]).toBe('unrar');
     expect(mockExecSafe.mock.calls[0][1]).toContain('x');
   });
 
@@ -932,7 +932,7 @@ describe('handleMediaUpload', () => {
   });
 
   // --- ZIP type ---
-  test('zip (rar) → 7za l, parse playlist', async () => {
+  test('zip (rar) → unrar v, parse playlist', async () => {
     const output = '------- ---- ---\n-----------\n50%  2024-01-01 12:00 12345 file1.txt\n0%  2024-01-01 12:00 12345 dir/\n-----------\n';
     mockExecSafe.mockResolvedValue(output);
     mockExtType.mockReturnValue({ type: 'zip', ext: 'rar' });
@@ -940,8 +940,8 @@ describe('handleMediaUpload', () => {
     mockMongo.mockResolvedValueOnce([makeItem({ tags: ['t1'], user123: ['t1'] })]).mockResolvedValueOnce({}).mockResolvedValueOnce({}).mockResolvedValueOnce([makeItem()]);
     const mt = { type: 'zip', ext: 'rar' };
     await MediaHandleTool.handleMediaUpload(mt, '/f', 'fid', makeUser());
-    expect(mockExecSafe.mock.calls[0][0]).toBe('7za');
-    expect(mockExecSafe.mock.calls[0][1]).toContain('l');
+    expect(mockExecSafe.mock.calls[0][0]).toBe('unrar');
+    expect(mockExecSafe.mock.calls[0][1]).toContain('v');
   });
 
   test('zip (7z) → 7za l, column format parse', async () => {
@@ -1014,7 +1014,7 @@ describe('handleMediaUpload', () => {
     mockStatSync.mockReturnValue({ size: 500 }); // below NOISE_SIZE
     mockGoogleApi.mockImplementation((action, opts) => {
       if (action === 'upload' && opts.rest) {
-        return opts.rest({ alternateLink: 'http://alt', id: 'gid' });
+        return opts.rest({ webViewLink: 'http://alt', id: 'gid' });
       }
       if (action === 'download media' && opts.rest) return opts.rest(null);
       return Promise.resolve({});
@@ -1030,7 +1030,7 @@ describe('handleMediaUpload', () => {
     mockAppendFile.mockResolvedValue();
     mockGoogleApi.mockImplementation((action, opts) => {
       if (action === 'upload' && opts.rest) {
-        return opts.rest({ alternateLink: 'http://alt', id: 'gid' });
+        return opts.rest({ webViewLink: 'http://alt', id: 'gid' });
       }
       if (action === 'download media' && opts.rest) return opts.rest(null);
       return Promise.resolve({});
@@ -1047,7 +1047,7 @@ describe('handleMediaUpload', () => {
     mockGoogleApi.mockImplementation((action, opts) => {
       if (action === 'delete') return Promise.resolve();
       if (action === 'upload' && opts.rest) {
-        return opts.rest({ alternateLink: 'http://alt', id: 'gid' });
+        return opts.rest({ webViewLink: 'http://alt', id: 'gid' });
       }
       if (action === 'download media' && opts.rest) return opts.rest(null);
       return Promise.resolve({});
@@ -1090,7 +1090,7 @@ describe('handleMediaUpload', () => {
       if (action === 'upload' && opts.rest) {
         return opts.rest({
           exportLinks: { 'application/pdf': 'http://pdf' },
-          alternateLink: 'http://alt',
+          webViewLink: 'http://alt',
           id: 'gid',
         });
       }
@@ -1103,7 +1103,7 @@ describe('handleMediaUpload', () => {
     expect(mt.alternate).toBe('http://alt');
   });
 
-  test('default — present with no alternateLink → error', async () => {
+  test('default — present with no webViewLink → error', async () => {
     mockGoogleApi.mockImplementation((action, opts) => {
       if (action === 'upload' && opts.rest) {
         return opts.rest({
@@ -1323,7 +1323,7 @@ describe('handleMedia', () => {
 
   test('present — no thumbnail, fetch from get', async () => {
     mockGoogleApi.mockImplementation((action, opts) => {
-      if (action === 'get') return Promise.resolve({ exportLinks: { 'application/pdf': 'http://pdf' }, alternateLink: 'http://alt' });
+      if (action === 'get') return Promise.resolve({ exportLinks: { 'application/pdf': 'http://pdf' }, webViewLink: 'http://alt' });
       if (action === 'download present' && opts.rest) return opts.rest(4);
       if (action === 'delete') return Promise.resolve();
       return Promise.resolve({});

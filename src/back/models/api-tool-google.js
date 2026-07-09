@@ -1,4 +1,4 @@
-import { MAX_RETRY, DRIVE_LIMIT, OATH_WAITING, KINDLE_LIMIT, __dirname } from '../constants.js'
+import { MAX_RETRY, DRIVE_LIMIT, OATH_WAITING, KINDLE_LIMIT, __dirname, DOC_EXT, EXT_FILENAME } from '../constants.js'
 import { ENV_TYPE, GOOGLE_ID, GOOGLE_SECRET, GOOGLE_REDIRECT, ROOT_USER } from '../../../ver.js'
 import { GOOGLE_MEDIA_FOLDER, GOOGLE_BACKUP_FOLDER, API_LIMIT, NAS_TMP, GOOGLE_DB_BACKUP_FOLDER, BACKUP_PATH } from '../config.js'
 import googleapisModule from 'googleapis'
@@ -339,16 +339,28 @@ function upload(data) {
         default:
         return handleError(new HoError('upload type unknown!!!'), data['errhandle']);
     }
+    // When converting to a native Google Docs format, the resource mimeType must be the
+    // target Google Workspace type while the media mimeType stays the original source type,
+    // otherwise Drive stores the file as-is and skips conversion (missing exportLinks).
+    const convertMimeType = () => {
+        const result = data['name'].match(EXT_FILENAME);
+        const extName = (result && result[1]) ? result[1].toLowerCase() : '';
+        return DOC_EXT.present.includes(extName) ? 'application/vnd.google-apps.presentation'
+            : DOC_EXT.sheet.includes(extName) ? 'application/vnd.google-apps.spreadsheet'
+            : 'application/vnd.google-apps.document';
+    }
+    const resourceMimeType = data['convert'] ? convertMimeType() : mimeType;
     let param = data['filePath'] ? {
         resource: {
             name: data['name'],
-            mimeType,
+            mimeType: resourceMimeType,
             parents: [parent.id],
         },
         media: {
             mimeType,
             body: FsCreateReadStream(data['filePath']),
         },
+        fields: 'id,name,mimeType,thumbnailLink,exportLinks,webViewLink,videoMediaMetadata',
     } : {
         resource: {
             name: data['name'],
@@ -359,6 +371,7 @@ function upload(data) {
             mimeType: 'text/plain',
             body: data['body'],
         },
+        fields: 'id,name,mimeType,thumbnailLink,exportLinks,webViewLink,videoMediaMetadata',
     }
     let index = 0;
     const proc = () => new Promise((resolve, reject) => googleapis.drive({

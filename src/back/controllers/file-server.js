@@ -70,6 +70,13 @@ app.use(BodyParserUrlencoded({ extended: true }))
 app.use(BodyParserJson({ extended: true }))
 app.use(ExpressSession(SessionStore(ExpressSession).config))
 app.use(multer({ dest: NAS_TMP(ENV_TYPE) }).single('file'))
+app.use(function(req, res, next) {
+    // multer/busboy decodes multipart filenames as latin1, garbling UTF-8 names (e.g. Chinese)
+    if (req.file?.originalname) {
+        req.file.originalname = Buffer.from(req.file.originalname, 'latin1').toString('utf8');
+    }
+    next();
+})
 app.use(Passport.initialize())
 app.use(Passport.session())
 app.use(function(req, res, next) {

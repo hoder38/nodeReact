@@ -68,6 +68,9 @@ export function _setPools(overrides) {
     if ('mega_pool' in overrides) mega_pool = overrides.mega_pool;
 }
 
+// NOTE: startMega's completion path (megaComplete) re-acquires megaMutex, so
+// it MUST be invoked after this runExclusive section releases the lock,
+// otherwise it deadlocks (megaMutex is not reentrant).
 const megaGet = (rest=null) => megaMutex.runExclusive(() => {
     log.info('mega download started')
     const afterRest = (rest && typeof rest === 'function')
@@ -89,7 +92,7 @@ const megaGet = (rest=null) => megaMutex.runExclusive(() => {
     }
     log.debug({ priority: choose, time }, 'pool item timing')
     if (!time) {
-        return Promise.resolve();
+        return null;
     }
     let runNum = 0;
     mega_pool.forEach(v => {
@@ -101,17 +104,21 @@ const megaGet = (rest=null) => megaMutex.runExclusive(() => {
     if (is_run) {
         mega_pool[choose].start = Math.round(new Date().getTime() / 1000);
         mega_pool[choose].run = true;
-        const runUser = mega_pool[choose].user;
-        const runUrl = mega_pool[choose].url;
-        const runPath= mega_pool[choose].filePath;
-        const runData= mega_pool[choose].data;
-        return startMega(runUser, runUrl, runPath, runData).catch(err => handle_err(err, runUser, 'Mega api')).then(rest => megaGet(rest));
+        return {
+            runUser: mega_pool[choose].user,
+            runUrl: mega_pool[choose].url,
+            runPath: mega_pool[choose].filePath,
+            runData: mega_pool[choose].data,
+        };
     } else {
-        return Promise.resolve();
+        return null;
     }
     });
-});
+}).then(task => task ? startMega(task.runUser, task.runUrl, task.runPath, task.runData).catch(err => handle_err(err, task.runUser, 'Mega api')).then(rest => megaGet(rest)) : Promise.resolve());
 
+// NOTE: startZip's completion path (zipComplete) re-acquires zipMutex, so the
+// actual startZip() call MUST happen *after* this runExclusive section
+// releases the lock, otherwise it deadlocks (zipMutex is not reentrant).
 const zipGet = () => zipMutex.runExclusive(() => {
     log.info('zip extraction started')
     let time = 0;
@@ -129,7 +136,7 @@ const zipGet = () => zipMutex.runExclusive(() => {
     }
     log.debug({ priority: choose, time }, 'pool item timing')
     if (!time) {
-        return Promise.resolve();
+        return null;
     }
     let runNum = 0;
     zip_pool.forEach(v => {
@@ -141,19 +148,23 @@ const zipGet = () => zipMutex.runExclusive(() => {
     if (is_run) {
         zip_pool[choose].start = Math.round(new Date().getTime() / 1000);
         zip_pool[choose].run = true;
-        const runIndex = zip_pool[choose].index;
-        const runId = zip_pool[choose].fileId;
-        const runOwner = zip_pool[choose].fileOwner;
-        const runName = zip_pool[choose].name;
-        const runPwd = zip_pool[choose].pwd;
-        const runType = zip_pool[choose].type;
-        const runUser = zip_pool[choose].user;
-        return startZip(runUser, runIndex, runId, runOwner, runName, runPwd, runType).catch(err => handle_err(err, runUser, 'Zip api', runId)).then(() => zipGet());
+        return {
+            runIndex: zip_pool[choose].index,
+            runId: zip_pool[choose].fileId,
+            runOwner: zip_pool[choose].fileOwner,
+            runName: zip_pool[choose].name,
+            runPwd: zip_pool[choose].pwd,
+            runType: zip_pool[choose].type,
+            runUser: zip_pool[choose].user,
+        };
     } else {
-        return Promise.resolve();
+        return null;
     }
-});
+}).then(task => task ? startZip(task.runUser, task.runIndex, task.runId, task.runOwner, task.runName, task.runPwd, task.runType).catch(err => handle_err(err, task.runUser, 'Zip api', task.runId)).then(() => zipGet()) : Promise.resolve());
 
+// NOTE: startTorrent's completion path (torrentComplete) re-acquires
+// torrentMutex, so it MUST be invoked after this runExclusive section
+// releases the lock, otherwise it deadlocks (torrentMutex is not reentrant).
 const torrentGet = () => torrentMutex.runExclusive(() => {
     log.info('torrent download started')
     let pri = 0;
@@ -185,7 +196,7 @@ const torrentGet = () => torrentMutex.runExclusive(() => {
     }
     log.debug({ priority: pri, time, hash }, 'torrent pool item')
     if (!hash) {
-        return Promise.resolve();
+        return null;
     }
     let runNum = 0;
     torrent_pool.forEach(v => {
@@ -206,22 +217,32 @@ const torrentGet = () => torrentMutex.runExclusive(() => {
                 log.info('new torrent engine created')
                 torrent_pool[i].engine = engine;
                 torrent_pool[i].start = Math.round(new Date().getTime() / 1000);
-                const runIndex = torrent_pool[i].index;
-                const runId = torrent_pool[i].fileId;
-                const runOwner = torrent_pool[i].fileOwner;
-                const runHash = torrent_pool[i].hash;
-                const runUser = torrent_pool[i].user;
-                const startEngine = index => engine ? (engine.files && engine.files.length > 0) ? startTorrent(runUser, runId, runOwner, index, runHash, engine) : new Promise((resolve, reject) => engine.on('ready', () => {
-                    log.info('torrent ready to download')
-                    return resolve(startTorrent(runUser, runId, runOwner, index, runHash, engine));
-                })) : Promise.resolve();
-                return Promise.all(runIndex.map(v => startEngine(v))).catch(err => handle_err(err, runUser, 'Torrent api')).then(() => torrentGet());
+                return {
+                    engine,
+                    runIndex: torrent_pool[i].index,
+                    runId: torrent_pool[i].fileId,
+                    runOwner: torrent_pool[i].fileOwner,
+                    runHash: torrent_pool[i].hash,
+                    runUser: torrent_pool[i].user,
+                };
             }
         }
+        return null;
     } else {
+        return null;
+    }
+}).then(task => {
+    if (!task) {
         return Promise.resolve();
     }
+    const { engine, runIndex, runId, runOwner, runHash, runUser } = task;
+    const startEngine = index => engine ? (engine.files && engine.files.length > 0) ? startTorrent(runUser, runId, runOwner, index, runHash, engine) : new Promise((resolve, reject) => engine.on('ready', () => {
+        log.info('torrent ready to download')
+        return resolve(startTorrent(runUser, runId, runOwner, index, runHash, engine));
+    })) : Promise.resolve();
+    return Promise.all(runIndex.map(v => startEngine(v))).catch(err => handle_err(err, runUser, 'Torrent api')).then(() => torrentGet());
 });
+
 
 export default function process(action, ...args) {
     log.debug({
@@ -373,6 +394,9 @@ const startMega = (user, url, filePath, data) => {
     }
 }
 
+// NOTE: startMega's completion path (megaComplete) re-acquires megaMutex, so
+// it MUST be invoked after this runExclusive section releases the lock,
+// otherwise it deadlocks (megaMutex is not reentrant).
 const megaAdd = (user, url, filePath, data={})  => megaMutex.runExclusive(async () => {
     let is_queue = false;
     let runNum = 0;
@@ -427,21 +451,30 @@ const megaAdd = (user, url, filePath, data={})  => megaMutex.runExclusive(async 
             run: true,
         } : {run: false}));
     }
-    return is_run ? startMega(user, url, filePath, data) : Promise.resolve();
-});
+    return is_run ? { filePath, data } : null;
+}).then(task => task ? startMega(user, url, task.filePath, task.data) : Promise.resolve());
+
 
 const startZip = (user, index, id, owner, name, pwd, zip_type) => Mongo('update', STORAGEDB, {_id: id}, {$set: {utime: Math.round(new Date().getTime() / 1000)}}).then(async () => {
     const filePath = getFileLocation(owner, id);
     const comPath = `${filePath}/${index}_complete`;
+    const realPath = `${filePath}/real`;
+    const realName = `${realPath}/${name}`;
     if (await fsExists(comPath)) {
-        return zipComplete();
+        // The file was already extracted in a previous run. If the DB/media-
+        // handling step never actually completed (e.g. a prior deadlock or
+        // crash), retry it now instead of silently skipping it forever;
+        // otherwise it's genuinely already done, so just clean up the pool.
+        const items = await Mongo('find', STORAGEDB, {_id: id}, {limit: 1});
+        const alreadyHandled = items.length > 0 && items[0].mediaType && items[0].mediaType[index];
+        return zipComplete(alreadyHandled ? false : realName);
     } else {
-        const realPath = `${filePath}/real`;
         const password = pwd || '123';
-        let extractCmd, extractArgs;
+        let extractCmd, extractArgs, extractOptions = {};
         if (zip_type === 2) {
-            extractCmd = '7za';
-            extractArgs = ['x', `${filePath}.1.rar`, `-o${realPath}`, name, `-p${password}`];
+            extractCmd = 'unrar';
+            extractArgs = ['x', `-p${password}`, '-y', '-o+', `${filePath}.1.rar`, name, `${realPath}/`];
+            extractOptions = {allowExitCode: [1, 3]};
         } else if (zip_type === 3) {
             extractCmd = '7za';
             extractArgs = ['x', `${filePath}_7z`, `-o${realPath}`, name, `-p${password}`];
@@ -456,10 +489,9 @@ const startZip = (user, index, id, owner, name, pwd, zip_type) => Mongo('update'
             extractArgs = [`${filePath}_zip`, realPath, name, password];
         }
         log.debug({ cmd: extractCmd, args: extractArgs }, 'zip extract command')
-        const realName = `${realPath}/${name}`;
         const unReal = () => fsExists(realName).then(exists => exists ? new Promise((resolve, reject) => FsUnlink(realName, err => err ? zipComplete().then(() => reject(err)) : resolve())) : Promise.resolve());
         return unReal().then(() => {
-            const { chp, promise } = execFileWithHandle(extractCmd, extractArgs);
+            const { chp, promise } = execFileWithHandle(extractCmd, extractArgs, extractOptions);
             const wrappedPromise = promise.catch(err => zipComplete().then(() => Promise.reject(err)));
             zipMutex.runExclusive(() => {
                 for (let i in zip_pool) {
@@ -513,6 +545,9 @@ function zipAdd(user, index, id, owner, name, pwd='') {
         if (!zip_type) {
             return handleError(new HoError('not zip'));
         }
+        // NOTE: startZip's completion path (zipComplete) re-acquires zipMutex,
+        // so it MUST be invoked after this runExclusive section releases the
+        // lock, otherwise it deadlocks (zipMutex is not reentrant).
         return zipMutex.runExclusive(async () => {
         let is_queue = false;
         let runNum = 0;
@@ -550,8 +585,8 @@ function zipAdd(user, index, id, owner, name, pwd='') {
                 run: true,
             } : {run: false}));
         }
-        return is_run ? startZip(user, index, id, owner, name, pwd, zip_type) : Promise.resolve();
-        });
+        return is_run;
+        }).then(is_run => is_run ? startZip(user, index, id, owner, name, pwd, zip_type) : Promise.resolve());
     });
 }
 
@@ -703,6 +738,10 @@ function torrentAdd(user, torrent, fileIndex, id, owner, pType=0) {
     let bufferPath = `${filePath}/${fileIndex}`;
     let is_queue = false;
     let engine = null;
+    // NOTE: startTorrent's completion path (torrentComplete) and the local
+    // `rest` helper both re-acquire torrentMutex, so they MUST be invoked
+    // after this runExclusive section releases the lock, otherwise it
+    // deadlocks (torrentMutex is not reentrant).
     return torrentMutex.runExclusive(async () => {
         for (let i in torrent_pool) {
             if (torrent_pool[i].hash === shortTorrent) {
@@ -760,19 +799,14 @@ function torrentAdd(user, torrent, fileIndex, id, owner, pType=0) {
                             }
                         }
                     }
-                    return Promise.resolve();
+                    return { action: 'none' };
                 }
                 break;
             }
         }
-        let comPath = `${bufferPath}_complete`;
-        const startEngine = index => engine ? (engine.files && engine.files.length > 0) ? startTorrent(user, id, owner, index, shortTorrent, engine) : new Promise((resolve, reject) => engine.on('ready', () => {
-            log.info('torrent ready to download')
-            return resolve(startTorrent(user, id, owner, index, shortTorrent, engine));
-        })) : Promise.resolve();
-        if (engine){
+        if (engine) {
             log.debug('torrent: proceeding')
-            return startEngine(fileIndex);
+            return { action: 'run-single', engine, index: fileIndex };
         } else {
             let runNum = 0;
             torrent_pool.forEach(v => {
@@ -798,38 +832,6 @@ function torrentAdd(user, torrent, fileIndex, id, owner, pType=0) {
                     trackers: BEST_TRACKER_LIST,
                 });
                 log.info('new torrent engine created')
-                const rest = () => torrentMutex.runExclusive(() => {
-                    //剔除超過的
-                    runNum = 0;
-                    torrent_pool.forEach(v => {
-                        if (v.engine) {
-                            runNum++;
-                        }
-                    });
-                    if (runNum > TORRENT_LIMIT(ENV_TYPE)) {
-                        let time = 0;
-                        let out_shortTorrent = null;
-                        torrent_pool.forEach(v => {
-                            if (v.engine && !checkAdmin(1, v.user)) {
-                                if (time < v.time) {
-                                    time = v.time;
-                                    out_shortTorrent = v.hash;
-                                }
-                            }
-                        });
-                        log.warn({ time, timedOut: out_shortTorrent }, 'torrent kicked')
-                        for (let i = torrent_pool.length - 1; i >= 0; i--) {
-                            if (out_shortTorrent === torrent_pool[i].hash) {
-                                if (torrent_pool[i].engine) {
-                                    torrent_pool[i].engine.destroy();
-                                }
-                                torrent_pool.splice(i, 1);
-                                break;
-                            }
-                        }
-                    }
-                    return Promise.resolve(true);
-                });
                 if (!is_queue) {
                     log.debug('torrent: new item in pool')
                     torrent_pool.push({
@@ -843,16 +845,17 @@ function torrentAdd(user, torrent, fileIndex, id, owner, pType=0) {
                         start: Math.round(new Date().getTime() / 1000),
                         engine,
                     });
-                    return startEngine(fileIndex).then(() => rest());
+                    return { action: 'run-new', engine, indexes: [fileIndex] };
                 } else {
                     log.debug('torrent: continuing existing')
                     for (let i in torrent_pool) {
                         if (torrent_pool[i].hash === shortTorrent) {
                             torrent_pool[i].engine = engine;
                             const runIndex = torrent_pool[i].index;
-                            return Promise.all(runIndex.map(v => startEngine(v))).then(() => rest());
+                            return { action: 'run-new', engine, indexes: runIndex };
                         }
                     }
+                    return { action: 'none' };
                 }
             } else {
                 log.debug('torrent: waiting')
@@ -869,11 +872,58 @@ function torrentAdd(user, torrent, fileIndex, id, owner, pType=0) {
                         engine: null,
                     });
                 }
-                return Promise.resolve(false);
+                return { action: 'none', result: false };
             }
         }
+    }).then(task => {
+        if (!task || task.action === 'none') {
+            return Promise.resolve(task ? task.result : undefined);
+        }
+        const startEngine = index => task.engine ? (task.engine.files && task.engine.files.length > 0) ? startTorrent(user, id, owner, index, shortTorrent, task.engine) : new Promise((resolve, reject) => task.engine.on('ready', () => {
+            log.info('torrent ready to download')
+            return resolve(startTorrent(user, id, owner, index, shortTorrent, task.engine));
+        })) : Promise.resolve();
+        const rest = () => torrentMutex.runExclusive(() => {
+            //剔除超過的
+            let runNum = 0;
+            torrent_pool.forEach(v => {
+                if (v.engine) {
+                    runNum++;
+                }
+            });
+            if (runNum > TORRENT_LIMIT(ENV_TYPE)) {
+                let time = 0;
+                let out_shortTorrent = null;
+                torrent_pool.forEach(v => {
+                    if (v.engine && !checkAdmin(1, v.user)) {
+                        if (time < v.time) {
+                            time = v.time;
+                            out_shortTorrent = v.hash;
+                        }
+                    }
+                });
+                log.warn({ time, timedOut: out_shortTorrent }, 'torrent kicked')
+                for (let i = torrent_pool.length - 1; i >= 0; i--) {
+                    if (out_shortTorrent === torrent_pool[i].hash) {
+                        if (torrent_pool[i].engine) {
+                            torrent_pool[i].engine.destroy();
+                        }
+                        torrent_pool.splice(i, 1);
+                        break;
+                    }
+                }
+            }
+            return Promise.resolve(true);
+        });
+        if (task.action === 'run-single') {
+            return startEngine(task.index);
+        } else if (task.action === 'run-new') {
+            return Promise.all(task.indexes.map(v => startEngine(v))).then(() => rest());
+        }
+        return Promise.resolve();
     });
 }
+
 
 function torrentInfo(magnet, filePath) {
     const engine = createTorrentEngine(magnet, {

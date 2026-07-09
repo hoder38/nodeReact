@@ -392,20 +392,20 @@ describe('file-other-router.js', () => {
   describe('GET /preview/:uid', () => {
     test('invalid uid → error', async () => {
       const res = await request(app).get('/preview/BADUID').set('x-test-user', u(ADMIN));
-      expect(res.status).toBe(400);
+      expect(res.status).toBe(403);
       expect(res.text).toMatch(/uid is not vaild/);
     });
 
     test('item not found → error', async () => {
       mockMongo.mockResolvedValueOnce([]);
       const res = await request(app).get(`/preview/${VALID_UID}`).set('x-test-user', u(ADMIN));
-      expect(res.status).toBe(400);
+      expect(res.status).toBe(403);
     });
 
     test('status not previewable (e.g. 0) → error', async () => {
       mockMongo.mockResolvedValueOnce([makeItem({ status: 0 })]);
       const res = await request(app).get(`/preview/${VALID_UID}`).set('x-test-user', u(ADMIN));
-      expect(res.status).toBe(400);
+      expect(res.status).toBe(403);
     });
 
     test('status=5 → serves STATIC_PATH/document.jpg', async () => {
@@ -457,7 +457,7 @@ describe('file-other-router.js', () => {
       mockMongo.mockResolvedValueOnce([makeItem({ status: 5 })]);
       mockExistsSync.mockReturnValue(false);
       const res = await request(app).get(`/preview/${VALID_UID}`).set('x-test-user', u(ADMIN));
-      expect(res.status).toBe(400);
+      expect(res.status).toBe(403);
     });
   });
 
@@ -467,13 +467,13 @@ describe('file-other-router.js', () => {
   describe('GET /download/:uid', () => {
     test('invalid uid → error', async () => {
       const res = await request(app).get('/download/BADUID').set('x-test-user', u(ADMIN));
-      expect(res.status).toBe(400);
+      expect(res.status).toBe(403);
     });
 
     test('item not found → error', async () => {
       mockMongo.mockResolvedValueOnce([]);
       const res = await request(app).get(`/download/${VALID_UID}`).set('x-test-user', u(ADMIN));
-      expect(res.status).toBe(400);
+      expect(res.status).toBe(403);
     });
 
     test('regular file → download with filename', async () => {
@@ -521,7 +521,7 @@ describe('file-other-router.js', () => {
       mockMongo.mockResolvedValueOnce([makeItem({ status: 9 })]);
       mockExistsSync.mockReturnValue(false); // no archive found
       const res = await request(app).get(`/download/${VALID_UID}`).set('x-test-user', u(ADMIN));
-      expect(res.status).toBe(400);
+      expect(res.status).toBe(403);
     });
 
     test('sets latest and increments count', async () => {
@@ -540,13 +540,13 @@ describe('file-other-router.js', () => {
   describe('GET /video/:uid/file', () => {
     test('invalid uid → error', async () => {
       const res = await request(app).get('/video/BADUID/file').set('x-test-user', u(ADMIN));
-      expect(res.status).toBe(400);
+      expect(res.status).toBe(403);
     });
 
     test('status not 3 or 4 → error', async () => {
       mockMongo.mockResolvedValueOnce([makeItem({ status: 2 })]);
       const res = await request(app).get(`/video/${VALID_UID}/file`).set('x-test-user', u(ADMIN));
-      expect(res.status).toBe(400);
+      expect(res.status).toBe(403);
       expect(res.text).toMatch(/cannot find video/);
     });
 
@@ -571,7 +571,7 @@ describe('file-other-router.js', () => {
       mockMongo.mockResolvedValueOnce([makeItem({ status: 3 })]);
       mockExistsSync.mockReturnValue(false);
       const res = await request(app).get(`/video/${VALID_UID}/file`).set('x-test-user', u(ADMIN));
-      expect(res.status).toBe(400);
+      expect(res.status).toBe(403);
       expect(res.text).toMatch(/cannot find file/);
     });
   });
@@ -615,21 +615,21 @@ describe('file-other-router.js', () => {
       mockMongo.mockResolvedValueOnce([item]);
       mockIsVideo.mockReturnValue(false);
       const res = await request(app).get(`/subtitle/${VALID_UID}/zh/0`).set('x-test-user', u(ADMIN));
-      expect(res.status).toBe(400);
+      expect(res.status).toBe(403);
       expect(res.text).toMatch(/file type error/);
     });
 
     test('internal status=2 (not video/playlist) → error', async () => {
       mockMongo.mockResolvedValueOnce([makeItem({ status: 2 })]);
       const res = await request(app).get(`/subtitle/${VALID_UID}/zh/0`).set('x-test-user', u(ADMIN));
-      expect(res.status).toBe(400);
+      expect(res.status).toBe(403);
       expect(res.text).toMatch(/file type error/);
     });
 
     test('internal item not found → error', async () => {
       mockMongo.mockResolvedValueOnce([]);
       const res = await request(app).get(`/subtitle/${VALID_UID}/zh/0`).set('x-test-user', u(ADMIN));
-      expect(res.status).toBe(400);
+      expect(res.status).toBe(403);
     });
 
     // GROUP 1: Cover lines 146, 157-182, 191
@@ -649,14 +649,14 @@ describe('file-other-router.js', () => {
 
     test('external invalid name (contains *) → error', async () => {
       const res = await request(app).get('/subtitle/yif_te*st/zh/0').set('x-test-user', u(ADMIN));
-      expect(res.status).toBe(400);
+      expect(res.status).toBe(403);
       expect(res.text).toMatch(/external is not vaild/);
     });
 
     test('internal invalid uid format → error (line 191)', async () => {
       // Non-external prefix but not valid 24-hex uid
       const res = await request(app).get('/subtitle/notavaliduid123/zh/0').set('x-test-user', u(ADMIN));
-      expect(res.status).toBe(400);
+      expect(res.status).toBe(403);
       expect(res.text).toMatch(/uid is not vaild/);
     });
   });
@@ -673,13 +673,13 @@ describe('file-other-router.js', () => {
 
     test('invalid uid → error', async () => {
       const res = await request(app).get('/torrent/0/BADUID/1').set('x-test-user', u(ADMIN));
-      expect(res.status).toBe(400);
+      expect(res.status).toBe(403);
     });
 
     test('item not found → error', async () => {
       mockMongo.mockResolvedValueOnce([]);
       const res = await request(app).get(`/torrent/0/${VALID_UID}/1`).set('x-test-user', u(ADMIN));
-      expect(res.status).toBe(400);
+      expect(res.status).toBe(403);
       expect(res.text).toMatch(/torrent can not be fund/);
     });
 
@@ -719,7 +719,7 @@ describe('file-other-router.js', () => {
       mockIsMusic.mockReturnValue(false);
       mockExistsSync.mockImplementation((p) => p.endsWith('_error'));
       const res = await request(app).get(`/torrent/0/${VALID_UID}/1`).set('x-test-user', u(ADMIN));
-      expect(res.status).toBe(400);
+      expect(res.status).toBe(403);
       expect(res.text).toMatch(/video error/);
     });
 
@@ -812,7 +812,7 @@ describe('file-other-router.js', () => {
       mockRedis.mockResolvedValueOnce(null);
       mockExistsSync.mockReturnValue(false);
       const res = await request(app).get(`/torrent/3/${VALID_UID}/1`).set('x-test-user', u(ADMIN));
-      expect(res.status).toBe(400);
+      expect(res.status).toBe(403);
       expect(res.text).toMatch(/need download first/);
     });
 
@@ -854,7 +854,7 @@ describe('file-other-router.js', () => {
       mockIsDoc.mockImplementation((name) => name === 'doc.pdf' ? { type: 'doc' } : false);
       mockIsZipbook.mockReturnValue(false);
       const res = await request(app).get(`/torrent/2/${VALID_UID}/images`).set('x-test-user', u(ADMIN));
-      expect(res.status).toBe(400);
+      expect(res.status).toBe(403);
       expect(res.text).toMatch(/cannot find img name/);
     });
 
@@ -933,7 +933,7 @@ describe('file-other-router.js', () => {
       mockRedis.mockResolvedValueOnce(null);
       mockExistsSync.mockReturnValue(false);
       const res = await request(app).get(`/torrent/2/${VALID_UID}/5`).set('x-test-user', u(ADMIN));
-      expect(res.status).toBe(400);
+      expect(res.status).toBe(403);
       expect(res.text).toMatch(/cannot find file/);
     });
   });
@@ -944,13 +944,13 @@ describe('file-other-router.js', () => {
   describe('GET /image/:uid/:type/:number?', () => {
     test('invalid uid → error', async () => {
       const res = await request(app).get('/image/BADUID/file').set('x-test-user', u(ADMIN));
-      expect(res.status).toBe(400);
+      expect(res.status).toBe(403);
     });
 
     test('item not found → error', async () => {
       mockMongo.mockResolvedValueOnce([]);
       const res = await request(app).get(`/image/${VALID_UID}/file`).set('x-test-user', u(ADMIN));
-      expect(res.status).toBe(400);
+      expect(res.status).toBe(403);
     });
 
     test('plain image (no present, status≠5/6) → serves base path as JPEG', async () => {
@@ -1057,14 +1057,14 @@ describe('file-other-router.js', () => {
       mockRedis.mockResolvedValueOnce(null);
       mockExistsSync.mockReturnValue(false);
       const res = await request(app).get(`/image/${VALID_UID}/1`).set('x-test-user', u(ADMIN));
-      expect(res.status).toBe(400);
+      expect(res.status).toBe(403);
     });
 
     // GROUP 3: Cover lines 422, 435
     test('type=images without number → error (line 422)', async () => {
       mockMongo.mockResolvedValueOnce([makeItem({ status: 5, present: 10 })]);
       const res = await request(app).get(`/image/${VALID_UID}/images`).set('x-test-user', u(ADMIN));
-      expect(res.status).toBe(400);
+      expect(res.status).toBe(403);
       expect(res.text).toMatch(/cannot find img name/);
     });
 

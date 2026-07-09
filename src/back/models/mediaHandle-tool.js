@@ -278,9 +278,10 @@ export default {
                 } else if (await fsExists(`${filePath}_7z_c`)) {
                     zipPath = `${filePath}_7z_c`;
                 }
-                const [extractCmd, extractArgs] = (mediaType['ext'] === 'rar' || mediaType['ext'] === 'cbr') ? ['7za', ['x', zipPath, `-o${tempPath}`, '-p123']] : (mediaType['ext'] === '7z') ? ['7za', ['x', zipPath, `-o${tempPath}`, '-p123']] : [PathJoin(__dirname, 'util/myuzip.py'), [zipPath, tempPath, '123']];
+                const isRar = (mediaType['ext'] === 'rar' || mediaType['ext'] === 'cbr');
+                const [extractCmd, extractArgs, extractOptions] = isRar ? ['unrar', ['x', '-p123', '-y', '-o+', zipPath, `${tempPath}/`], {allowExitCode: [1, 3]}] : (mediaType['ext'] === '7z') ? ['7za', ['x', zipPath, `-o${tempPath}`, '-p123'], {}] : [PathJoin(__dirname, 'util/myuzip.py'), [zipPath, tempPath, '123'], {}];
                 log.debug({ cmd: extractCmd, args: extractArgs }, 'extract command');
-                return execSafe(extractCmd, extractArgs).then(async output => {
+                return execSafe(extractCmd, extractArgs, extractOptions).then(async output => {
                     let zip_arr = [];
                     const recurFolder = async (indexFolder, initFolder, preFolder) => {
                         for (const file of await readdir(initFolder)) {
@@ -324,7 +325,6 @@ export default {
                 });
             });
         } else if (mediaType['type'] === 'zip') {
-            const is7za = (mediaType['ext'] === 'rar' || mediaType['ext'] === 'cbr' || mediaType['ext'] === '7z');
             const zip_type = (mediaType['ext'] === 'rar' || mediaType['ext'] === 'cbr') ? 2 : (mediaType['ext'] === '7z') ? 3 : 1;
             let is_processed = false;
             let append = '';
@@ -344,9 +344,11 @@ export default {
                 append = '_7z_c';
             }
             const archivePath = `${filePath}${append}`;
-            const [listCmd, listArgs] = is7za ? ['7za', ['l', archivePath]] : [PathJoin(__dirname, 'util/myuzip.py'), [archivePath]];
+            const isRar = (mediaType['ext'] === 'rar' || mediaType['ext'] === 'cbr');
+            const is7z = (mediaType['ext'] === '7z');
+            const [listCmd, listArgs, listOptions] = isRar ? ['unrar', ['v', '-p123', archivePath], {allowExitCode: [1, 3]}] : is7z ? ['7za', ['l', archivePath], {}] : [PathJoin(__dirname, 'util/myuzip.py'), [archivePath], {}];
             log.debug({ cmd: listCmd, args: listArgs }, 'list command');
-            return execSafe(listCmd, listArgs).then(output => {
+            return execSafe(listCmd, listArgs, listOptions).then(output => {
                 const tmplist = output.match(/[^\r\n]+/g);
                 if (!tmplist) {
                     return handleError(new HoError('is not zip'));
@@ -452,13 +454,13 @@ export default {
                     if(metadata.exportLinks && metadata.exportLinks['application/pdf']) {
                         mediaType['thumbnail'] = metadata.exportLinks['application/pdf'];
                         if (mediaType['type'] === 'present') {
-                            if (!metadata.alternateLink) {
+                            if (!metadata.webViewLink) {
                                 return handleError(new HoError('error type'));
                             }
-                            mediaType['alternate'] = metadata.alternateLink;
+                            mediaType['alternate'] = metadata.webViewLink;
                         }
-                    } else if (mediaType['type'] === 'video' && metadata.alternateLink) {
-                        mediaType['thumbnail'] = metadata.alternateLink;
+                    } else if (mediaType['type'] === 'video' && metadata.webViewLink) {
+                        mediaType['thumbnail'] = metadata.webViewLink;
                     } else if (metadata.thumbnailLink) {
                         mediaType['thumbnail'] = metadata.thumbnailLink;
                     } else {

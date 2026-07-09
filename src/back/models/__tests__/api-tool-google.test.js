@@ -29,6 +29,14 @@ jest.unstable_mockModule('../../constants.js', () => ({
     DRIVE_LIMIT: TEST_CONFIG.DRIVE_LIMIT, OATH_WAITING: TEST_CONFIG.OATH_WAITING,
     KINDLE_LIMIT: TEST_CONFIG.KINDLE_LIMIT,
     __dirname: '/app/src/back/models',
+    DOC_EXT: {
+        doc: ['rtf', 'txt', 'doc', 'docx', 'odt', 'htm', 'html', 'conf'],
+        present: ['ppt', 'pps', 'pptx', 'odp'],
+        sheet: ['xls', 'xlsx', 'xlsm', 'csv', 'ods'],
+        pdf: ['pdf'],
+        rawdoc: ['c', 'cc', 'cpp', 'cs', 'm', 'h', 'sh', 'csh', 'bash', 'tcsh', 'java', 'js', 'mxml', 'pl', 'pm', 'py', 'sql', 'php', 'rb', 'xhtml', 'xml', 'xsl', 'json', 'css', 'ini', 'patch', 'vim', 'eml'],
+    },
+    EXT_FILENAME: /(?:\.([^.]+))?$/,
 }));
 
 jest.unstable_mockModule('../../../../ver.js', () => ({

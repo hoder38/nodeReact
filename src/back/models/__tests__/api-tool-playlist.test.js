@@ -1459,7 +1459,7 @@ describe('api-tool-playlist.js', () => {
             await new Promise(resolve => setTimeout(resolve, 100));
             
             const cmd = mockChildProcessExec.mock.calls[0]?.[0] || ''; const cmdArgs = mockChildProcessExec.mock.calls[0]?.[1] || [];
-            expect(cmd).toContain('7za');
+            expect(cmd).toContain('unrar');
             expect(cmdArgs.join(' ')).toContain('.1.rar');
         });
 
