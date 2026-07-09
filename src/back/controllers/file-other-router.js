@@ -28,11 +28,11 @@ router.get('/preview/:uid', function(req, res, next) {
         log.debug('preview file');
         const id = isValidString(req.params.uid, 'uid');
         if (!id) {
-            return handleError(new HoError('uid is not vaild'), next);
+            return handleError(new HoError('uid is not vaild', { code: 403 }), next);
         }
         Mongo('find', STORAGEDB, {_id: id}, {limit: 1}).then(async items => {
             if (items.length < 1 || (items[0].status !== 2 && items[0].status !== 3 && items[0].status !== 5 && items[0].status !== 6 && items[0].status !== 10)) {
-                return handleError(new HoError('cannot find file!!!'));
+                return handleError(new HoError('cannot find file!!!', { code: 403 }));
             }
             let previewPath = null;
             if (items[0].status === 5) {
@@ -50,7 +50,7 @@ router.get('/preview/:uid', function(req, res, next) {
             }
             if (!await fsExists(previewPath)) {
                 log.debug({ previewPath }, 'preview file path');
-                return handleError(new HoError('cannot find file!!!'));
+                return handleError(new HoError('cannot find file!!!', { code: 403 }));
             }
             res.writeHead(200, {
                 'X-Forwarded-Path': previewPath,
@@ -68,11 +68,11 @@ router.get('/download/:uid', function(req, res, next) {
         log.debug('download file');
         const id = isValidString(req.params.uid, 'uid');
         if (!id) {
-            return handleError(new HoError('uid is not vaild'), next);
+            return handleError(new HoError('uid is not vaild', { code: 403 }), next);
         }
         Mongo('find', STORAGEDB, {_id: id}, {limit: 1}).then(async items => {
             if (items.length === 0) {
-                return handleError(new HoError('cannot find file!!!'));
+                return handleError(new HoError('cannot find file!!!', { code: 403 }));
             }
             let filePath = getFileLocation(items[0].owner, items[0]._id);
             log.debug({ filePath }, 'file path');
@@ -87,7 +87,7 @@ router.get('/download/:uid', function(req, res, next) {
                 }
             }
             if (!await fsExists(filePath) && !ret_string) {
-                return handleError(new HoError('cannot find file!!!'));
+                return handleError(new HoError('cannot find file!!!', { code: 403 }));
             }
             StorageTagTool.setLatest(items[0]._id, req.session).then(() => Mongo('update', STORAGEDB, {_id: items[0]._id}, {$inc: {count: 1}})).catch(err => handleError(err, 'Set latest'));
             if (ret_string) {
@@ -134,21 +134,21 @@ router.get('/subtitle/:uid/:lang/:index(\\d+|v)/:fresh(0+)?', function(req, res,
         if (id) {
             const id_valid = isValidString(req.params.uid, 'name');
             if (!id_valid) {
-                return handleError(new HoError('external is not vaild'), next);
+                return handleError(new HoError('external is not vaild', { code: 403 }), next);
             }
             const filePath = getFileLocation('yify', id_valid);
             sendSub(filePath);
         } else {
             const id_valid = isValidString(req.params.uid, 'uid');
             if (!id_valid) {
-                return handleError(new HoError('uid is not vaild'), next);
+                return handleError(new HoError('uid is not vaild', { code: 403 }), next);
             }
             Mongo('find', STORAGEDB, {_id: id_valid}, {limit: 1}).then(items => {
                 if (items.length < 1) {
-                    return handleError(new HoError('cannot find file!!!'));
+                    return handleError(new HoError('cannot find file!!!', { code: 403 }));
                 }
                 if (items[0].status !== 3 && items[0].status !== 9) {
-                    return handleError(new HoError('file type error!!!'));
+                    return handleError(new HoError('file type error!!!', { code: 403 }));
                 }
                 if (items[0].status === 3) {
                     sendSub(getFileLocation(items[0].owner, items[0]._id));
@@ -165,7 +165,7 @@ router.get('/subtitle/:uid/:lang/:index(\\d+|v)/:fresh(0+)?', function(req, res,
                         }
                     }
                     if (!isVideo(items[0]['playList'][fileIndex])) {
-                        return handleError(new HoError('file type error!!!'));
+                        return handleError(new HoError('file type error!!!', { code: 403 }));
                     }
                     sendSub(getFileLocation(items[0].owner, items[0]._id), fileIndex);
                 }
@@ -179,18 +179,18 @@ router.get('/video/:uid/file', function(req, res, next) {
         log.debug('video');
         const id = isValidString(req.params.uid, 'uid');
         if (!id) {
-            return handleError(new HoError('uid is not vaild'), next);
+            return handleError(new HoError('uid is not vaild', { code: 403 }), next);
         }
         Mongo('find', STORAGEDB, {_id: id}, {limit: 1}).then(async items => {
             if (items.length < 1 || (items[0].status !== 3 && items[0].status !== 4)) {
-                return handleError(new HoError('cannot find video!!!'));
+                return handleError(new HoError('cannot find video!!!', { code: 403 }));
             }
             const videoPath = getFileLocation(items[0].owner, items[0]._id);
             log.debug({ videoPath }, 'video path');
             let finalPath = `${videoPath}_complete`;
             if (!await fsExists(finalPath)) {
                 if (!await fsExists(videoPath)) {
-                    return handleError(new HoError('cannot find file!!!'));
+                    return handleError(new HoError('cannot find file!!!', { code: 403 }));
                 }
                 finalPath = videoPath;
             }
@@ -233,11 +233,11 @@ router.get('/torrent/:index(\\d+|v)/:uid/:type(images|resources|\\d+)/:number(im
         let fileIndex = !isNaN(req.params.index) ? Number(req.params.index) : 0;
         const id = isValidString(req.params.uid, 'uid');
         if (!id) {
-            return handleError(new HoError('uid is not vaild'), next);
+            return handleError(new HoError('uid is not vaild', { code: 403 }), next);
         }
         Mongo('find', STORAGEDB, {_id: id}, {limit: 1}).then(async items => {
             if (items.length < 1) {
-                return handleError(new HoError('torrent can not be fund!!!'));
+                return handleError(new HoError('torrent can not be fund!!!', { code: 403 }));
             }
             if (req.params.index === 'v') {
                 for (let i in items[0]['playList']) {
@@ -253,7 +253,7 @@ router.get('/torrent/:index(\\d+|v)/:uid/:type(images|resources|\\d+)/:number(im
             if (type === 1) {
                 const outputPath = await fsExists(comPath) ? comPath : await fsExists(bufferPath) ? bufferPath : null;
                 if (await fsExists(`${bufferPath}_error`) || !outputPath) {
-                    return handleError(new HoError('video error!!!'));
+                    return handleError(new HoError('video error!!!', { code: 403 }));
                 }
                 log.debug({ outputPath }, 'output path');
                 res.writeHead(200, {
@@ -288,7 +288,7 @@ router.get('/torrent/:index(\\d+|v)/:uid/:type(images|resources|\\d+)/:number(im
                 const torrentDoc = () => {
                     if (req.params.type === 'images' || req.params.type === 'resources') {
                         if (!req.params.number) {
-                            return handleError(new HoError('cannot find img name!!!'));
+                            return handleError(new HoError('cannot find img name!!!', { code: 403 }));
                         }
                         return Promise.resolve((req.params.type === 'images') ? [`${bufferPath}_doc/images/${req.params.number}`, 'image/jpeg'] : [`${bufferPath}_doc/resources/sheet.css`, 'text/css']);
                     } else {
@@ -319,7 +319,7 @@ router.get('/torrent/:index(\\d+|v)/:uid/:type(images|resources|\\d+)/:number(im
                 return torrentDoc().then(async ([docFilePath, docMime]) => {
                     log.debug({ docPath: docFilePath }, 'document file path');
                     if (!await fsExists(docFilePath)) {
-                        return handleError(new HoError('cannot find file!!!'));
+                        return handleError(new HoError('cannot find file!!!', { code: 403 }));
                     }
                     res.writeHead(200, {
                         'X-Forwarded-Path': docFilePath,
@@ -345,7 +345,7 @@ router.get('/torrent/:index(\\d+|v)/:uid/:type(images|resources|\\d+)/:number(im
                         });
                         res.end('ok');
                     } else {
-                        return handleError(new HoError('need download first!!!'));
+                        return handleError(new HoError('need download first!!!', { code: 403 }));
                     }
                     //await fsExists(comPath) ? res.download(comPath, items[0].playList[fileIndex]) : handleError(new HoError('need download first!!!'))
                 });
@@ -359,11 +359,11 @@ router.get('/image/:uid/:type(file|images|resources|\\d+)/:number(image\\d+.png|
         log.debug('image');
         const id = isValidString(req.params.uid, 'uid');
         if (!id) {
-            return handleError(new HoError('uid is not vaild'), next);
+            return handleError(new HoError('uid is not vaild', { code: 403 }), next);
         }
         Mongo('find', STORAGEDB, {_id: id}, {limit: 1}).then(async items => {
             if (items.length < 1) {
-                return handleError(new HoError('cannot find file!!!'));
+                return handleError(new HoError('cannot find file!!!', { code: 403 }));
             }
             const filePath = getFileLocation(items[0].owner, items[0]._id);
             const getRecord = () => {
@@ -372,7 +372,7 @@ router.get('/image/:uid/:type(file|images|resources|\\d+)/:number(image\\d+.png|
                 }
                 if (req.params.type === 'images' || req.params.type === 'resources') {
                     if (!req.params.number) {
-                        return handleError(new HoError('cannot find img name!!!'));
+                        return handleError(new HoError('cannot find img name!!!', { code: 403 }));
                     }
                     return Promise.resolve((req.params.type === 'images') ? [`${filePath}_doc/images/${req.params.number}`, 'image/jpeg'] : [`${filePath}_doc/resources/sheet.css`, 'text/css']);
                 } else if (!isNaN(req.params.type)) {
@@ -396,7 +396,7 @@ router.get('/image/:uid/:type(file|images|resources|\\d+)/:number(image\\d+.png|
             return getRecord().then(async ([docFilePath, docMime]) => {
                 log.debug({ docPath: docFilePath }, 'document file path');
                 if (!await fsExists(docFilePath)) {
-                    return handleError(new HoError('cannot find file!!!'));
+                    return handleError(new HoError('cannot find file!!!', { code: 403 }));
                 }
                 res.writeHead(200, {
                     'X-Forwarded-Path': docFilePath,
