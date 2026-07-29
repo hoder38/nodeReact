@@ -158,6 +158,10 @@ export const getBasicStockData = (type, index) => {
                     }
                 }
             });
+            if (!result.stock_name || !result.stock_location) {
+                log.error({ index, raw_data: raw_data.substring(0, 500) }, 'getBasicStockData missing stock_name or stock_location');
+                return handleError(new HoError(`getBasicStockData missing fields for ${index}`));
+            }
             return result;
         }).catch(err => {
             log.debug({ count }, 'basic data retry');
@@ -205,6 +209,9 @@ export const handleStockTagV2 = (type, index, indexTag) => getBasicStockData(typ
     }
     if (basic.stock_ind) {
         tags.add(basic.stock_ind);
+    }
+    if (!basic.stock_name || !basic.stock_location) {
+        return handleError(new HoError(`handleStockTagV2 missing stock_name or stock_location for ${index}`));
     }
     basic.stock_name.forEach(i => tags.add(i));
     basic.stock_location.forEach(i => tags.add(i));
@@ -1395,6 +1402,7 @@ export default {
                     data: del_result.id,
                 }, 0, 1);
             }).catch(err => {
+                log.error({ index: result.items[index].index, id: result.items[index]._id, err: err.message }, 'delFilter error');
                 if (web) {
                     sendWs({
                         type: user.username,

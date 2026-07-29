@@ -1154,6 +1154,9 @@ export function isDefaultTag(tag) {
 }
 
 export function normalize(tag) {
+    if (!tag) {
+        return '';
+    }
     let result = '';
     [...tag].forEach((str, i) => result = `${result}${tag.charCodeAt(i) === 12288 ? ' ' : (tag.charCodeAt(i) > 65280 && tag.charCodeAt(i) < 65375) ? String.fromCharCode(tag.charCodeAt(i) - 65248) : String.fromCharCode(tag.charCodeAt(i))}`);
     return result.toLowerCase(result).replace(/[零一二三四五六七八九十百千萬0123456789]+/g, a => cn2ArabNum(a));

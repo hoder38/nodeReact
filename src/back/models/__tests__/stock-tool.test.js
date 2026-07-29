@@ -5939,7 +5939,7 @@ describe('updateStockTotal additional paths', () => {
                     mkNode('td', null, [mkNode('a', null, ['電子'])]),
                     mkNode('td', null, [mkNode('a', null, ['80'])]),
                 ]),
-            ]),
+            ], {id: 'zoom'}),
         ]);
         const basicDom = [mkNode('html', null, [mkNode('body', null, [formNode])])];
         const priceDom = makeCenterDom('500');
@@ -5975,7 +5975,7 @@ describe('updateStockTotal additional paths', () => {
                     mkNode('td', null, [mkNode('a', null, ['金融'])]),
                     mkNode('td', null, [mkNode('a', null, ['90'])]),
                 ]),
-            ]),
+            ], {id: 'zoom'}),
         ]);
         const basicDom = [mkNode('html', null, [mkNode('body', null, [formNode])])];
         const priceDom = makeCenterDom('500');
@@ -6030,7 +6030,7 @@ describe('updateStockTotal additional paths', () => {
                     mkNode('td', null, [mkNode('a', null, ['電子'])]),
                     mkNode('td', null, [mkNode('a', null, ['85'])]),
                 ]),
-            ]),
+            ], {id: 'zoom'}),
         ]);
         const basicDom = [mkNode('html', null, [mkNode('body', null, [formNode])])];
         const priceDom = makeCenterDom('500');

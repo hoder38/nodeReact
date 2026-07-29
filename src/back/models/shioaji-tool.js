@@ -97,7 +97,7 @@ export const twseShioajiInit = (force = false) => {
                                 let is_insert = false;
                                 for (let k = 0; k < item.previous.buy.length; k++) {
                                     if (item.previous.buy[k].time === o.time && item.previous.buy[k].price === o.price) {
-                                        log.warn('order duplicate skipped')
+                                        log.debug('order duplicate skipped')
                                         return fill_order_recur(index + 1);
                                     } else if (o.price < item.previous.buy[k].price) {
                                         item.previous.buy.splice(k, 0, {
@@ -177,7 +177,7 @@ export const twseShioajiInit = (force = false) => {
                                 let is_insert = false;
                                 for (let k = 0; k < item.previous.sell.length; k++) {
                                     if (item.previous.sell[k].time === o.time && item.previous.sell[k].price === o.price) {
-                                        log.warn('order duplicate skipped')
+                                        log.debug('order duplicate skipped')
                                         return fill_order_recur(index + 1);
                                     } else if (o.price > item.previous.sell[k].price) {
                                         item.previous.sell.splice(k, 0, {

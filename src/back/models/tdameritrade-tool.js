@@ -174,7 +174,7 @@ const processFilledOrder = (o, lastP, currentPosition, order_recur, nextIndex) =
             let isDup = false;
             for (let k = 0; k < item.previous.buy.length; k++) {
                 if (item.previous.buy[k].price === price && item.previous.buy[k].time === time) {
-                    log.warn('order duplicate skipped');
+                    log.debug('order duplicate skipped');
                     return order_recur(nextIndex);
                 } else if (price < item.previous.buy[k].price) {
                     item.previous.buy.splice(k, 0, {price, time});
@@ -221,7 +221,7 @@ const processFilledOrder = (o, lastP, currentPosition, order_recur, nextIndex) =
             let isDup = false;
             for (let k = 0; k < item.previous.sell.length; k++) {
                 if (item.previous.sell[k].price === price && item.previous.sell[k].time === time) {
-                    log.warn('order duplicate skipped');
+                    log.debug('order duplicate skipped');
                     return order_recur(nextIndex);
                 } else if (price > item.previous.sell[k].price) {
                     item.previous.sell.splice(k, 0, {price, time});
