@@ -1,6 +1,6 @@
 import { ENV_TYPE } from '../../../ver.js'
 import { CHECK_STOCK, USSE_TICKER, TWSE_TICKER } from '../config.js'
-import { STOCKDB, CACHE_EXPIRE, STOCK_FILTER_LIMIT, STOCK_FILTER, MAX_RETRY, TOTALDB, STOCK_INDEX, NORMAL_DISTRIBUTION, TRADE_FEE, TRADE_INTERVAL, RANGE_INTERVAL, TRADE_TIME, USSE_FEE, USERDB, TWSE_NUM, USSE_NUM, MAX_NEWMID_STACK, EMERGENCY_STOP_THRESHOLD, MIN_BINS, MAX_BINS, VOLUME_DECAY_LAMBDA } from '../constants.js'
+import { STOCKDB, CACHE_EXPIRE, STOCK_FILTER_LIMIT, STOCK_FILTER, MAX_RETRY, TOTALDB, STOCK_INDEX, NORMAL_DISTRIBUTION, TRADE_FEE, TRADE_INTERVAL, RANGE_INTERVAL, TRADE_TIME, USSE_FEE, USERDB, TWSE_NUM, USSE_NUM, TWSE_LIST_MIN, USSE_LIST_MIN, MAX_NEWMID_STACK, EMERGENCY_STOP_THRESHOLD, MIN_BINS, MAX_BINS, VOLUME_DECAY_LAMBDA } from '../constants.js'
 import Htmlparser from 'htmlparser2'
 import * as cheerio from 'cheerio/slim'
 import yahooFinance from 'yahoo-finance2'
@@ -252,6 +252,10 @@ let _maxRetry = MAX_RETRY;
 export const _setMaxRetry = n => { _maxRetry = n; };
 let _twseDelay = 5000;
 export const _setTwseDelay = n => { _twseDelay = n; };
+let _twseListMin = TWSE_LIST_MIN;
+export const _setTwseListMin = n => { _twseListMin = n; };
+let _usseListMin = USSE_LIST_MIN;
+export const _setUsseListMin = n => { _usseListMin = n; };
 let _dateFactory = () => new Date();
 export const _setDateFactory = fn => { _dateFactory = fn || (() => new Date()); };
 let _retryDelay = 60000;
@@ -3298,6 +3302,9 @@ export const getStockListV2 = (type, year, month) => {
             fund_no: '0',
         }}).then(raw_data => {
             const stock_list = [];
+            // Raw row tally (duplicates included) guards against an upstream layout change
+            // silently shrinking the roster.
+            let raw_count = 0;
             const $ = cheerio.load(Htmlparser.parseDOM(raw_data));
             const tables = $('body').children('div').first().children('table').toArray();
             let tag = false;
@@ -3318,6 +3325,7 @@ export const getStockListV2 = (type, year, month) => {
                             if (cls === 'even' || cls === 'odd') {
                                 const index = $(tr).children('td').first().text().trim();
                                 if (Number(index)) {
+                                    raw_count++;
                                     if (index != '2888') {
                                         let exist = false;
                                         for (let i = 0; i < stock_list.length; i++) {
@@ -3341,7 +3349,10 @@ export const getStockListV2 = (type, year, month) => {
                     }
                 }
             });
-            log.debug({ stock_list }, 'fetched stock list');
+            log.debug({ raw_count, stock_list }, 'fetched stock list');
+            if (raw_count < _twseListMin) {
+                return handleError(new HoError(`twse stock list too small: ${raw_count} < ${_twseListMin}!!!`));
+            }
             return stock_list;
         });
         case 'usse':
@@ -3351,9 +3362,15 @@ export const getStockListV2 = (type, year, month) => {
         // now lives on the dedicated "List of ..." pages that still expose table#constituents.
         const list = ['List_of_Dow_Jones_Industrial_Average_companies', 'List_of_NASDAQ-100_companies', 'List_of_S%26P_500_companies'];
         const stock_list = [];
+        // Raw row tally (duplicates included) guards against an upstream layout change
+        // silently shrinking the roster.
+        let raw_count = 0;
         const recur_get = index => {
             if (index >= list.length) {
-                log.debug({ count: stock_list.length, stock_list }, 'stock list parsed');
+                log.debug({ count: stock_list.length, raw_count, stock_list }, 'stock list parsed');
+                if (raw_count < _usseListMin) {
+                    return handleError(new HoError(`usse stock list too small: ${raw_count} < ${_usseListMin}!!!`));
+                }
                 return stock_list;
             } else {
                 return Api('url', `https://en.wikipedia.org/wiki/${list[index]}`).then(raw_data => {
@@ -3387,6 +3404,7 @@ export const getStockListV2 = (type, year, month) => {
                             }
                         }
                         if (name && sIndex) {
+                            raw_count++;
                             let is_exit = false;
                             for (let i = 0; i < stock_list.length; i++) {
                                 if (stock_list[i].index === sIndex) {

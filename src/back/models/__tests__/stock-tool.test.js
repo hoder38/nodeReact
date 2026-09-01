@@ -188,7 +188,7 @@ let parseMacrotrendsMarketCap, parseMacrotrendsRatio;
 let parseStockCsv, getParameterV2, getBasicStockData, handleStockTagV2, getStockPrice, getUsStock;
 let parseTwseRocDate, fetchTwseAdjustments, extractUsseAdjustments, applyAdjustments, validateIntervalData;
 let scaleWebArr, calcResetMid, resolveNewMidStack;
-let StockTool, setMaxRetry, setStatusDelay, setTwseDelay;
+let StockTool, setMaxRetry, setStatusDelay, setTwseDelay, setTwseListMin, setUsseListMin;
 
 beforeAll(async () => {
     const mod = await import('../stock-tool.js');
@@ -221,6 +221,8 @@ beforeAll(async () => {
     setMaxRetry     = mod._setMaxRetry;
     setStatusDelay  = mod._setStatusDelay;
     setTwseDelay    = mod._setTwseDelay;
+    setTwseListMin  = mod._setTwseListMin;
+    setUsseListMin  = mod._setUsseListMin;
 });
 
 beforeEach(() => {
@@ -229,6 +231,8 @@ beforeEach(() => {
     setMaxRetry(0);         // avoid retry delays
     setStatusDelay(0);      // avoid 3s inter-stock delay
     setTwseDelay(0);        // avoid 5s twse fetch delay
+    setTwseListMin(0);      // disable roster size guard for small mock DOMs
+    setUsseListMin(0);
 });
 
 // ===========================================================================
@@ -970,6 +974,74 @@ describe('getStockListV2', () => {
         expect(Array.isArray(result)).toBe(true);
         expect(result.length).toBeGreaterThan(0);
         expect(result[0]).toMatchObject({ index: 'AAPL', type: 'usse' });
+    });
+
+    test('twse: raw row count below minimum → rejects', async () => {
+        const nameCell1 = mkNode('td', '');
+        const nameCell2 = mkNode('td', '', ['元大台灣卓越50證券投資信託基金']);
+        const noBorderRow = mkNode('tr', '', [nameCell1, nameCell2]);
+        const noBorderTable = mkNode('table', 'noBorder', [noBorderRow]);
+        const evenRow = mkNode('tr', 'even', [mkNode('td', '', ['0050'])]);
+        const dataTable = mkNode('table', '', [evenRow]);
+        const div = mkNode('div', '', [noBorderTable, dataTable]);
+        const html = mkNode('html', '', [mkNode('body', '', [div])]);
+
+        mockApi.mockResolvedValue('<html>...</html>');
+        mockParseDOM.mockReturnValue([html]);
+        setTwseListMin(140);
+
+        await expect(getStockListV2('twse', 2024, 6)).rejects.toMatchObject({
+            message: 'twse stock list too small: 1 < 140!!!',
+        });
+    });
+
+    test('twse: duplicate rows still counted toward minimum', async () => {
+        const nameCell2 = mkNode('td', '', ['元大台灣卓越50證券投資信託基金']);
+        const noBorderTable = mkNode('table', 'noBorder', [mkNode('tr', '', [mkNode('td', ''), nameCell2])]);
+        const dataTable = mkNode('table', '', [
+            mkNode('tr', 'even', [mkNode('td', '', ['0050'])]),
+            mkNode('tr', 'odd', [mkNode('td', '', ['0050'])]),
+        ]);
+        const div = mkNode('div', '', [noBorderTable, dataTable]);
+        const html = mkNode('html', '', [mkNode('body', '', [div])]);
+
+        mockApi.mockResolvedValue('<html>...</html>');
+        mockParseDOM.mockReturnValue([html]);
+        setTwseListMin(2);
+
+        const result = await getStockListV2('twse', 2024, 6);
+        expect(result).toHaveLength(1);
+    });
+
+    test('usse: raw row count below minimum → rejects', async () => {
+        const mkPage = rows => {
+            const tbodyNode = mkNode('tbody', '', rows);
+            const constitTable = mkNode('table', null, [tbodyNode], {id: 'constituents'});
+            const parserOutput = mkNode('div', 'mw-content-ltr mw-parser-output', [constitTable]);
+            const contentText = mkNode('div', null, [parserOutput], {id: 'mw-content-text'});
+            const bodyContent = mkNode('div', null, [contentText], {id: 'bodyContent'});
+            const contentArea = mkNode('main', null, [bodyContent], {id: 'content'});
+            const contentContainer = mkNode('div', 'mw-content-container', [contentArea]);
+            const innerContainer = mkNode('div', 'mw-page-container-inner', [contentContainer]);
+            const pageContainer = mkNode('div', 'mw-page-container', [innerContainer]);
+            return mkNode('html', '', [mkNode('body', '', [pageContainer])]);
+        };
+        const dowRow = mkNode('tr', '', [
+            mkNode('th', '', [mkNode('a', '', ['Apple Inc.'])]),
+            mkNode('td', ''),
+            mkNode('td', '', [mkNode('a', '', ['AAPL'])]),
+        ]);
+
+        mockApi.mockResolvedValue('<html>...</html>');
+        mockParseDOM
+            .mockReturnValueOnce([mkPage([dowRow])])
+            .mockReturnValueOnce([mkPage([])])
+            .mockReturnValueOnce([mkPage([])]);
+        setUsseListMin(620);
+
+        await expect(getStockListV2('usse', 2024, 6)).rejects.toMatchObject({
+            message: 'usse stock list too small: 1 < 620!!!',
+        });
     });
 });
 

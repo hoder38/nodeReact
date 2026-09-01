@@ -925,6 +925,10 @@ export const STOCK_INDEX = {
 export const TWSE_NUM = 40;
 export const USSE_NUM = 60;
 
+// Minimum raw rows (duplicates included) expected when parsing the index rosters.
+export const TWSE_LIST_MIN = 140;
+export const USSE_LIST_MIN = 620;
+
 //export const TD_AUTH_URL = 'https://auth.tdameritrade.com/auth?';
 export const TD_AUTH_URL = 'https://api.schwabapi.com/v1/oauth/authorize?'
 //export const TD_TOKEN_URL = 'https://api.tdameritrade.com/v1/oauth2/token';
