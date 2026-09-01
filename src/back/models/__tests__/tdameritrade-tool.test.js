@@ -1602,7 +1602,7 @@ describe('usseTDInit', () => {
             mockGetSuggestionData.mockReturnValue({});
 
             await usseTDInit();
-            expect(mockLog.warn).toHaveBeenCalledWith('order duplicate skipped');
+            expect(mockLog.debug).toHaveBeenCalledWith('order duplicate skipped');
         });
 
         test('non-cancelable FILL → duplicate in sell → skip', async () => {
@@ -1640,7 +1640,7 @@ describe('usseTDInit', () => {
             mockGetSuggestionData.mockReturnValue({});
 
             await usseTDInit();
-            expect(mockLog.warn).toHaveBeenCalledWith('order duplicate skipped');
+            expect(mockLog.debug).toHaveBeenCalledWith('order duplicate skipped');
         });
 
         test('non-cancelable, not filled, not fake → skip', async () => {

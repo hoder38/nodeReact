@@ -635,7 +635,7 @@ export default {
                         }
                     }
                     return getUsStock(index, ['price', 'per', 'pdr', 'pbr', 'equity'], back).then(ret => handleStockTagV2(type, index, obj.tag).then(([name, tags]) => {
-                        log.debug({ ret }, 'filter v4 step result');
+                        log.debug({ ret: { price: ret.price, per: ret.per, pdr: ret.pdr, pbr: ret.pbr, equity: ret.equity } }, 'filter v4 step result');
                         let stock_default = [];
                         // US stocks follow the same tag merge rule as TWSE: keep manual tags and
                         // record only newly derived defaults in stock_default.
@@ -1487,7 +1487,7 @@ export default {
                         return stage3(iIndex + 1);
                     }
                     return this.getIntervalWarp(filterList[iIndex]._id, session).then(([result, index]) => {
-                        log.debug({ name: filterList[iIndex].name, result }, 'filter upsert result');
+                        log.debug({ name: filterList[iIndex].name, result: { acknowledged: result?.acknowledged, modifiedCount: result?.modifiedCount } }, 'filter upsert result');
                         filterList[iIndex].name = filterList[iIndex].name + result;
                         filterList1.push(filterList[iIndex]);
                     }).catch(err => {
@@ -1650,13 +1650,13 @@ export default {
                         }
                     }
                 }
-                log.debug({ twseList: totalTwseMarketcapList, usseList: totalUsseMarketcapList }, 'marketcap lists');
+                log.debug({ twseList: totalTwseMarketcapList.map(m => ({ index: m.index, mc: m.mc, mul: m.mul })), usseList: totalUsseMarketcapList.map(m => ({ index: m.index, mc: m.mc, mul: m.mul })) }, 'marketcap lists');
                 const updmulTwse = mIndex => (mIndex < totalTwseMarketcapList.length) ? Mongo('update', TOTALDB, {_id: totalTwseMarketcapList[mIndex]._id}, {$set: {mul: totalTwseMarketcapList[mIndex].mul}}).then(mitems => {
-                    log.debug({ mitems }, 'twse mul update');
+                    log.debug({ mitems: { acknowledged: mitems?.acknowledged, modifiedCount: mitems?.modifiedCount } }, 'twse mul update');
                     return updmulTwse(mIndex + 1);
                 }) : Promise.resolve();
                 const updmulUsse = mIndex => (mIndex < totalUsseMarketcapList.length) ? Mongo('update', TOTALDB, {_id: totalUsseMarketcapList[mIndex]._id}, {$set: {mul: totalUsseMarketcapList[mIndex].mul}}).then(mitems => {
-                    log.debug({ mitems }, 'usse mul update');
+                    log.debug({ mitems: { acknowledged: mitems?.acknowledged, modifiedCount: mitems?.modifiedCount } }, 'usse mul update');
                     return updmulUsse(mIndex + 1);
                 }) : Promise.resolve();
                 return updmulTwse(0).then(() => updmulUsse(0).then(() => compare_list(cIndex + 1)));
@@ -2801,12 +2801,12 @@ const getTwseAnnual = (index, year, filePath) => Api('url', `https://doc.twse.co
     const $ = cheerio.load(Htmlparser.parseDOM(raw_data));
     const $center = $('body').children('center').first();
     if ($center.length === 0) {
-        log.debug({ raw_data }, 'annual report step1 response');
+        log.debug({ raw_data: raw_data.substring(0, 200) }, 'annual report step1 response');
         return handleError(new HoError('cannot find form'));
     }
     const $form = $center.children('form').first();
     if ($form.length === 0) {
-        log.debug({ raw_data }, 'annual report step2 response');
+        log.debug({ raw_data: raw_data.substring(0, 200) }, 'annual report step2 response');
         return handleError(new HoError('cannot find form'));
     }
     let filename = false;
@@ -2963,7 +2963,7 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
                     if (item.orig < 1000) {
                         item.orig = 1000;
                     }
-                    log.debug({ item }, 'stock status item');
+                    log.debug({ item: { _id: item._id, index: item.index, orig: item.orig, times: item.times, mid: item.mid, count: item.count, order: item.order } }, 'stock status item');
                     const fee = items[index].setype === 'usse' ? USSE_FEE : TRADE_FEE;
                     // Resolve any breakout-driven midpoint shifts before generating fresh buy/sell guidance.
                     let newArr = resolveNewMidStack(item.newMid, price, item.mid, item.web, (nm) => {
@@ -3347,7 +3347,9 @@ export const getStockListV2 = (type, year, month) => {
         case 'usse':
         // Build one deduplicated US list from the three reference index pages.
         // Each source exposes slightly different table shapes, so the parser branches per page.
-        const list = ['Dow_Jones_Industrial_Average', 'Nasdaq-100', 'List_of_S%26P_500_companies'];
+        // Wikipedia split the constituent tables out of the index articles, so the roster
+        // now lives on the dedicated "List of ..." pages that still expose table#constituents.
+        const list = ['List_of_Dow_Jones_Industrial_Average_companies', 'List_of_NASDAQ-100_companies', 'List_of_S%26P_500_companies'];
         const stock_list = [];
         const recur_get = index => {
             if (index >= list.length) {
@@ -3361,7 +3363,7 @@ export const getStockListV2 = (type, year, month) => {
                         .children('tr').each((_, t) => {
                         let name = null;
                         let sIndex = null;
-                        if (list[index] === 'Dow_Jones_Industrial_Average') {
+                        if (list[index] === 'List_of_Dow_Jones_Industrial_Average_companies') {
                             const $a = $(t).children('th').first().children('a').first();
                             if ($a.length > 0) {
                                 name = toValidName($a.text().trim()).replace('&amp;', '&').replace('&#x27;', "'");
@@ -3389,14 +3391,14 @@ export const getStockListV2 = (type, year, month) => {
                             for (let i = 0; i < stock_list.length; i++) {
                                 if (stock_list[i].index === sIndex) {
                                     is_exit = true;
-                                    stock_list[i].tag.push(list[index] === 'Dow_Jones_Industrial_Average' ? 'dow jones' : list[index] === 'Nasdaq-100' ? 'nasdaq 100' : 's&p 500');
+                                    stock_list[i].tag.push(list[index] === 'List_of_Dow_Jones_Industrial_Average_companies' ? 'dow jones' : list[index] === 'List_of_NASDAQ-100_companies' ? 'nasdaq 100' : 's&p 500');
                                     break;
                                 }
                             }
                             if (!is_exit && sIndex !== 'ETFC' && sIndex !== 'MRP-W' && sIndex.length <= 6) {
                                 stock_list.push({
                                     index: sIndex,
-                                    tag: [name, list[index] === 'Dow_Jones_Industrial_Average' ? 'dow jones' : list[index] === 'Nasdaq-100' ? 'nasdaq 100' : 's&p 500'],
+                                    tag: [name, list[index] === 'List_of_Dow_Jones_Industrial_Average_companies' ? 'dow jones' : list[index] === 'List_of_NASDAQ-100_companies' ? 'nasdaq 100' : 's&p 500'],
                                     type: 'usse',
                                 });
                             }

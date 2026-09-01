@@ -354,7 +354,7 @@ export const calWeb = curArr => {
                 str: bestStr,
             }).catch(err => handleError(err, 'Redis'));
             const updateWeb = () => Mongo('find', TOTALDB, {index: curArr[index]}).then(item => {
-                log.debug({ item }, 'web update result');
+                log.debug({ itemCount: item.length, firstIndex: item[0]?.index, firstOwner: item[0]?.owner }, 'web update result');
                 if (item.length < 1) {
                     return Mongo('insert', TOTALDB, {
                         sType: 1,
@@ -366,7 +366,7 @@ export const calWeb = curArr => {
                         mid: web.mid,
                         extrem: web.extrem,
                         metrics: bestMetrics,
-                    }).then(items => log.debug({ items }, 'times update result'));
+                    }).then(items => log.debug({ items: { acknowledged: items?.acknowledged, insertedId: items?.insertedId } }, 'times update result'));
                 } else {
                     const recur_update = async () => {
                         for (let i = 0; i < item.length; i++) {
@@ -378,7 +378,7 @@ export const calWeb = curArr => {
                                     extrem: web.extrem,
                                     metrics: bestMetrics,
                                 }});
-                                log.debug({ items }, 'buy fill update result');
+                                log.debug({ items: { acknowledged: items?.acknowledged, modifiedCount: items?.modifiedCount } }, 'buy fill update result');
                             } else {
                                 // User-owned entries also need `times` rescaled to the refreshed web capacity.
                                 const maxAmount = web.mid * (web.arr.length - 1) / 3 * 2;
@@ -391,7 +391,7 @@ export const calWeb = curArr => {
                                     times: Math.floor(item[i].orig / maxAmount * 10000) / 10000,
                                     newMid: [],
                                 }});
-                                log.debug({ items }, 'sell fill update result');
+                                log.debug({ items: { acknowledged: items?.acknowledged, modifiedCount: items?.modifiedCount } }, 'sell fill update result');
                             }
                         }
                     }
@@ -435,7 +435,7 @@ export const calWeb = curArr => {
                         mcList[i].mul = (mul > 5) ? 5 : mul;
                     }
                 }
-                log.debug({ mcList }, 'marketcap list');
+                log.debug({ mcList: mcList.map(m => ({ index: m.index, mc: m.mc, mul: m.mul })) }, 'marketcap list');
                 // §9b Volatility-normalized position size: mul = mcMul + volMul, cap at 5, default = 1
                 const updmul = mIndex => (mIndex < mcList.length) ? (() => {
                     const volValue = 1 + Math.max(0, 1 - (mcList[mIndex].extrem || 0) / 0.4);
@@ -443,7 +443,7 @@ export const calWeb = curArr => {
                     const finalMul = (mcMul > volValue) ? mcMul : volValue;
                     return Mongo('update', TOTALDB, {_id: mcList[mIndex]._id}, {$set: {mul: finalMul > 5 ? 5 : finalMul}});
                 })().then(mitems => {
-                    log.debug({ mitems }, 'mul update result');
+                    log.debug({ mitems: { acknowledged: mitems?.acknowledged, modifiedCount: mitems?.modifiedCount } }, 'mul update result');
                     return updmul(mIndex + 1);
                 }) : Promise.resolve();
                 return updmul(0).then(() => recurUser(uIndex + 1));
@@ -584,12 +584,12 @@ export const checkRisk = (risk, ...arr) => {
  */
 export const closeRestCredit = async (id, userRest) => {
     if (closeCredit[id] && closeCredit[id].length > 0) {
-        log.debug({ credits: closeCredit[id] }, 'credits to close');
+        log.debug({ credits: closeCredit[id].map(c => typeof c === 'object' ? { id: c.id, symbol: c.symbol } : c) }, 'credits to close');
         // Snapshot and clear the queue first so concurrently added ids wait for the next pass.
         const close_id = closeCredit[id].splice(0, closeCredit[id].length);
         for (let i = 0; i < close_id.length; i++) {
             const result = await userRest.closeFunding({id: Number(close_id[i])});
-            log.debug({ result }, 'credit close result');
+            log.debug({ result: { id: result?.id, status: result?.status, symbol: result?.symbol } }, 'credit close result');
         }
     }
 };
@@ -810,7 +810,9 @@ export const makeOnPositionUpdate = (id) => fc => {
  * Cache a newly opened position so later update/close events can reconcile against it.
  */
 export const makeOnPositionNew = (id) => fc => {
-    log.debug({ fc }, 'position new');
+    const posSummary = (fc.id && fc.symbol) ? { id: fc.id, symbol: fc.symbol, amount: fc.amount, price: fc.basePrice, pl: fc.pl } : fc;
+    if (!fc.id || !fc.symbol) log.warn({ fc }, 'position new: unexpected null fields');
+    else log.debug({ fc: posSummary }, 'position new');
     const symbol = `f${fc.symbol.substr(-3)}`;
     if (SUPPORT_COIN.indexOf(symbol) === -1) return;
     if (!position[id][symbol]) position[id][symbol] = [];
@@ -832,7 +834,9 @@ export const makeOnPositionNew = (id) => fc => {
 export const makeOnPositionClose = (id, curArr, uid) => fc => {
     // Close payloads also arrive as trading pairs, so normalize before looking up cached positions.
     const symbol = `f${fc.symbol.substr(-3)}`;
-    log.debug({ fc }, 'position close');
+    const closeSummary = (fc.id && fc.symbol) ? { id: fc.id, symbol: fc.symbol, amount: fc.amount, price: fc.basePrice, pl: fc.pl } : fc;
+    if (!fc.id || !fc.symbol) log.warn({ fc }, 'position close: unexpected null fields');
+    else log.debug({ fc: closeSummary }, 'position close');
     if (SUPPORT_COIN.indexOf(symbol) === -1) return;
     if (position[id][symbol]) {
         for (let j = 0; j < position[id][symbol].length; j++) {
@@ -906,7 +910,11 @@ export const makeOnOrderUpdate = (id) => os => {
 export const makeOnOrderNew = (id) => os => {
     const symbol = `f${os.symbol.substr(-3)}`;
     if (SUPPORT_COIN.indexOf(symbol) === -1) return;
-    log.info({ symbol, id, order: os }, 'order new');
+    const orderSummary = (os.id && os.symbol && os.price != null)
+        ? { id: os.id, symbol: os.symbol, amount: os.amountOrig, price: os.price, type: os.type, status: os.status }
+        : os;
+    if (!os.id || !os.symbol || os.price == null) log.warn({ order: os }, 'order new: unexpected null fields');
+    else log.info({ symbol, id, order: orderSummary }, 'order new');
     if (!order[id][symbol]) order[id][symbol] = [];
     // Bitfinex can resend the same order-open event after reconnects, so dedupe by id.
     let isExist = false;
@@ -938,7 +946,11 @@ export const makeOnOrderNew = (id) => os => {
 export const makeOnOrderClose = (id, curArr, uid) => os => {
     const symbol = `f${os.symbol.substr(-3)}`;
     if (SUPPORT_COIN.indexOf(symbol) === -1) return;
-    log.info({ symbol, id, order: os }, 'order close');
+    const orderSummary = (os.id && os.symbol && os.price != null)
+        ? { id: os.id, symbol: os.symbol, amount: os.amountOrig, price: os.price, type: os.type, status: os.status }
+        : os;
+    if (!os.id || !os.symbol || os.price == null) log.warn({ order: os }, 'order close: unexpected null fields');
+    else log.info({ symbol, id, order: orderSummary }, 'order close');
     let is_exist = false;
     if (order[id][symbol]) {
         for (let j = 0; j < order[id][symbol].length; j++) {
@@ -972,7 +984,7 @@ export const makeOnOrderClose = (id, curArr, uid) => os => {
                         const amount = (os.amountOrig - os.amount < 0) ? (1 - BITFINEX_FEE) * (os.amountOrig - os.amount) : os.amountOrig - os.amount;
                         if (amount !== 0) {
                             Mongo('find', TOTALDB, {owner: uid, sType: 1, index: os.symbol}).then(items => {
-                                log.debug({ items }, 'order history TOTALDB items');
+                                log.debug({ items: items.map(i => ({ _id: i._id, index: i.index, profit: i.profit })) }, 'order history TOTALDB items');
                                 if (items.length < 1) {
                                     return handleError(new HoError(`miss ${os.symbol}`));
                                 }
@@ -1133,7 +1145,7 @@ export const _recur_status = async ({ id, uid, current, userRest, items }) => {
             item.times = Math.floor(item.times * item.mul * 10000) / 10000;
         }
         margin[id][current.type][item.index] = item.profit;
-        log.debug({ margin: margin[id] }, 'margin state');
+        log.debug({ margin: Object.fromEntries(Object.entries(margin[id]).map(([k, v]) => [k, { total: v?.total, used: v?.used }])) }, 'margin state');
         const clearP = (current.clear === true || current.clear[item.index] === true) ? true : false;
         // Reset the live position snapshot before folding in the current holdings.
         item.count = 0;
@@ -1167,7 +1179,7 @@ export const _recur_status = async ({ id, uid, current, userRest, items }) => {
         if (item.orig < 1000) {
             item.orig = 1000;
         }
-        log.debug({ item }, 'recur_status item');
+        log.debug({ item: { _id: item._id, index: item.index, orig: item.orig, times: item.times, mid: item.mid, amount: item.amount } }, 'recur_status item');
 
         const cancelOrder = async () => {
             if (order[id][current.type]) {
@@ -1646,7 +1658,7 @@ export const _recur_NewOrder = async ({ id, uid, current, userRest, newOrder }) 
                     break;
                 }
             }
-            log.debug({ margin: margin[id] }, 'margin after sell');
+            log.debug({ margin: Object.fromEntries(Object.entries(margin[id]).map(([k, v]) => [k, { total: v?.total, used: v?.used }])) }, 'margin after sell');
             const order_avail = (margin[id][current.type] && margin[id][current.type].avail && (margin[id][current.type].avail - 1) > 0) ? SUPPORT_LEVERAGE[item.index] ? SUPPORT_LEVERAGE[item.index] * (margin[id][current.type].avail - 1) : margin[id][current.type].avail - 1 : 0;
             if (order_avail < suggestion.bCount * suggestion.buy * 4 / 3) {
                 if (order_avail < suggestion.bCount * suggestion.buy * 2 / 3) {
@@ -2235,7 +2247,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                 }
             };
             if (current.isTrade && fakeOrder[id][current.type]) {
-                log.debug({ id, type: current.type, fakeOrder: fakeOrder[id][current.type] }, 'fake order state');
+                log.debug({ id, type: current.type, fakeOrder: fakeOrder[id][current.type].map(o => ({ symbol: o.symbol, type: o.type, price: o.price, done: o.done })) }, 'fake order state');
             }
             const checkFakeOrder = async () => {
                 if (!(current.isTrade && fakeOrder[id][current.type])) {
@@ -2245,7 +2257,9 @@ export const setWsOffer = (id, curArr=[], uid) => {
                     const o = fakeOrder[id][current.type][index];
                     if (!o.done && o.type === 'buy' && +priceData[o.symbol].lastPrice && +priceData[o.symbol].lastPrice <= o.price) {
                         const items = await Mongo('find', TOTALDB, {owner: uid, sType: 1, index: o.symbol});
-                        log.info({ items }, 'closing fake sell orders');
+                        const itemsSummary = items.map(i => ({ _id: i._id, index: i.index, amount: i.amount }));
+                        if (items.length < 1) log.warn({ items }, 'closing fake sell orders: empty');
+                        else log.info({ items: itemsSummary }, 'closing fake sell orders');
                         if (items.length < 1) {
                             log.warn({ symbol: o.symbol }, 'fake order symbol missing');
                             continue;
@@ -2254,7 +2268,9 @@ export const setWsOffer = (id, curArr=[], uid) => {
                         o.done = true;
                     } else if (!o.done && o.type === 'sell' && +priceData[o.symbol].lastPrice && +priceData[o.symbol].lastPrice >= o.price) {
                         const items = await Mongo('find', TOTALDB, {owner: uid, sType: 1, index: o.symbol});
-                        log.info({ items }, 'closing fake buy orders');
+                        const itemsSummary = items.map(i => ({ _id: i._id, index: i.index, amount: i.amount }));
+                        if (items.length < 1) log.warn({ items }, 'closing fake buy orders: empty');
+                        else log.info({ items: itemsSummary }, 'closing fake buy orders');
                         if (items.length < 1) {
                             log.warn({ symbol: o.symbol }, 'fake order symbol missing');
                             continue;
@@ -2313,7 +2329,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                             break;
                         }
                     }
-                    log.debug({ available: available[id] }, 'wallet available');
+                    log.debug({ available: available[id]?.[current?.type] }, 'wallet available');
                     if (available[id][current.type] && available[id][current.type].avail > 0) {
                         availableMargin = available[id][current.type].avail;
                     }
@@ -2374,7 +2390,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                             break;
                         }
                     }
-                    log.debug({ margin: margin[id] }, 'margin after transfer');
+                    log.debug({ margin: Object.fromEntries(Object.entries(margin[id]).map(([k, v]) => [k, { total: v?.total, used: v?.used }])) }, 'margin after transfer');
                     if (margin[id][current.type] && margin[id][current.type].avail > 0) {
                         availableMargin = -margin[id][current.type].avail;
                     }
@@ -2442,7 +2458,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                     amount: (Math.floor(availableMargin * 1000000) / 1000000).toString(),
                     currency: current.type.substr(1),
                 }).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), API_WAIT * 1000))).then(data => {
-                    log.debug({ data }, 'margin order submitted');
+                    log.debug({ data: { status: data?.status, id: data?.id } }, 'margin order submitted');
                     return Promise.resolve();
                     /*current.used = current.used > 0 ? current.used + availableMargin : availableMargin;
                     return Mongo('update', USERDB, {"username": id, "bitfinex.type": current.type}, {$set:{"bitfinex.$.used": current.used}});*/
@@ -2454,7 +2470,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                     amount: (-availableMargin).toString(),
                     currency: current.type.substr(1),
                 }).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), API_WAIT * 1000))).then(data => {
-                    log.debug({ data }, 'margin order submitted');
+                    log.debug({ data: { status: data?.status, id: data?.id } }, 'margin order submitted');
                     return Promise.resolve();
                     /*current.used = (current.used > 0 && current.used + availableMargin > 1) ? current.used + availableMargin : 0;
                     if (margin[id][current.type] && (margin[id][current.type].total < 1 || !margin[id][current.type].total)) {
@@ -2503,7 +2519,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                             }
                         });
                     }
-                    log.debug({ lent_credit }, 'lent credits for auto-close');
+                    log.debug({ lent_credit: typeof lent_credit === 'number' ? lent_credit : (Array.isArray(lent_credit) ? lent_credit.map(c => ({ id: c.id, symbol: c.symbol, amount: c.amount })) : lent_credit) }, 'lent credits for auto-close');
                     if (lent_credit <= 0) {
                         for (let i = 0; i < curArr.length; i++) {
                             if (curArr[i].type === current.type) {
@@ -2547,13 +2563,17 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                     if (curArr[i].type === symbol && curArr[i].pair) {
                                         for (let j = 0; j < curArr[i].pair.length; j++) {
                                             if (curArr[i].pair[j].type === os.symbol) {
-                                                log.info({ order: os }, 'trade history event');
+                                                const tradeSummary = (os.symbol && os.execAmount != null)
+                                                    ? { symbol: os.symbol, execAmount: os.execAmount, orderPrice: os.orderPrice, orderID: os.orderID, orderType: os.orderType }
+                                                    : os;
+                                                if (!os.symbol || os.execAmount == null) log.warn({ order: os }, 'trade history event: unexpected null fields');
+                                                else log.info({ order: tradeSummary }, 'trade history event');
                                                 // Apply the execution fee adjustment before updating holdings.
                                                 const amount = os.execAmount < 0 ? (1 - BITFINEX_FEE) * os.execAmount : os.execAmount;
                                                 if (amount !== 0) {
                                                     // Load the tracked TOTALDB row for this pair and record the close fill.
                                                     return Mongo('find', TOTALDB, {owner: uid, sType: 1, index: os.symbol}).then(items => {
-                                                        log.debug({ items }, 'TOTALDB items for order');
+                                                        log.debug({ items: items.map(i => ({ _id: i._id, index: i.index, profit: i.profit })) }, 'TOTALDB items for order');
                                                         if (items.length < 1) {
                                                             return handleError(new HoError(`miss ${os.symbol}`));
                                                         }
@@ -2907,10 +2927,10 @@ export default {
                 bitfinex = items[0].bitfinex;
             }
             return Mongo('update', USERDB, {_id: id}, {$set: {bitfinex}}).then(user => {
-                log.debug({ user }, 'setWsOffer user');
+                log.debug({ user: { acknowledged: user?.acknowledged, modifiedCount: user?.modifiedCount } }, 'setWsOffer user');
                 //處理市價出單
                 return Mongo('find', TOTALDB, {owner: id, sType: 1, type: set.type}).then(item => {
-                    log.debug({ item }, 'bitfinex config item');
+                    log.debug({ item: item.map(i => ({ _id: i._id, index: i.index, orig: i.orig, times: i.times, ing: i.ing })) }, 'bitfinex config item');
                     /*if (rest_total) {
                         for (let i = 0; i < item.length; i++) {
                             if (item[i].index === rest_total.index) {
@@ -2950,14 +2970,14 @@ export default {
                                                 orig: data['pair'][i].amount,
                                                 ing: item[index].ing,
                                             }});
-                                            log.debug({ r }, 'clear result');
+                                            log.debug({ r: { acknowledged: r?.acknowledged, modifiedCount: r?.modifiedCount } }, 'clear result');
                                             updated = true;
                                             break;
                                         }
                                     }
                                     if (!updated) {
                                         const result = await Mongo('update', TOTALDB, {_id: item[index]._id}, {$set : {ing: 2}});
-                                        log.debug({ result }, 'update result');
+                                        log.debug({ result: { acknowledged: result?.acknowledged, modifiedCount: result?.modifiedCount } }, 'update result');
                                     }
                                 } else {
                                     const webitem = await Mongo('find', TOTALDB, {index: item[index].type, sType: 1});
@@ -2986,7 +3006,7 @@ export default {
                                         ing: 0,
                                         //count: 0,
                                     });
-                                    log.debug({ r }, 'delete result');
+                                    log.debug({ r: { acknowledged: r?.acknowledged, modifiedCount: r?.modifiedCount } }, 'delete result');
                                 }
                             }
                             if (userWs[userID]) {
@@ -3017,7 +3037,7 @@ export default {
             if (items[0].bitfinex) {
                 const bitfinex = items[0].bitfinex.filter(v => (v.type === type) ? false : true);
                 return Mongo('update', USERDB, {_id: id}, {$set: {bitfinex}}).then(user => {
-                    log.debug({ user }, 'user after bitfinex removal');
+                    log.debug({ user: { acknowledged: user?.acknowledged, modifiedCount: user?.modifiedCount } }, 'user after bitfinex removal');
                     if (userWs[userID]) {
                         userWs[userID].close();
                         userWs[userID] = null;
@@ -3368,7 +3388,7 @@ export default {
         } else {
             closeCredit[id].push(cId);
         }
-        log.debug({ closeCredit }, 'close credit state');
+        log.debug({ closeCredit: Object.fromEntries(Object.entries(closeCredit).map(([k, v]) => [k, v?.length ?? 0])) }, 'close credit state');
         return Promise.resolve();
     }
 }

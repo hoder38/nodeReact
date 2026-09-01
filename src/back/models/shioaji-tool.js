@@ -376,7 +376,6 @@ const getShioajiData = (simulation = true) => {
     const id = simulation ? 'PAPIUSER02' : SHIOAJI_APIKEY;
     const pw = simulation ? '2222' : SHIOAJI_APISECRET;
     return execSafe(PathJoin(__dirname, 'util/twse.py'), [id, pw]).then(output => {
-        log.debug({ output }, 'shioaji python raw output')
         const result = output.split('\n');
         log.debug({ result }, 'parsed result lines')
         let start_result = 0;
@@ -402,6 +401,9 @@ const getShioajiData = (simulation = true) => {
                 ret.fill_order = JSON.parse(result[i]);
                 break;
             }
+        }
+        if (!start_result) {
+            log.warn({ output }, 'shioaji python raw output: no start result found');
         }
         return ret;
     });

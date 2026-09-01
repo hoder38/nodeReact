@@ -66,7 +66,7 @@ export const getToken = code => {
                 sendWs(`TD AMERITRADE: Please refresh token in 3 days`, 0, 0, true);
             }
         }
-        log.debug({ token }, 'token response');
+        log.debug({ hasAccessToken: !!token.access_token, expiresIn: token.expires_in }, 'token response');
         return Mongo('find', 'accessToken', {api: 'tdameritrade'}).then(items => {
             if (items.length > 0) {
                 return Mongo('update', 'accessToken', {api: 'tdameritrade'}, {$set: token}).then(() => {
@@ -88,7 +88,11 @@ const checkOauth = () => (!tokens.access_token || !tokens.expiry_date) ? Mongo('
         return handleError(new HoError('can not find token'));
     }
     tokens = token[0];
-    log.info({ tokens }, 'loaded tokens from DB');
+    if (!tokens.access_token) {
+        log.warn({ tokens }, 'loaded tokens from DB: missing access_token');
+    } else {
+        log.info({ hasAccessToken: !!tokens.access_token, hasExpiry: !!tokens.expiry_date }, 'loaded tokens from DB');
+    }
 }).then(() => getToken()) : getToken();
 
 const cancelTDOrder = id => {
@@ -148,7 +152,12 @@ const processFilledOrder = (o, lastP, currentPosition, order_recur, nextIndex) =
     let price = o.fake ? o.price : 0;
     let revenue = 0;
     if (!o.fake) {
-        log.debug({ order: o, firstLeg: o.orderActivityCollection[0].executionLegs[0] }, 'processing filled order');
+        const firstLeg = o.orderActivityCollection[0].executionLegs[0];
+        const orderSummary = (firstLeg && o.orderLegCollection && o.orderLegCollection[0])
+            ? { symbol: o.orderLegCollection[0].instrument.symbol, instruction: o.orderLegCollection[0].instruction, legCount: o.orderActivityCollection[0].executionLegs.length, firstLegTime: firstLeg.time, firstLegPrice: firstLeg.price }
+            : null;
+        if (!orderSummary) log.warn({ order: o }, 'processing filled order: unexpected null fields');
+        else log.debug({ order: orderSummary }, 'processing filled order');
         o.orderActivityCollection.forEach(oac => oac.executionLegs.forEach(oace => {
             time = Math.round(new Date(oace.time).getTime() / 1000);
             price = oace.price;
@@ -266,7 +275,7 @@ const processFilledOrder = (o, lastP, currentPosition, order_recur, nextIndex) =
                 item.previous.sell = item.previous.sell.filter(v => (time - v.time < RANGE_INTERVAL) ? true : false);
             }
         }
-        log.debug({ previous: item.previous }, 'updated previous state');
+        log.debug({ buyCount: item.previous.buy.length, sellCount: item.previous.sell.length }, 'updated previous state');
         return Mongo('update', TOTALDB, {_id: item._id}, {$set: {previous: item.previous, profit: item.profit}}).then(() => order_recur(nextIndex));
     });
 };
@@ -325,7 +334,7 @@ export const usseTDInit = () => checkOauth().then(() => {
                 }
                 order = [];
                 const usseSuggestion = getSuggestionData('usse');
-                log.debug({ fakeOrder }, 'fakeOrder td');
+                log.debug({ fakeOrder: fakeOrder.map(o => ({ symbol: o.symbol, type: o.type, price: o.price, done: o.done })) }, 'fakeOrder td');
                 fakeOrder.forEach(o => {
                     if (!o.done && o.type === 'buy' && usseSuggestion[o.symbol] && usseSuggestion[o.symbol].price && usseSuggestion[o.symbol].price <= o.price) {
                         o.done = true;
@@ -429,7 +438,7 @@ export const usseTDInit = () => checkOauth().then(() => {
             fakeOrder = [];
             const newOrder = [];
             const usseSuggestion = getSuggestionData('usse');
-            log.debug({ usseSuggestion }, 'suggestion data');
+            log.debug({ usseSuggestion: Object.fromEntries(Object.entries(usseSuggestion).map(([k, v]) => [k, { price: v.price, bCount: v.bCount, sCount: v.sCount }])) }, 'suggestion data');
             const recur_status = index => {
                 if (index >= items.length) {
                     return Promise.resolve();
@@ -444,7 +453,12 @@ export const usseTDInit = () => checkOauth().then(() => {
                         item.times = Math.floor(item.times * item.mul);
                     }
                     const price = usseSuggestion[item.index].price;
-                    log.debug({ item }, 'evaluating stock item');
+                    const itemSummary = (item.index && item._id) ? { _id: item._id, index: item.index, orig: item.orig, times: item.times, mul: item.mul } : item;
+                    if (!item.index || !item._id) {
+                        log.warn({ item }, 'evaluating stock item: unexpected null fields');
+                    } else {
+                        log.debug({ item: itemSummary }, 'evaluating stock item');
+                    }
                     const cancelOrder = rest => initialBook(true).then(() => {
                         const real_id = order.filter(v => (v.symbol === item.index));
                         const real_delete = index => {
@@ -452,7 +466,8 @@ export const usseTDInit = () => checkOauth().then(() => {
                                 return rest ? rest() : Promise.resolve();
                             }
                             return real_id[index].partial ? real_delete(index + 1) : cancelTDOrder(real_id[index].id).catch(err => {
-                                log.warn({ order }, 'cancel order failed, current orders');
+                                const orderIds = order.map(v => ({ id: v.id, symbol: v.symbol, partial: v.partial }));
+                                log.warn({ orders: orderIds, failedId: real_id[index].id }, 'cancel order failed, current orders');
                                 sendWs(`${real_id[index].id} TD cancelOrder Error: ${err.message||err.msg}`, 0, 0, true);
                                 handleError(err, `${real_id[index].id} TDcancelOrder Error`);
                             }).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), API_WAIT * 2000)).then(() => real_delete(index + 1)));
