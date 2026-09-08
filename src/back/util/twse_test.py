@@ -153,14 +153,13 @@ class TestCashCalculation:
         return data['cash']
 
     def test_cc01_three_settlements_balance_positive(self):
-        """CC-01/CC-02: 3 settlements, balance > 0."""
+        """CC-01/CC-02: 3 settlements, balance > 0, rolled window."""
         cash = self._get_cash(env_overrides={
             'MOCK_SJ_BALANCE': '500000',
             'MOCK_SJ_SETTLEMENTS': json.dumps([-10000, -20000, -30000]),
         })
-        # hour-dependent: either (500000-10000-20000-30000)/10 or (500000-20000-30000)/10
-        cash_val = float(cash)
-        assert cash_val > 0
+        # rolled: today's -10000 is already in acc_balance, only T+1/T+2 apply
+        assert float(cash) == (500000 - 20000 - 30000) / 10
 
     def test_cc04_balance_zero(self):
         """CC-04: balance=0 with 3 settlements → 'same'."""
@@ -192,10 +191,7 @@ class TestCashCalculation:
             'MOCK_SJ_BALANCE': '100000',
             'MOCK_SJ_SETTLEMENTS': json.dumps([-50000, -30000, -10000]),
         })
-        cash_val = float(cash)
-        # (100000 + (-50000) + (-30000) + (-10000)) / 10 = 1000 (before 10am)
-        # or (100000 + (-30000) + (-10000)) / 10 = 6000 (after 10am)
-        assert cash_val > 0
+        assert float(cash) == (100000 - 30000 - 10000) / 10
 
     def test_cc08_large_balance(self):
         """CC-08: Very large balance handled correctly."""
@@ -205,6 +201,61 @@ class TestCashCalculation:
         })
         cash_val = float(cash)
         assert cash_val > 99000000
+
+    # -- settlement window handling (see twse.py current_cash) --------------
+    # "rolled"     -> settlements[0].date == today (bank already credited)
+    # "not rolled" -> settlements[0].date == yesterday (credit may be pending)
+
+    def _settle(self, entries):
+        return json.dumps([{'date': d, 'amount': a} for d, a in entries])
+
+    def test_cc09_rolled_positive_today_excluded(self):
+        """Rolled + positive T+0: already in acc_balance, must not be added."""
+        cash = self._get_cash(env_overrides={
+            'MOCK_SJ_BALANCE': '2246789',
+            'MOCK_SJ_SETTLEMENTS': self._settle([(0, 41285), (1, 24108), (2, 13988)]),
+        })
+        assert float(cash) == (2246789 + 24108 + 13988) / 10
+
+    def test_cc10_rolled_negative_today_excluded(self):
+        """Rolled + negative T+0: already debited, must not be subtracted twice."""
+        cash = self._get_cash(env_overrides={
+            'MOCK_SJ_BALANCE': '2285367',
+            'MOCK_SJ_SETTLEMENTS': self._settle([(0, -76104), (1, -21889), (2, 0)]),
+        })
+        assert float(cash) == (2285367 - 21889 + 0) / 10
+
+    def test_cc11_not_rolled_positive_today_deferred(self):
+        """Not rolled + positive T+0: pending inflow is never counted."""
+        cash = self._get_cash(env_overrides={
+            'MOCK_SJ_BALANCE': '2205504',
+            'MOCK_SJ_SETTLEMENTS': self._settle([(-1, 88878), (0, 41285), (1, 24108)]),
+        })
+        assert float(cash) == (2205504 + 24108) / 10
+
+    def test_cc12_not_rolled_negative_today_subtracted(self):
+        """Not rolled + negative T+0: pending outflow must be subtracted."""
+        cash = self._get_cash(env_overrides={
+            'MOCK_SJ_BALANCE': '1848502',
+            'MOCK_SJ_SETTLEMENTS': self._settle([(-1, 236757), (0, -60776), (1, 0)]),
+        })
+        assert float(cash) == (1848502 - 60776 + 0) / 10
+
+    def test_cc13_stale_row_never_counted(self):
+        """A past settlement row is already in acc_balance regardless of sign."""
+        cash = self._get_cash(env_overrides={
+            'MOCK_SJ_BALANCE': '1000000',
+            'MOCK_SJ_SETTLEMENTS': self._settle([(-3, -500000), (1, 1000), (2, 2000)]),
+        })
+        assert float(cash) == (1000000 + 1000 + 2000) / 10
+
+    def test_cc14_result_independent_of_time_of_day(self):
+        """Same broker state must yield the same cash at any hour."""
+        env = {
+            'MOCK_SJ_BALANCE': '2246789',
+            'MOCK_SJ_SETTLEMENTS': self._settle([(0, 41285), (1, 24108), (2, 13988)]),
+        }
+        assert self._get_cash(env_overrides=env) == self._get_cash(env_overrides=env)
 
 
 # ===========================================================================

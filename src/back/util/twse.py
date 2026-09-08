@@ -42,10 +42,20 @@ if len(acc_settle) < 3 and len(sys.argv) != 3:
 acc_position = retryApi(lambda: api.list_positions(api.stock_account, unit=sj.Unit.Share, timeout=10000))
 now = datetime.datetime.now()
 if len(acc_settle) >= 3 and acc_balance.acc_balance > 0:
-    if int(now.hour) < 10:
-        current_cash = (acc_balance.acc_balance + acc_settle[0].amount + acc_settle[1].amount + acc_settle[2].amount) / 10
-    else:
-        current_cash = (acc_balance.acc_balance + acc_settle[1].amount + acc_settle[2].amount) / 10
+    # acc_balance already contains every settlement credited by the bank, which
+    # happens in the early hours (~01:30-05:30) of the settlement date itself.
+    # settlements() rolls its window later (~06:00-09:40), always after the cash
+    # moved, so settlements[0].date >= today proves today's amount is already in
+    # acc_balance. Before the roll the credit may still be pending, so today's
+    # amount is only applied when negative (never overstate available cash).
+    # Filter on .date: before the roll the T=0 row still carries yesterday's date.
+    today = now.date()
+    rolled = acc_settle[0].date >= today
+    current_cash = acc_balance.acc_balance
+    for s in acc_settle:
+        if s.date > today or (not rolled and s.date == today and s.amount < 0):
+            current_cash = current_cash + s.amount
+    current_cash = current_cash / 10
 else:
     current_cash = 'same'
 

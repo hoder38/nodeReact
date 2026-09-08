@@ -6,7 +6,11 @@ this instead. All API calls are controlled via environment variables:
 
   MOCK_SJ_BALANCE      - acc_balance (default: 500000)
   MOCK_SJ_ERRMSG       - balance error message (default: '')
-  MOCK_SJ_SETTLEMENTS  - JSON array of settlement amounts (default: [-10000,-20000,-30000])
+  MOCK_SJ_SETTLEMENTS  - JSON array of settlement entries (default: [-10000,-20000,-30000]).
+                         Each entry is either a bare amount (dates default to
+                         today, today+1, today+2 i.e. an already-rolled window)
+                         or {"date": ..., "amount": ...} where date is either
+                         'YYYY-MM-DD' or an int offset in days from today.
   MOCK_SJ_POSITIONS    - JSON array of {code,quantity,price} (default: [])
   MOCK_SJ_ORDERS       - JSON array of order objects (default: [])
   MOCK_SJ_LOGIN_FAIL   - number of times login should fail before success (default: 0)
@@ -75,11 +79,12 @@ class _Balance:
 
 
 class _Settlement:
-    def __init__(self, amount):
+    def __init__(self, amount, date):
         self.amount = amount
+        self.date = date
 
     def __repr__(self):
-        return f'Settlement(amount={self.amount})'
+        return f'Settlement(date={self.date}, amount={self.amount})'
 
 
 class _Position:
@@ -236,7 +241,19 @@ class Shioaji:
 
     def settlements(self, account=None, timeout=None):
         amounts = _env_json('MOCK_SJ_SETTLEMENTS', [-10000, -20000, -30000])
-        return [_Settlement(a) for a in amounts]
+        today = datetime.date.today()
+        result = []
+        for i, a in enumerate(amounts):
+            if isinstance(a, dict):
+                d = a['date']
+                if isinstance(d, str):
+                    d = datetime.datetime.strptime(d, '%Y-%m-%d').date()
+                elif isinstance(d, int):
+                    d = today + datetime.timedelta(days=d)
+                result.append(_Settlement(a['amount'], d))
+            else:
+                result.append(_Settlement(a, today + datetime.timedelta(days=i)))
+        return result
 
     def list_positions(self, account=None, unit=None, timeout=None):
         raw = _env_json('MOCK_SJ_POSITIONS', [])
