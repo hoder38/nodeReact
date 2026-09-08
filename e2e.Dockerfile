@@ -3,7 +3,15 @@ FROM node:14-bullseye-slim
 WORKDIR /app
 
 # Install Chromium system dependencies for Playwright 1.29.2
-RUN apt-get update && apt-get install -y --no-install-recommends \
+# Debian 11 (bullseye) reached end-of-LTS on 2026-08-31: deb.debian.org purged the
+# security pool (404 on every .deb) and its Release file is expired. Pull from
+# archive.debian.org, which retains EOL releases. The bullseye-security suite is
+# omitted because it exists on no mirror any more - an EOL release receives no
+# further security updates. Check-Valid-Until is disabled because archived metadata
+# is frozen and therefore permanently past its expiry date.
+RUN printf 'deb http://archive.debian.org/debian bullseye main\ndeb http://archive.debian.org/debian bullseye-updates main\n' > /etc/apt/sources.list \
+    && rm -rf /etc/apt/sources.list.d/* \
+    && apt-get -o Acquire::Check-Valid-Until=false update && apt-get install -y --no-install-recommends \
     libatk1.0-0 libatk-bridge2.0-0 libatspi2.0-0 \
     libxcomposite1 libxdamage1 libxfixes3 libxrandr2 \
     libgbm1 libpango-1.0-0 libcairo2 libasound2 \
