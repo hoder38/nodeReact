@@ -110,32 +110,7 @@ class MediaWidget extends React.Component {
                         }
                     }
                 }
-                this._video.onkeydown = e => {
-                    switch(e.keyCode) {
-                        case 67:
-                        case 55:
-                        this._changeSub();
-                        break
-                        case 188:
-                        case 52:
-                        this._backward();
-                        break;
-                        case 190:
-                        case 53:
-                        this._forward();
-                        break;
-                        case 49:
-                        this._backward(true);
-                        break;
-                        case 50:
-                        this._forward(true);
-                        break;
-                        case 56:
-                        case 70:
-                        this._fullscreen();
-                        break;
-                    }
-                }
+                this._video.onkeydown = this._videoKeyDown
             }
         }
         if (this.props.mediaType === 4 || this.props.mediaType === 9) {
@@ -173,25 +148,84 @@ class MediaWidget extends React.Component {
                         }
                     }, 1000)
                 }
-                this._audio.onkeydown = e => {
-                    switch(e.keyCode) {
-                        case 188:
-                        case 52:
-                        this._backward();
-                        break;
-                        case 190:
-                        case 53:
-                        this._forward();
-                        break;
-                        case 49:
-                        this._backward(true);
-                        break;
-                        case 50:
-                        this._forward(true);
-                        break;
-                    }
-                }
+                this._audio.onkeydown = this._audioKeyDown
             }
+        }
+        document.addEventListener('keydown', this._captureKeyDown, true)
+    }
+    _stopKey = e => {
+        if (e.preventDefault) {
+            e.preventDefault()
+        }
+        if (e.stopPropagation) {
+            e.stopPropagation()
+        }
+    }
+    _videoKeyDown = e => {
+        switch(e.keyCode) {
+            case 38:
+            case 67:
+            case 55:
+            this._stopKey(e);
+            this._changeSub();
+            break
+            case 37:
+            case 188:
+            case 52:
+            this._stopKey(e);
+            this._backward();
+            break;
+            case 190:
+            case 53:
+            this._stopKey(e);
+            this._forward();
+            break;
+            case 49:
+            this._stopKey(e);
+            this._backward(true);
+            break;
+            case 39:
+            case 50:
+            this._stopKey(e);
+            this._forward(true);
+            break;
+            case 40:
+            case 56:
+            case 70:
+            this._stopKey(e);
+            this._fullscreen();
+            break;
+        }
+    }
+    _audioKeyDown = e => {
+        switch(e.keyCode) {
+            case 37:
+            case 188:
+            case 52:
+            this._stopKey(e);
+            this._backward();
+            break;
+            case 190:
+            case 53:
+            this._stopKey(e);
+            this._forward();
+            break;
+            case 49:
+            this._stopKey(e);
+            this._backward(true);
+            break;
+            case 39:
+            case 50:
+            this._stopKey(e);
+            this._forward(true);
+            break;
+        }
+    }
+    _captureKeyDown = e => {
+        if (this._video && e.target === this._video) {
+            this._videoKeyDown(e)
+        } else if (this._audio && e.target === this._audio) {
+            this._audioKeyDown(e)
         }
     }
     componentDidUpdate(prevProps, prevState) {
@@ -239,6 +273,7 @@ class MediaWidget extends React.Component {
     }
     componentWillUnmount() {
         //window.removeEventListener("beforeunload", this._leaveRecord)
+        document.removeEventListener('keydown', this._captureKeyDown, true)
         if (this._targetArr.length > 0) {
             this._targetArr.forEach(target => {
                 target.removeEventListener('click', this._toggle)

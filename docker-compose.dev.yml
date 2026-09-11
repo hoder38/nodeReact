@@ -56,6 +56,7 @@ services:
       - /mnt/dev/storage:/mnt/storage:ro
       - /etc/timezone:/etc/timezone:ro
       - /etc/localtime:/etc/localtime:ro
+      - ./public:/app/public
     depends_on:
       - reactnode-file-server
       - reactnode-server
@@ -109,6 +110,7 @@ services:
       - /etc/timezone:/etc/timezone:ro
       - /etc/localtime:/etc/localtime:ro
       - ./src:/app/src
+      - ./public:/app/public
     depends_on:
       redis:
         condition: service_healthy
