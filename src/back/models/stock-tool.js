@@ -297,12 +297,14 @@ export const findFirstParameterPairs = (raw_data, pairs) => {
 
 // Fallback row identifiers seen across TWSE/MOPS statement variants.
 // The filter walks these lists in order until it finds a compatible filing layout.
-export const PROFIT_CODES = [7900, 6100, 61001, 62000, 61000];
+// 902001 / 301000 / 906002 belong to the securities-broker taxonomy (e.g. 2855, 6005).
+export const PROFIT_CODES = [7900, 6100, 61001, 62000, 61000, 902001];
 export const PROFIT_LABEL = '繼續營業單位稅前淨利（淨損）';
-export const EQUITY_CODES = [3100, 31100, 31000];
+export const EQUITY_CODES = [3100, 31100, 31000, 301000];
 export const EQUITY_LABEL = '股本合計';
 export const NETVALUE_PAIRS = [
     ['3XXX', '權益總計'],
+    [906002, '權益總計'],
     [30000, '權益總計'],
     ['3XXXX', '權益總額'],
     [39999, '權益總計'],

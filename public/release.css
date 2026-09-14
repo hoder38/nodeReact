@@ -379,3 +379,11 @@ ul.alert-dropdown {
     border-right-width: 1px;
 }
 
+video::-webkit-media-controls-overlay-play-button {
+    opacity: 0;
+}
+
+video::-webkit-media-controls-start-playback-button {
+    opacity: 0;
+}
+
