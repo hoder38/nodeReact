@@ -1,11 +1,10 @@
 FROM nginx:1.18-alpine
 
-# Dev and release share this image: the dev stack serves app.html/main.js
-# (unminified, webpack --watch friendly), release serves release.html/release.js.
-ARG NGINX_CONF=config/nginx-release.conf
-
+# One image for both stacks. It bakes the release config and the built
+# frontend so production is self-contained and immutable; the dev compose
+# file bind-mounts nginx-dev.conf and ./public over these to get live reload.
 RUN rm /etc/nginx/conf.d/default.conf
-COPY ${NGINX_CONF} /etc/nginx/conf.d/default.conf
+COPY config/nginx-release.conf /etc/nginx/conf.d/default.conf
 COPY ./public/. /app/public/.
 
 EXPOSE 443

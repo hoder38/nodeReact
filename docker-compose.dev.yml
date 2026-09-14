@@ -46,9 +46,7 @@ services:
     build:
       context: .
       dockerfile: nginx.Dockerfile
-      args:
-        NGINX_CONF: config/nginx-dev.conf
-    image: nodereact-nginx-dev:v1.0
+    image: nodereact-nginx:v1.0
     container_name: nginx-proxy
     ports:
       - "8080:443" # Map host 8080 to Nginx container 8080
@@ -58,6 +56,7 @@ services:
       - /mnt/dev/storage:/mnt/storage:ro
       - /etc/timezone:/etc/timezone:ro
       - /etc/localtime:/etc/localtime:ro
+      - ./config/nginx-dev.conf:/etc/nginx/conf.d/default.conf:ro
       - ./public:/app/public
     depends_on:
       - reactnode-file-server
