@@ -119,6 +119,7 @@ jest.unstable_mockModule('../../config.js', () => ({
 
 // --- constants.js ---
 jest.unstable_mockModule('../../constants.js', () => ({
+  QRLOGIN: 'qrlogin',
   STATIC_PATH: '/test/public',
   __dirname: '/test/src/back',
   RELEASE: 'release',

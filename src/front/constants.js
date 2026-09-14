@@ -6,12 +6,16 @@ export const STORAGE_PAGE = '/Storage'
 export const PASSWORD_PAGE = '/Password'
 export const STOCK_PAGE = '/Stock'
 export const BITFINEX_PAGE = '/Bitfinex'
+export const QRCODE_PAGE = '/qrcode'
 
 //item type
 export const STORAGE = 'storage'
 export const PASSWORD = 'password'
 export const STOCK = 'stock'
 export const BITFINEX = 'bitfinex'
+
+//websocket message type
+export const QRLOGIN = 'qrlogin'
 
 //action
 export const ALERT_PUSH = 'ALERT_PUSH'

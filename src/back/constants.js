@@ -751,6 +751,8 @@ export const BACKUP_COLLECTION = [
 ]
 
 export const BITFINEX = 'bitfinex'
+//websocket message type
+export const QRLOGIN = 'qrlogin'
 export const FUSD_SYM = 'fUSD'
 export const FUSDT_SYM = 'fUST'
 export const FBTC_SYM = 'fBTC'

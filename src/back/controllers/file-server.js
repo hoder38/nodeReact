@@ -13,6 +13,7 @@ import Passport from 'passport'
 import multer from 'multer'
 import SessionStore from '../models/session-tool.js'
 import LoginRouter from './login-router.js'
+import QrLoginRouter from './qrlogin-router.js'
 import BasicRouter from './file-basic-router.js'
 import OtherRouter from './file-other-router.js'
 import FileRouter from './file-router.js'
@@ -97,6 +98,7 @@ app.use('/f/api/external', ExternalRouter);
 app.use('/f/api/file', FileRouter);
 app.use('/f/api/bitfinex', BitfinexRouter);
 app.use('/f', OtherRouter);
+app.use('/f', QrLoginRouter());
 app.use('/f', LoginRouter());
 
 app.all('*', function(req, res, next) {

@@ -12,6 +12,7 @@ const { urlencoded: BodyParserUrlencoded, json: BodyParserJson } = bodyParser;
 import Passport from 'passport'
 import SessionStore from '../models/session-tool.js'
 import LoginRouter from './login-router.js'
+import QrLoginRouter from './qrlogin-router.js'
 import HomeRouter from './home-router.js'
 import BasicRouter from './basic-router.js'
 import UserRouter from './user-router.js'
@@ -83,6 +84,7 @@ app.use('/api/bookmark', BookmarkRouter);
 app.use('/api/parent', ParentRouter);
 
 app.use('/', OtherRouter);
+app.use('/', QrLoginRouter(`https://${EXTENT_FILE_IP(ENV_TYPE)}:${EXTENT_FILE_PORT(ENV_TYPE)}/f`));
 app.use('/', LoginRouter(`https://${EXTENT_FILE_IP(ENV_TYPE)}:${EXTENT_FILE_PORT(ENV_TYPE)}/f`));
 app.use(function(err, req, res, next) {
     handleError(err, 'Send');

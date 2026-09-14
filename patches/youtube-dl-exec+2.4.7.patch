@@ -1,0 +1,15 @@
+diff --git a/node_modules/youtube-dl-exec/src/index.js b/node_modules/youtube-dl-exec/src/index.js
+index 68e7ed6..7c60d0a 100644
+--- a/node_modules/youtube-dl-exec/src/index.js
++++ b/node_modules/youtube-dl-exec/src/index.js
+@@ -10,8 +10,8 @@ const args = (url, flags = {}) =>
+ 
+ const isJSON = (str = '') => str.startsWith('{')
+ 
+-const parse = ({ stdout, stderr, ...details }) => {
+-  if (!stderr) return isJSON(stdout) ? JSON.parse(stdout) : stdout
++const parse = ({ stdout, stderr, failed, ...details }) => {
++  if (!failed) return isJSON(stdout) ? JSON.parse(stdout) : stdout
+   throw Object.assign(new Error(stderr), details)
+ }
+ 

@@ -188,6 +188,28 @@ export const doLogout = (url = '') => api(`${url}/api/logout`).then(info => {
 
 export const testLogin = () => api('/api/testLogin', null, 'GET', false)
 
+//qrcode login
+export const qrCreate = () => api('/api/qrlogin/create', {}, 'POST', false)
+
+export const qrStatus = serial => api(`/api/qrlogin/status/${serial}`, null, 'GET', false)
+
+export const qrApprove = serial => api('/api/qrlogin/approve', {serial}, 'POST', false)
+
+export const qrReject = serial => api('/api/qrlogin/reject', {serial}, 'POST', false)
+
+export const doQrLogin = (serial, secret, url = '') => api(`${url}/api/login/qr`, {
+    serial: serial,
+    secret: secret,
+}, 'POST', false).then(info => {
+    if (info.loginOK){
+        if (info.url) {
+            return doQrLogin(serial, secret, info.url)
+        }
+    } else {
+        throw Error('auth fail!!!')
+    }
+})
+
 //array object
 export const arrayObject = (action, myArray, term, property=null, rest=item=>item) => {
     let newList = new Map(myArray)

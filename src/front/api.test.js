@@ -13,7 +13,7 @@ jest.mock('./configureStore.js', () => ({
 
 import fetch from 'isomorphic-fetch';
 import { history } from './configureStore.js';
-import { api, doLogin, doLogout, testLogin, getItemList, resetItemList, dirItemList, bookmarkItemList } from './utility.js';
+import { api, doLogin, doLogout, testLogin, getItemList, resetItemList, dirItemList, bookmarkItemList, qrCreate, qrStatus, qrApprove, qrReject, doQrLogin } from './utility.js';
 
 beforeEach(() => {
   fetch.mockReset();
@@ -117,6 +117,49 @@ describe('doLogin', () => {
   test('failed login throws auth fail', async () => {
     fetch.mockResolvedValue({ ok: true, json: () => Promise.resolve({ loginOK: false }) });
     await expect(doLogin('user', 'wrong')).rejects.toThrow('auth fail!!!');
+  });
+});
+
+describe('qrcode login', () => {
+  const SERIAL = 'a'.repeat(64);
+  const SECRET = 'b'.repeat(64);
+
+  test('qrCreate posts to the create endpoint', async () => {
+    fetch.mockResolvedValue({ ok: true, json: () => Promise.resolve({ serial: SERIAL, secret: SECRET }) });
+    const result = await qrCreate();
+    expect(fetch).toHaveBeenCalledWith('/api/qrlogin/create', expect.objectContaining({ method: 'POST' }));
+    expect(result.serial).toBe(SERIAL);
+  });
+
+  test('qrStatus gets the status endpoint', async () => {
+    fetch.mockResolvedValue({ ok: true, json: () => Promise.resolve({ status: 'pending' }) });
+    await qrStatus(SERIAL);
+    expect(fetch).toHaveBeenCalledWith(`/api/qrlogin/status/${SERIAL}`, { credentials: 'include', method: 'GET' });
+  });
+
+  test('qrApprove and qrReject post the serial only', async () => {
+    fetch.mockResolvedValue({ ok: true, json: () => Promise.resolve({ apiOK: true }) });
+    await qrApprove(SERIAL);
+    expect(fetch.mock.calls[0][0]).toBe('/api/qrlogin/approve');
+    expect(fetch.mock.calls[0][1].body).toBe(JSON.stringify({ serial: SERIAL }));
+    await qrReject(SERIAL);
+    expect(fetch.mock.calls[1][0]).toBe('/api/qrlogin/reject');
+  });
+
+  test('doQrLogin cascades to the file server', async () => {
+    fetch
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ loginOK: true, url: 'https://server2' }) })
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ loginOK: true }) });
+    await doQrLogin(SERIAL, SECRET);
+    expect(fetch).toHaveBeenCalledTimes(2);
+    expect(fetch.mock.calls[0][0]).toBe('/api/login/qr');
+    expect(fetch.mock.calls[0][1].body).toBe(JSON.stringify({ serial: SERIAL, secret: SECRET }));
+    expect(fetch.mock.calls[1][0]).toBe('https://server2/api/login/qr');
+  });
+
+  test('doQrLogin throws when the code is refused', async () => {
+    fetch.mockResolvedValue({ ok: true, json: () => Promise.resolve({ loginOK: false }) });
+    await expect(doQrLogin(SERIAL, SECRET)).rejects.toThrow('auth fail!!!');
   });
 });
 
