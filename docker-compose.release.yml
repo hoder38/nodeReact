@@ -46,6 +46,8 @@ services:
     build:
       context: .
       dockerfile: nginx.Dockerfile
+      args:
+        NGINX_CONF: config/nginx-release.conf
     image: nodereact-nginx:v1.0
     container_name: nginx-proxy-release
     ports:
