@@ -934,11 +934,10 @@ describe('getStockListV2', () => {
         }));
     });
 
-    test('usse: returns array from Dow Jones DOM', async () => {
-        const thElem = mkNode('th', '', [mkNode('a', '', ['Apple Inc.'])]);
-        const td0 = mkNode('td', '');
+    test('usse: returns array from Nasdaq-100 DOM', async () => {
         const tdTicker = mkNode('td', '', [mkNode('a', '', ['AAPL'])]);
-        const dataRow = mkNode('tr', '', [thElem, td0, tdTicker]);
+        const tdName = mkNode('td', '', [mkNode('a', '', ['Apple Inc.'])]);
+        const dataRow = mkNode('tr', '', [tdTicker, tdName]);
         const tbodyNode = mkNode('tbody', '', [dataRow]);
         const constitTable = mkNode('table', null, [tbodyNode], {id: 'constituents'});
         const parserOutput = mkNode('div', 'mw-content-ltr mw-parser-output', [constitTable]);
@@ -949,9 +948,9 @@ describe('getStockListV2', () => {
         const innerContainer = mkNode('div', 'mw-page-container-inner', [contentContainer]);
         const pageContainer = mkNode('div', 'mw-page-container', [innerContainer]);
         const bodyNode = mkNode('body', '', [pageContainer]);
-        const htmlDow = mkNode('html', '', [bodyNode]);
+        const htmlNas = mkNode('html', '', [bodyNode]);
 
-        // Empty tbody for subsequent calls (Nasdaq-100, S&P 500)
+        // Empty tbody for the subsequent call (S&P 500)
         const emptyTbody = mkNode('tbody', '');
         const emptyTable = mkNode('table', null, [emptyTbody], {id: 'constituents'});
         const emptyOutput = mkNode('div', 'mw-content-ltr mw-parser-output', [emptyTable]);
@@ -966,8 +965,7 @@ describe('getStockListV2', () => {
 
         mockApi.mockResolvedValue('<html>...</html>');
         mockParseDOM
-            .mockReturnValueOnce([htmlDow])   // Dow Jones
-            .mockReturnValueOnce([htmlEmpty]) // Nasdaq-100
+            .mockReturnValueOnce([htmlNas])   // Nasdaq-100
             .mockReturnValueOnce([htmlEmpty]); // S&P 500
 
         const result = await getStockListV2('usse', 2024, 6);
@@ -1026,21 +1024,19 @@ describe('getStockListV2', () => {
             const pageContainer = mkNode('div', 'mw-page-container', [innerContainer]);
             return mkNode('html', '', [mkNode('body', '', [pageContainer])]);
         };
-        const dowRow = mkNode('tr', '', [
-            mkNode('th', '', [mkNode('a', '', ['Apple Inc.'])]),
-            mkNode('td', ''),
+        const nasRow = mkNode('tr', '', [
             mkNode('td', '', [mkNode('a', '', ['AAPL'])]),
+            mkNode('td', '', [mkNode('a', '', ['Apple Inc.'])]),
         ]);
 
         mockApi.mockResolvedValue('<html>...</html>');
         mockParseDOM
-            .mockReturnValueOnce([mkPage([dowRow])])
-            .mockReturnValueOnce([mkPage([])])
+            .mockReturnValueOnce([mkPage([nasRow])])
             .mockReturnValueOnce([mkPage([])]);
-        setUsseListMin(620);
+        setUsseListMin(570);
 
         await expect(getStockListV2('usse', 2024, 6)).rejects.toMatchObject({
-            message: 'usse stock list too small: 1 < 620!!!',
+            message: 'usse stock list too small: 1 < 570!!!',
         });
     });
 });
@@ -1963,9 +1959,9 @@ describe('getStockListV2 twse additional branches', () => {
 });
 
 // ===========================================================================
-// getStockListV2 — usse Nasdaq/S&P path (line 3169-3181)
+// getStockListV2 — usse Nasdaq/S&P path
 // ===========================================================================
-describe('getStockListV2 usse non-Dow path', () => {
+describe('getStockListV2 usse Nasdaq/S&P path', () => {
     const buildUsseDom = (rows) => {
         const tbody = mkNode('tbody', '', rows);
         const ct = mkNode('table', null, [tbody], {id: 'constituents'});
@@ -1990,7 +1986,6 @@ describe('getStockListV2 usse non-Dow path', () => {
 
         mockApi.mockResolvedValue('<html>...</html>');
         mockParseDOM
-            .mockReturnValueOnce([emptyHtml])   // Dow Jones empty
             .mockReturnValueOnce([nasdaqHtml])  // Nasdaq-100 has MSFT
             .mockReturnValueOnce([emptyHtml]);  // S&P 500 empty
 
@@ -2007,7 +2002,6 @@ describe('getStockListV2 usse non-Dow path', () => {
 
         mockApi.mockResolvedValue('<html>...</html>');
         mockParseDOM
-            .mockReturnValueOnce([emptyHtml])
             .mockReturnValueOnce([nasdaqHtml])
             .mockReturnValueOnce([emptyHtml]);
 
@@ -2023,7 +2017,6 @@ describe('getStockListV2 usse non-Dow path', () => {
 
         mockApi.mockResolvedValue('<html>...</html>');
         mockParseDOM
-            .mockReturnValueOnce([emptyHtml])
             .mockReturnValueOnce([nasdaqHtml])
             .mockReturnValueOnce([emptyHtml]);
 
@@ -2045,7 +2038,6 @@ describe('getStockListV2 usse non-Dow path', () => {
 
         mockApi.mockResolvedValue('<html>...</html>');
         mockParseDOM
-            .mockReturnValueOnce([emptyHtml])   // Dow Jones
             .mockReturnValueOnce([nasdaqHtml])  // Nasdaq-100
             .mockReturnValueOnce([sp500Html]);  // S&P 500
 
@@ -8420,9 +8412,9 @@ describe('stockFilterV4 error branches', () => {
         expect(r).toBeDefined();
     }, 30000);
 
-    test('dow jones / nasdaq 100 / s&p 500 etf classifications', async () => {
+    test('nasdaq 100 / s&p 500 etf classifications', async () => {
         const stocksMix = [
-            { _id: 'd1', type: 'usse', index: 'D', name: 'D', tags: ['dow jones'], equity: 100 },
+            { _id: 'b1', type: 'usse', index: 'B', name: 'B', tags: ['nasdaq 100', 's&p 500'], equity: 100 },
             { _id: 'n1', type: 'usse', index: 'N', name: 'N', tags: ['nasdaq 100'], equity: 100 },
             { _id: 's1', type: 'usse', index: 'S', name: 'S', tags: ['s&p 500'], equity: 100 },
         ];
@@ -9044,7 +9036,7 @@ describe('stockFilterV4 user sync', () => {
     test('with admin user + portfolio stocks → exercises compare_list & marketcap sort', async () => {
         // Tags returned by tagQuery (Stage 1 list) — provide a few stocks
         const stockA = { _id: 'sA', type: 'twse', index: '2330', name: 'TSMC', tags: ['tw50'], equity: 100 };
-        const stockB = { _id: 'sB', type: 'usse', index: 'AAPL', name: 'Apple', tags: ['dow jones'], equity: 50 };
+        const stockB = { _id: 'sB', type: 'usse', index: 'AAPL', name: 'Apple', tags: ['nasdaq 100'], equity: 50 };
         const stockC = { _id: 'sC', type: 'twse', index: '2454', name: 'MTK', tags: [], equity: 30 };
         let tqCalls = 0;
         mockTagInstance.tagQuery.mockImplementation(() => {
@@ -9101,7 +9093,7 @@ describe('stockFilterV4 deeper user sync', () => {
             { _id: 's1', type: 'twse', index: '1111', name: 'A', tags: ['tw50'], equity: 100 },
             { _id: 's2', type: 'twse', index: '2222', name: 'B', tags: ['tw50'], equity: 80 },
             { _id: 's3', type: 'twse', index: '3333', name: 'C', tags: ['tw100'], equity: 60 },
-            { _id: 's4', type: 'usse', index: 'AAPL', name: 'Apple', tags: ['dow jones'], equity: 50 },
+            { _id: 's4', type: 'usse', index: 'AAPL', name: 'Apple', tags: ['nasdaq 100', 's&p 500'], equity: 50 },
             { _id: 's5', type: 'usse', index: 'GOOG', name: 'Google', tags: ['nasdaq 100'], equity: 40 },
             { _id: 's6', type: 'usse', index: 'MSFT', name: 'MSFT', tags: ['s&p 500'], equity: 30 },
         ];

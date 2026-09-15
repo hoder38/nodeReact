@@ -12,7 +12,7 @@ import TagTool, { isDefaultTag, normalize } from '../models/tag-tool.js'
 import Api from './api-tool.js'
 import { getUssePosition, getUsseOrder } from '../models/tdameritrade-tool.js'
 import { getTwsePosition, getTwseOrder } from '../models/shioaji-tool.js'
-import { handleError, HoError, completeZero, addPre, isValidString, toValidName, convertTimestampToDate, fsExists } from '../util/utility.js'
+import { handleError, HoError, completeZero, addPre, isValidString, convertTimestampToDate, fsExists } from '../util/utility.js'
 import { getExtname } from '../util/mime.js'
 import sendWs from '../util/sendWs.js'
 import createLogger from '../util/logger.js'
@@ -1440,10 +1440,8 @@ export default {
                         log.debug({ mcap: i.mcap }, 'market cap');
                         marketcapList.push(i.mcap);
                         if (i.tags.indexOf('tw50') !== -1) {
-                            i.etf = 5;
-                        } else if (i.tags.indexOf('tw100') !== -1) {
                             i.etf = 4;
-                        } else if (i.tags.indexOf('dow jones') !== -1) {
+                        } else if (i.tags.indexOf('tw100') !== -1) {
                             i.etf = 3;
                         } else if (i.tags.indexOf('nasdaq 100') !== -1) {
                             i.etf = 2;
@@ -1471,20 +1469,17 @@ export default {
             const filterList1 = [];
             let tw50 = 0;
             let tw100 = 0;
-            let dow = 0;
             let nas = 0;
             let sp = 0;
             const twseNum = Math.floor(TWSE_NUM / 2);
-            const usseNum = Math.floor(USSE_NUM / 3);
+            const usseNum = Math.floor(USSE_NUM / 2);
             const stage3 = iIndex => {
                 if (iIndex < filterList.length) {
                     log.debug({ index: filterList[iIndex].index, etf: filterList[iIndex].etf, mcap: filterList[iIndex].mcap }, 'filter candidate');
-                    if (filterList[iIndex].etf === 5 && tw50 < twseNum) {
+                    if (filterList[iIndex].etf === 4 && tw50 < twseNum) {
                         tw50++;
-                    } else if (filterList[iIndex].etf === 4 && tw100 < twseNum) {
+                    } else if (filterList[iIndex].etf === 3 && tw100 < twseNum) {
                         tw100++;
-                    } else if (filterList[iIndex].etf === 3 && dow < usseNum) {
-                        dow++;
                     } else if (filterList[iIndex].etf === 2 && nas < usseNum) {
                         nas++;
                     } else if (filterList[iIndex].etf === 1 && sp < usseNum) {
@@ -3358,11 +3353,10 @@ export const getStockListV2 = (type, year, month) => {
             return stock_list;
         });
         case 'usse':
-        // Build one deduplicated US list from the three reference index pages.
-        // Each source exposes slightly different table shapes, so the parser branches per page.
+        // Build one deduplicated US list from the two reference index pages.
         // Wikipedia split the constituent tables out of the index articles, so the roster
         // now lives on the dedicated "List of ..." pages that still expose table#constituents.
-        const list = ['List_of_Dow_Jones_Industrial_Average_companies', 'List_of_NASDAQ-100_companies', 'List_of_S%26P_500_companies'];
+        const list = ['List_of_NASDAQ-100_companies', 'List_of_S%26P_500_companies'];
         const stock_list = [];
         // Raw row tally (duplicates included) guards against an upstream layout change
         // silently shrinking the roster.
@@ -3382,27 +3376,19 @@ export const getStockListV2 = (type, year, month) => {
                         .children('tr').each((_, t) => {
                         let name = null;
                         let sIndex = null;
-                        if (list[index] === 'List_of_Dow_Jones_Industrial_Average_companies') {
-                            const $a = $(t).children('th').first().children('a').first();
+                        const $d = $(t).children('td').first();
+                        if ($d.length > 0) {
+                            const $a = $(t).children('td').eq(1).children('a').first();
                             if ($a.length > 0) {
-                                name = toValidName($a.text().trim()).replace('&amp;', '&').replace('&#x27;', "'");
-                                sIndex = $(t).children('td').eq(1).children('a').first().text().trim().replace('.', '-');
+                                name = $a.text().trim().replace('&amp;', '&').replace('&#x27;', "'");
+                            } else {
+                                name = $(t).children('td').eq(1).text().trim().replace('&amp;', '&').replace('&#x27;', "'");
                             }
-                        } else {
-                            const $d = $(t).children('td').first();
-                            if ($d.length > 0) {
-                                const $a = $(t).children('td').eq(1).children('a').first();
-                                if ($a.length > 0) {
-                                    name = $a.text().trim().replace('&amp;', '&').replace('&#x27;', "'");
-                                } else {
-                                    name = $(t).children('td').eq(1).text().trim().replace('&amp;', '&').replace('&#x27;', "'");
-                                }
-                                const $a1 = $d.children('a').first();
-                                if ($a1.length > 0) {
-                                    sIndex = $a1.text().trim().replace('.', '-');
-                                } else {
-                                    sIndex = $d.text().trim().replace('.', '-');
-                                }
+                            const $a1 = $d.children('a').first();
+                            if ($a1.length > 0) {
+                                sIndex = $a1.text().trim().replace('.', '-');
+                            } else {
+                                sIndex = $d.text().trim().replace('.', '-');
                             }
                         }
                         if (name && sIndex) {
@@ -3411,14 +3397,14 @@ export const getStockListV2 = (type, year, month) => {
                             for (let i = 0; i < stock_list.length; i++) {
                                 if (stock_list[i].index === sIndex) {
                                     is_exit = true;
-                                    stock_list[i].tag.push(list[index] === 'List_of_Dow_Jones_Industrial_Average_companies' ? 'dow jones' : list[index] === 'List_of_NASDAQ-100_companies' ? 'nasdaq 100' : 's&p 500');
+                                    stock_list[i].tag.push(list[index] === 'List_of_NASDAQ-100_companies' ? 'nasdaq 100' : 's&p 500');
                                     break;
                                 }
                             }
                             if (!is_exit && sIndex !== 'ETFC' && sIndex !== 'MRP-W' && sIndex.length <= 6) {
                                 stock_list.push({
                                     index: sIndex,
-                                    tag: [name, list[index] === 'List_of_Dow_Jones_Industrial_Average_companies' ? 'dow jones' : list[index] === 'List_of_NASDAQ-100_companies' ? 'nasdaq 100' : 's&p 500'],
+                                    tag: [name, list[index] === 'List_of_NASDAQ-100_companies' ? 'nasdaq 100' : 's&p 500'],
                                     type: 'usse',
                                 });
                             }
