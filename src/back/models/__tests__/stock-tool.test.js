@@ -7433,7 +7433,7 @@ describe('getSingleStockV2 twse', () => {
 
     test('profit not found in any code → handleError', async () => {
         mockMongo.mockResolvedValue([]);
-        mockApi.mockResolvedValue('no-profit-here'); // matches no patterns
+        mockApi.mockResolvedValue('<td>no-profit-here</td>'); // valid page shape, matches no row codes
         mockParseDOM.mockReturnValue([]);
         await expect(StockTool.getSingleStockV2('twse', { index: '2330', tag: [] }, 1, false)).rejects.toBeDefined();
     });
@@ -8654,9 +8654,11 @@ describe('executeBuy / executeSell pure helpers', () => {
 // ===========================================================================
 describe('_setDateFactory branch coverage', () => {
     let setDate;
+    let setOverrunDelay;
     beforeAll(async () => {
         const mod = await import('../stock-tool.js');
         setDate = mod._setDateFactory;
+        setOverrunDelay = mod._setOverrunDelay;
     });
     afterEach(() => setDate(null));
 
@@ -8818,6 +8820,109 @@ describe('_setDateFactory branch coverage', () => {
         });
         const r = await StockTool.getSingleStockV2('twse', { index: '2330', tag: [] }, 1, false);
         expect(r).toBeDefined();
+    }, 30000);
+
+    test('needDividends retry succeeds when the quarterly filing has no profit row', async () => {
+        setDate(() => new Date('2026-01-15T00:00:00Z'));
+        const annualHtml = '>7900</td>繼續營業單位稅前淨利（淨損）xx>1000<>200<>500<>100<x</tr>'
+            + '>3100</td>股本合計<td>>9999<</td></tr>'
+            + '>3XXX</td>權益總計<td>>5000<</td></tr>';
+        // The dividend-only pass hits a filing template whose profit row code is unknown.
+        const dividendHtml = '<td>only dividends here</td>'
+            + '>C04500</td>x<td>>77<</td></tr>';
+        const priceSpanInline = mkNode('span', '', ['100']);
+        const qhDivInline = mkNode('div', null, [
+            mkNode('div', null, [
+                mkNode('div', null, []),
+                mkNode('div', null, [
+                    mkNode('div', null, [
+                        mkNode('div', null, [priceSpanInline]),
+                    ]),
+                ]),
+            ]),
+        ], {id: 'main-0-QuoteHeader-Proxy'});
+        const priceDom = mkNode('html', '', [mkNode('body', '', [qhDivInline])]);
+        const mkA = txt => mkNode('a', '', [mkText(txt)]);
+        const mkTd = ch => mkNode('td', '', ch);
+        const tr1 = mkNode('tr', '', [mkTd([mkA('2330')]), mkTd([mkA('TSMC')]), mkTd([mkA('Full')]), mkTd([mkA('上市')]), mkTd([mkA('半導體')]), mkTd([mkA('民國76')])]);
+        const basicDom = mkNode('html', '', [mkNode('body', '', [mkNode('form', '', [mkNode('table', null, [mkNode('tr'), tr1], {id: 'zoom'})])])]);
+        let mopsCall = 0;
+        mockApi.mockImplementation((_op, url) => {
+            if (url.includes('t164sb01')) {
+                mopsCall++;
+                return Promise.resolve(mopsCall === 1 ? annualHtml : dividendHtml);
+            }
+            if (url.includes('tw.stock.yahoo.com/quote')) return Promise.resolve('<priceHtml>');
+            if (url.includes('ajax_quickpgm')) return Promise.resolve('<basicHtml>');
+            return Promise.resolve('');
+        });
+        mockParseDOM.mockImplementation(raw => {
+            if (raw === '<priceHtml>') return [priceDom];
+            if (raw === '<basicHtml>') return [basicDom];
+            return [];
+        });
+        let callIdx = 0;
+        mockMongo.mockImplementation(() => {
+            callIdx++;
+            if (callIdx === 1) return Promise.resolve([]);
+            if (callIdx === 2) return Promise.resolve([{ _id: 'newid' }]);
+            return Promise.resolve({});
+        });
+        const r = await StockTool.getSingleStockV2('twse', { index: '2330', tag: [] }, 1, false);
+        expect(r).toBeDefined();
+        expect(mopsCall).toBe(2);
+        expect(r.pdr).not.toBe(9999);
+    }, 30000);
+
+    test('response without table cells is retried like the Overrun throttle page', async () => {
+        setDate(() => new Date('2026-01-15T00:00:00Z'));
+        setOverrunDelay(0);
+        const html = '>7900</td>繼續營業單位稅前淨利（淨損）xx>1000<>200<>500<>100<x</tr>'
+            + '>3100</td>股本合計<td>>9999<</td></tr>'
+            + '>3XXX</td>權益總計<td>>5000<</td></tr>'
+            + '>C04500</td>x<td>>50<</td></tr>';
+        const priceSpanInline = mkNode('span', '', ['100']);
+        const qhDivInline = mkNode('div', null, [
+            mkNode('div', null, [
+                mkNode('div', null, []),
+                mkNode('div', null, [
+                    mkNode('div', null, [
+                        mkNode('div', null, [priceSpanInline]),
+                    ]),
+                ]),
+            ]),
+        ], {id: 'main-0-QuoteHeader-Proxy'});
+        const priceDom = mkNode('html', '', [mkNode('body', '', [qhDivInline])]);
+        const mkA = txt => mkNode('a', '', [mkText(txt)]);
+        const mkTd = ch => mkNode('td', '', ch);
+        const tr1 = mkNode('tr', '', [mkTd([mkA('2330')]), mkTd([mkA('TSMC')]), mkTd([mkA('Full')]), mkTd([mkA('上市')]), mkTd([mkA('半導體')]), mkTd([mkA('民國76')])]);
+        const basicDom = mkNode('html', '', [mkNode('body', '', [mkNode('form', '', [mkNode('table', null, [mkNode('tr'), tr1], {id: 'zoom'})])])]);
+        let mopsCall = 0;
+        mockApi.mockImplementation((_op, url) => {
+            if (url.includes('t164sb01')) {
+                mopsCall++;
+                return Promise.resolve(mopsCall === 1 ? 'transient error' : html);
+            }
+            if (url.includes('tw.stock.yahoo.com/quote')) return Promise.resolve('<priceHtml>');
+            if (url.includes('ajax_quickpgm')) return Promise.resolve('<basicHtml>');
+            return Promise.resolve('');
+        });
+        mockParseDOM.mockImplementation(raw => {
+            if (raw === '<priceHtml>') return [priceDom];
+            if (raw === '<basicHtml>') return [basicDom];
+            return [];
+        });
+        let callIdx = 0;
+        mockMongo.mockImplementation(() => {
+            callIdx++;
+            if (callIdx === 1) return Promise.resolve([]);
+            if (callIdx === 2) return Promise.resolve([{ _id: 'newid' }]);
+            return Promise.resolve({});
+        });
+        const r = await StockTool.getSingleStockV2('twse', { index: '2330', tag: [] }, 1, false);
+        expect(r).toBeDefined();
+        expect(mopsCall).toBe(2);
+        setOverrunDelay(20000);
     }, 30000);
 });
 

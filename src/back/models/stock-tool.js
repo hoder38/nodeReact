@@ -502,6 +502,12 @@ export default {
                     log.debug({ year, quarter }, 'financial quarter');
                     return Api('url', `https://mopsov.twse.com.tw/server-java/t164sb01?step=1&CO_ID=${index}&SYEAR=${year}&SSEASON=${quarter}&REPORT_ID=${reportType}`, {big5: true}).then(raw_data => {
                         if (cheerio.load(Htmlparser.parseDOM(raw_data))('h4').length > 0) {
+                            if (needDividends) {
+                                // The dividend-only pass is best effort: a missing quarterly filing
+                                // must not discard the fundamentals already gathered.
+                                log.debug({ profit, equity, netValue, dividends }, 'financial data retry');
+                                return getStockPrice(type, index).then(price => final_stage(price));
+                            }
                             if (latestQuarter) {
                                 return handleError(new HoError('too short stock data'));
                             } else {
@@ -525,17 +531,30 @@ export default {
                                     }
                                 }
                             }
-                        } else if (raw_data.match(/\>Overrun \- /)) {
+                        } else if (raw_data.match(/\>Overrun \- /) || !raw_data.match(/\<\/td\>/)) {
                             if (wait_count >= 10) {
                                 return handleError(new HoError('too much wait'));
                             } else {
-                                // Overrun is the TWSE throttle page; wait and retry the same request.
+                                // Overrun is the TWSE throttle page; a response without any table
+                                // cell is a transient error/rate-limit page rather than a filing.
+                                // Both cases wait and retry the same request.
                                 wait_count++;
                                 log.debug({ wait_count }, 'waiting for TWSE throttle');
                                 return new Promise((resolve, reject) => setTimeout(() => resolve(recur_getTwseProfit()), _overrunDelay));
                             }
                         } else {
                             wait_count = 0;
+                            if (needDividends) {
+                                // This extra pass only exists to pick up a dividend row missing from
+                                // the annual filing; the other fundamentals are already collected,
+                                // so never fail the whole stock on their row codes here.
+                                const matchRetryDividends = getParameterV2(raw_data, 'C04500');
+                                if (matchRetryDividends && matchRetryDividends[0] > dividends) {
+                                    dividends = matchRetryDividends[0];
+                                }
+                                log.debug({ profit, equity, netValue, dividends }, 'financial data retry');
+                                return getStockPrice(type, index).then(price => final_stage(price));
+                            }
                             // Statement row identifiers drift between filing templates, so each
                             // lookup uses the fallback code lists declared above.
                             let profitArr = findFirstParameterArray(raw_data, PROFIT_CODES, PROFIT_LABEL);
@@ -580,10 +599,6 @@ export default {
                                 break;
                                 case 3:
                                 case 2:
-                                if (needDividends) {
-                                    log.debug({ profit, equity, netValue, dividends }, 'financial data retry');
-                                    return getStockPrice(type, index).then(price => final_stage(price));
-                                }
                                 profit += profitArr[2];
                                 profit -= profitArr[3];
                                 break;
