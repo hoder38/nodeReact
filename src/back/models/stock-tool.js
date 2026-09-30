@@ -3057,13 +3057,15 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
                     return processResetWeb(0).then(() => {
                     // §9a Kelly Criterion: boost trade count when the measured edge is strong enough
                     // to justify one extra unit on both sides of the web.
+                    // Only enlarge a tranche that finalBuy/finalSell already allowed — a count of 0
+                    // means the position limits blocked the trade, so it must stay a fake order.
                     if (item.metrics && item.metrics.winRate > 0 && item.metrics.avgLoss > 0) {
                         const p = item.metrics.winRate / 100;
                         const b = item.metrics.avgWin / item.metrics.avgLoss;
                         const kelly = p - (1 - p) / b;
                         if (kelly > 0.5) {
-                            if (suggestion.buy > 0) suggestion.bCount++;
-                            if (suggestion.sell > 0) suggestion.sCount++;
+                            if (suggestion.buy > 0 && suggestion.bCount > 0) suggestion.bCount++;
+                            if (suggestion.sell > 0 && suggestion.sCount > 0) suggestion.sCount++;
                         }
                     }
                     // Fold already queued manual quantities into the next suggested order size.
@@ -3676,7 +3678,17 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
     const finalBuy = () => {
         // When the position is nearly empty, re-anchor the refill size to one quarter of the original capital.
         if (pCount < priceTimes * 2) {
-            bCount = Math.floor(pOrig / buy / 4 / priceTimes) * priceTimes;
+            // Keep whole priceTimes blocks while they fit, but fall back to single units instead
+            // of rounding a still-affordable tranche down to zero.
+            const target = pOrig / buy / 4;
+            bCount = (target >= priceTimes) ? Math.floor(target / priceTimes) * priceTimes : Math.floor(target);
+            const affordable = Math.floor(pAmount / (buy * (1 + fee)));
+            if (bCount > affordable) {
+                bCount = affordable;
+            }
+            if (bCount < 0) {
+                bCount = 0;
+            }
             if (buy > upLimit) {
                 buy = (sType === 0) ? (fee === TRADE_FEE) ? twseTicker(upLimit, false) : usseTicker(upLimit, false) : (sType === 1) ? bitfinexTicker(upLimit, false) : upLimit;
             }
