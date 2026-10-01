@@ -1240,7 +1240,18 @@ export const _recur_status = async ({ id, uid, current, userRest, items }) => {
             let newArr = resolveNewMidStack(item.newMid, +priceData[item.index].lastPrice, item.mid, item.web, (nm) => {
                 log.debug({ nm }, 'newMid check');
             });
-            let suggestion = stockProcess(+priceData[item.index].lastPrice, newArr, item.times, item.previous, item.orig, clearP ? 0 : item.amount, item.count, Math.abs(item.web[0]), item.wType, 1, BITFINEX_FEE, BITFINEX_INTERVAL, BITFINEX_INTERVAL, undefined, item.newMid.length);
+            // §9a Kelly Criterion: when the measured edge is strong enough, double each tranche.
+            // Resolved once up front so every stockProcess() recalculation below sees the same
+            // multiplier, and so finalBuy()/finalSell() can clamp the boosted size.
+            let kAdd = 0;
+            if (item.metrics && item.metrics.winRate > 0 && item.metrics.avgLoss > 0) {
+                const p = item.metrics.winRate / 100;
+                const b = item.metrics.avgWin / item.metrics.avgLoss;
+                if ((p - (1 - p) / b) > 0.5) {
+                    kAdd = 1;
+                }
+            }
+            let suggestion = stockProcess(+priceData[item.index].lastPrice, newArr, item.times, item.previous, item.orig, clearP ? 0 : item.amount, item.count, Math.abs(item.web[0]), item.wType, 1, BITFINEX_FEE, BITFINEX_INTERVAL, BITFINEX_INTERVAL, undefined, item.newMid.length, kAdd);
             const processResetWeb = (recalcCount) => {
                 if (!suggestion.resetWeb) return Promise.resolve();
                 item.newMid.push(suggestion.newMid);
@@ -1294,7 +1305,7 @@ export const _recur_status = async ({ id, uid, current, userRest, items }) => {
                             item.newMid = [];
                             newArr = item.web;
                         }
-                        suggestion = stockProcess(+priceData[item.index].lastPrice, newArr, item.times, item.previous, item.orig, clearP ? 0 : item.amount, item.count, Math.abs(item.web[0]), item.wType, 1, BITFINEX_FEE, BITFINEX_INTERVAL, BITFINEX_INTERVAL, undefined, item.newMid.length);
+                        suggestion = stockProcess(+priceData[item.index].lastPrice, newArr, item.times, item.previous, item.orig, clearP ? 0 : item.amount, item.count, Math.abs(item.web[0]), item.wType, 1, BITFINEX_FEE, BITFINEX_INTERVAL, BITFINEX_INTERVAL, undefined, item.newMid.length, kAdd);
                         return processResetWeb(recalcCount);
                     }).catch(() => {
                         // On candle fetch failure, keep trading with a rescaled ladder instead of aborting the loop.
@@ -1303,26 +1314,16 @@ export const _recur_status = async ({ id, uid, current, userRest, items }) => {
                         item.web = item.web.map(v => v * ratio);
                         item.newMid = [];
                         newArr = item.web;
-                        suggestion = stockProcess(+priceData[item.index].lastPrice, newArr, item.times, item.previous, item.orig, clearP ? 0 : item.amount, item.count, Math.abs(item.web[0]), item.wType, 1, BITFINEX_FEE, BITFINEX_INTERVAL, BITFINEX_INTERVAL, undefined, item.newMid.length);
+                        suggestion = stockProcess(+priceData[item.index].lastPrice, newArr, item.times, item.previous, item.orig, clearP ? 0 : item.amount, item.count, Math.abs(item.web[0]), item.wType, 1, BITFINEX_FEE, BITFINEX_INTERVAL, BITFINEX_INTERVAL, undefined, item.newMid.length, kAdd);
                         return processResetWeb(recalcCount);
                     });
                 } else {
                     newArr = scaleWebArr(item.newMid, item.mid, item.web);
                 }
-                suggestion = stockProcess(+priceData[item.index].lastPrice, newArr, item.times, item.previous, item.orig, clearP ? 0 : item.amount, item.count, Math.abs(item.web[0]), item.wType, 1, BITFINEX_FEE, BITFINEX_INTERVAL, BITFINEX_INTERVAL, undefined, item.newMid.length);
+                suggestion = stockProcess(+priceData[item.index].lastPrice, newArr, item.times, item.previous, item.orig, clearP ? 0 : item.amount, item.count, Math.abs(item.web[0]), item.wType, 1, BITFINEX_FEE, BITFINEX_INTERVAL, BITFINEX_INTERVAL, undefined, item.newMid.length, kAdd);
                 return processResetWeb(recalcCount);
             };
             await processResetWeb(0);
-            // §9a Kelly Criterion: boost trade count when kelly > 50%
-            if (item.metrics && item.metrics.winRate > 0 && item.metrics.avgLoss > 0) {
-                const p = item.metrics.winRate / 100;
-                const b = item.metrics.avgWin / item.metrics.avgLoss;
-                const kelly = p - (1 - p) / b;
-                if (kelly > 0.5) {
-                    if (suggestion.buy > 0) suggestion.bCount++;
-                    if (suggestion.sell > 0) suggestion.sCount++;
-                }
-            }
             let count = 0;
             let amount = clearP ? 0 : item.amount;
             // When the shifted midpoint sits below the base mid, preserve extra cash only down to the

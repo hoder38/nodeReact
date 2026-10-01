@@ -3708,7 +3708,7 @@ describe('recur_status + recur_NewOrder paths', () => {
             0.5,
             expect.any(Number), expect.any(Number), 1,
             expect.any(Number), expect.any(Number), expect.any(Number),
-            undefined, expect.any(Number)
+            undefined, expect.any(Number), expect.any(Number)
         );
     });
 

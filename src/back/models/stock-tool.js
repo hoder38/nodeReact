@@ -2985,7 +2985,18 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
                     let newArr = resolveNewMidStack(item.newMid, price, item.mid, item.web, (nm) => {
                         log.debug({ nm }, 'newMid value');
                     });
-                    let suggestion = stockProcess(price, newArr, item.times, item.previous, item.orig, item.clear ? 0 : item.amount, item.count, Math.abs(item.web[0]), item.wType, 0, fee, undefined, undefined, undefined, item.newMid.length);
+                    // §9a Kelly Criterion: when the measured edge is strong enough, double each tranche.
+                    // Resolved once up front so every stockProcess() recalculation below sees the same
+                    // multiplier, and so finalBuy()/finalSell() can clamp the boosted size.
+                    let kAdd = 0;
+                    if (item.metrics && item.metrics.winRate > 0 && item.metrics.avgLoss > 0) {
+                        const p = item.metrics.winRate / 100;
+                        const b = item.metrics.avgWin / item.metrics.avgLoss;
+                        if ((p - (1 - p) / b) > 0.5) {
+                            kAdd = 1;
+                        }
+                    }
+                    let suggestion = stockProcess(price, newArr, item.times, item.previous, item.orig, item.clear ? 0 : item.amount, item.count, Math.abs(item.web[0]), item.wType, 0, fee, undefined, undefined, undefined, item.newMid.length, kAdd);
                     // Re-run the web whenever repeated breakouts push too many provisional mids onto the stack.
                     // The preferred path rebuilds from cached interval data; the ratio fallback preserves behavior
                     // when the cache is missing or the recalculation cannot produce a stable stair array.
@@ -3045,29 +3056,16 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
                                     item.newMid = [];
                                     newArr = item.web;
                                 }
-                                suggestion = stockProcess(price, newArr, item.times, item.previous, item.orig, item.clear ? 0 : item.amount, item.count, Math.abs(item.web[0]), item.wType, 0, fee, undefined, undefined, undefined, item.newMid.length);
+                                suggestion = stockProcess(price, newArr, item.times, item.previous, item.orig, item.clear ? 0 : item.amount, item.count, Math.abs(item.web[0]), item.wType, 0, fee, undefined, undefined, undefined, item.newMid.length, kAdd);
                                 return processResetWeb(recalcCount);
                             });
                         } else {
                             newArr = scaleWebArr(item.newMid, item.mid, item.web);
                         }
-                        suggestion = stockProcess(price, newArr, item.times, item.previous, item.orig, item.clear ? 0 : item.amount, item.count, Math.abs(item.web[0]), item.wType, 0, fee, undefined, undefined, undefined, item.newMid.length);
+                        suggestion = stockProcess(price, newArr, item.times, item.previous, item.orig, item.clear ? 0 : item.amount, item.count, Math.abs(item.web[0]), item.wType, 0, fee, undefined, undefined, undefined, item.newMid.length, kAdd);
                         return processResetWeb(recalcCount);
                     };
                     return processResetWeb(0).then(() => {
-                    // §9a Kelly Criterion: boost trade count when the measured edge is strong enough
-                    // to justify one extra unit on both sides of the web.
-                    // Only enlarge a tranche that finalBuy/finalSell already allowed — a count of 0
-                    // means the position limits blocked the trade, so it must stay a fake order.
-                    if (item.metrics && item.metrics.winRate > 0 && item.metrics.avgLoss > 0) {
-                        const p = item.metrics.winRate / 100;
-                        const b = item.metrics.avgWin / item.metrics.avgLoss;
-                        const kelly = p - (1 - p) / b;
-                        if (kelly > 0.5) {
-                            if (suggestion.buy > 0 && suggestion.bCount > 0) suggestion.bCount++;
-                            if (suggestion.sell > 0 && suggestion.sCount > 0) suggestion.sCount++;
-                        }
-                    }
                     // Fold already queued manual quantities into the next suggested order size.
                     suggestion.buy = suggestion.buy + (item.bquantity ? item.bquantity : 0) + (item.boddquantity ? item.boddquantity : 0);
                     suggestion.sell = suggestion.sell + (item.squantity ? item.squantity : 0) + (item.soddquantity ? item.soddquantity : 0);
@@ -3491,7 +3489,7 @@ export const resolveNewMidStack = (stack, price, mid, webArr, onPop) => {
 
 // Generate buy/sell suggestions for a single price probe against the current web.
 // Returns resetWeb when price escapes the ladder and a new midpoint must be derived.
-export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:[], sell:[]}, pOrig, pAmount, pCount, upLimit, pType = 0, sType = 0, fee = TRADE_FEE, ttime = TRADE_TIME, tinterval = TRADE_INTERVAL, now = Math.round(_dateFactory().getTime() / 1000), newMidDepth = 0) => {
+export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:[], sell:[]}, pOrig, pAmount, pCount, upLimit, pType = 0, sType = 0, fee = TRADE_FEE, ttime = TRADE_TIME, tinterval = TRADE_INTERVAL, now = Math.round(_dateFactory().getTime() / 1000), newMidDepth = 0, kAdd = 0) => {
     priceTimes = priceTimes ? priceTimes : 1;
     let is_buy = true;
     let is_sell = true;
@@ -3499,8 +3497,10 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
     let sTimes = 1;
     let bP = 8;
     let nowBP = priceArray.length - 1;
-    let bAdd = 0;
-    let sAdd = 0;
+    // §9a Kelly Criterion edge multiplier, supplied by the caller. Applied to the tranche count
+    // before finalBuy()/finalSell() so the position and cash limits still clamp the boosted size.
+    let bAdd = kAdd;
+    let sAdd = kAdd;
 
     // Walk downward through the web to find the nearest buy band and its σ depth.
     for (; nowBP >= 0; nowBP--) {
