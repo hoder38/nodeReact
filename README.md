@@ -38,7 +38,7 @@ services:
         max-file: "3"     # 最多保留 3 個舊檔
 查詢檔案路徑： 執行 docker inspect --format='{{.LogPath}}' <容器ID> 即可找到該固定檔案的絕對位置。
 
-新環境要有的git nvm docker certbot p7zip-full(data.7z用)
+新環境要有的git nvm docker certbot p7zip-full(data.7z用) pppoeconf(設定網路)
 
 7z a -p -mhe=on data.7z .env .env.dev csr/
 
