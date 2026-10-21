@@ -5,6 +5,7 @@ import Express from 'express'
 import TagTool from '../models/tag-tool.js'
 import createLogger from '../util/logger.js'
 import { checkAdmin, checkLogin } from '../util/utility.js'
+import { canUseAgent } from './agent-router.js'
 
 const router = Express.Router();
 const StorageTagTool = TagTool(STORAGEDB);
@@ -23,7 +24,12 @@ router.route('/getuser').get(function(req, res, next) {
                 hash: "/Stock",
                 css: "glyphicon glyphicon-signal",
                 key: 3
-            }] : [],
+            }, ...(canUseAgent(req.user) ? [{
+                title: "Agent",
+                hash: "/Agent",
+                css: "glyphicon glyphicon-comment",
+                key: 8
+            }] : [])] : [],
             main_url: `https://${EXTENT_FILE_IP(ENV_TYPE)}:${EXTENT_FILE_PORT(ENV_TYPE)}/f`,
         });
     });

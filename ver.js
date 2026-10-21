@@ -31,3 +31,6 @@ export const OPENSUBTITLES_USERNAME = process.env.OPENSUBTITLES_USERNAME;
 export const OPENSUBTITLES_PASSWORD = process.env.OPENSUBTITLES_PASSWORD;
 export const DEVICE_PATH = process.env.DEVICE_PATH;
 export const DEFAULT_PASS = process.env.DEFAULT_PASS;
+export const AGENT_JWT_SECRET = process.env.AGENT_JWT_SECRET;
+export const AGENT_OWNER_ID = process.env.AGENT_OWNER_ID;
+export const AGENT_NODEREACT_USER = process.env.AGENT_NODEREACT_USER;

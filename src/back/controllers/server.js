@@ -22,6 +22,7 @@ import StockRouter from './stock-router.js'
 import BookmarkRouter from './bookmark-router.js'
 import ParentRouter from './parent-router.js'
 import OtherRouter from './other-router.js'
+import AgentRouter from './agent-router.js'
 import createLogger from '../util/logger.js'
 import { handleError, showLog } from '../util/utility.js'
 import { init as WsInit } from '../util/sendWs.js'
@@ -82,6 +83,8 @@ app.use('/api/stock', StockRouter);
 app.use('/api/bookmark', BookmarkRouter);
 
 app.use('/api/parent', ParentRouter);
+
+app.use('/api/agent-token', AgentRouter);
 
 app.use('/', OtherRouter);
 app.use('/', QrLoginRouter(`https://${EXTENT_FILE_IP(ENV_TYPE)}:${EXTENT_FILE_PORT(ENV_TYPE)}/f`));

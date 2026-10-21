@@ -7,6 +7,7 @@ export const PASSWORD_PAGE = '/Password'
 export const STOCK_PAGE = '/Stock'
 export const BITFINEX_PAGE = '/Bitfinex'
 export const QRCODE_PAGE = '/qrcode'
+export const AGENT_PAGE = '/Agent'
 
 //item type
 export const STORAGE = 'storage'
