@@ -44,6 +44,10 @@ services:
 
 連線db要用docker exec -it mongodb mongo
 
+use admin
+db.auth("<DB_USERNAME>", "<DB_PWD>")
+use <yourdb>
+
 docker exec -it reactnode-file-server node ./src/back/cmd/cmd.js
 
 docker compose -f docker-compose.dev.yml logs -f | -C 100

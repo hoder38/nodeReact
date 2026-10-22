@@ -1,20 +1,10 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { agentApi, useAgentThread } from '../agent.js'
 
-const THREADS_KEY = 'agentThreads'
 const CURRENT_KEY = 'agentThread'
 const RUNNING = ['queued', 'running', 'deferred', 'paused', 'retrying']
 
 const newThreadId = () => `w${Date.now().toString(36)}`
-
-const loadThreads = () => {
-    try {
-        const list = JSON.parse(localStorage.getItem(THREADS_KEY) || '[]')
-        return Array.isArray(list) && list.length > 0 ? list : [{ id: newThreadId(), title: 'New chat' }]
-    } catch (e) {
-        return [{ id: newThreadId(), title: 'New chat' }]
-    }
-}
 
 const bubbleStyle = role => ({
     maxWidth: '85%',
@@ -44,21 +34,58 @@ function Message({ msg }) {
 }
 
 export default function Agent() {
-    const [threads, setThreads] = useState(loadThreads)
-    const [threadId, setThreadId] = useState(() => {
-        const cur = localStorage.getItem(CURRENT_KEY)
-        return cur && threads.some(t => t.id === cur) ? cur : threads[0].id
-    })
+    // The thread list lives on the harness (so every device/tab sees the same chats).
+    // A new chat is only a local draft until its first message is sent.
+    const [threads, setThreads] = useState([])
+    const [draft, setDraft] = useState(null)
+    const draftRef = useRef(null)
+    draftRef.current = draft
+    const [threadId, setThreadId] = useState(() => localStorage.getItem(CURRENT_KEY) || null)
     const [text, setText] = useState('')
     const [killswitch, setKillswitch] = useState(null)
     const { messages, run, error, send, cancel } = useAgentThread(threadId)
     const bottomRef = useRef(null)
     const busy = Boolean(run && RUNNING.includes(run.status))
 
+    const refreshThreads = useCallback(() => agentApi('/threads')
+        .then(res => {
+            const list = (res && res.threads) || []
+            setThreads(list)
+            setDraft(d => (d && list.some(t => t.id === d.id) ? null : d))
+            setThreadId(cur => {
+                if (cur && list.some(t => t.id === cur)) {
+                    return cur
+                }
+                const d = draftRef.current
+                if (list.length > 0 && !(d && cur === d.id)) {
+                    return list[0].id
+                }
+                return cur
+            })
+            return list
+        })
+        .catch(() => null), [])
+
     useEffect(() => {
-        localStorage.setItem(THREADS_KEY, JSON.stringify(threads))
-        localStorage.setItem(CURRENT_KEY, threadId)
-    }, [threads, threadId])
+        localStorage.removeItem('agentThreads') // old browser-only list
+        refreshThreads().then(list => {
+            if (list && list.length === 0) {
+                const id = newThreadId()
+                setDraft({ id, title: 'New chat' })
+                setThreadId(id)
+            }
+        })
+        const onFocus = () => refreshThreads()
+        window.addEventListener('focus', onFocus)
+        return () => window.removeEventListener('focus', onFocus)
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [])
+
+    useEffect(() => {
+        if (threadId) {
+            localStorage.setItem(CURRENT_KEY, threadId)
+        }
+    }, [threadId])
 
     useEffect(() => {
         agentApi('/status').then(s => setKillswitch(s.killswitch)).catch(() => setKillswitch(null))
@@ -72,12 +99,12 @@ export default function Agent() {
 
     const submit = () => {
         const t = text.trim()
-        if (!t || busy) {
+        if (!t || busy || !threadId) {
             return
         }
         setText('')
-        setThreads(list => list.map(th => (th.id === threadId && th.title === 'New chat' ? { ...th, title: t.slice(0, 30) } : th)))
-        send(t)
+        setDraft(d => (d && d.id === threadId ? { ...d, title: t.slice(0, 30) } : d))
+        Promise.resolve(send(t)).then(() => refreshThreads())
     }
 
     const onKeyDown = e => {
@@ -89,17 +116,31 @@ export default function Agent() {
 
     const newThread = () => {
         const id = newThreadId()
-        setThreads(list => [{ id, title: 'New chat' }, ...list])
+        setDraft({ id, title: 'New chat' })
         setThreadId(id)
     }
 
-    const removeThread = () => {
+    const removeThread = async () => {
+        if (draft && draft.id === threadId) {
+            setDraft(null)
+        } else {
+            try {
+                await agentApi(`/threads/${threadId}`, { method: 'DELETE' })
+            } catch (err) {
+                window.alert(err.message)
+                return
+            }
+        }
         const rest = threads.filter(t => t.id !== threadId)
-        const next = rest.length > 0 ? rest : [{ id: newThreadId(), title: 'New chat' }]
-        setThreads(next)
-        setThreadId(next[0].id)
+        setThreads(rest)
+        if (rest.length > 0) {
+            setThreadId(rest[0].id)
+        } else {
+            newThread()
+        }
     }
 
+    const shown = draft && !threads.some(t => t.id === draft.id) ? [draft, ...threads] : threads
     const changeKillswitch = state => agentApi('/killswitch', { method: 'PUT', body: JSON.stringify({ state }) })
         .then(r => setKillswitch(r.killswitch))
         .catch(err => window.alert(err.message))
@@ -108,8 +149,8 @@ export default function Agent() {
     return (
         <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 60px)', padding: '10px' }}>
             <div className="form-inline" style={{ marginBottom: '8px' }}>
-                <select className="form-control input-sm" value={threadId} onChange={e => setThreadId(e.target.value)}>
-                    {threads.map(t => <option key={t.id} value={t.id}>{t.title}</option>)}
+                <select className="form-control input-sm" aria-label="Chats" value={threadId || ''} onChange={e => setThreadId(e.target.value)}>
+                    {shown.map(t => <option key={t.id} value={t.id}>{t.channel === 'line' ? `💬 ${t.title}` : t.title}</option>)}
                 </select>
                 &nbsp;
                 <button className="btn btn-default btn-sm" onClick={newThread} title="New chat">

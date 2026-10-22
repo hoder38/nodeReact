@@ -25,7 +25,10 @@ const json = body => Promise.resolve({ ok: true, json: () => Promise.resolve(bod
 
 describe('Agent page', () => {
   let calls
+  let serverThreads
+  const ready = () => waitFor(() => expect(screen.getByRole('combobox', { name: 'Chats' }).value).not.toBe(''))
   beforeEach(() => {
+    serverThreads = []
     localStorage.clear()
     resetAgentToken()
     calls = []
@@ -36,6 +39,7 @@ describe('Agent page', () => {
       calls.push({ url, opts })
       if (url === '/api/agent-token') return json({ token: 'tok', expiresIn: 600 })
       if (url === '/api/agent/status') return json({ killswitch: 'off' })
+      if (url === '/api/agent/threads') return json({ threads: serverThreads })
       if (/\/runs$/.test(url)) return json({ run_id: 'r1', decision: { route: 'chat', model: 'local', queue: 'interactive' } })
       if (/\/cancel$/.test(url)) return json({ ok: true })
       return json({ messages: [] })
@@ -44,6 +48,7 @@ describe('Agent page', () => {
 
   test('sends a message, streams tokens and shows the final answer', async () => {
     render(<Agent />)
+    await ready()
     const box = screen.getByPlaceholderText(/Message the agent/)
     fireEvent.change(box, { target: { value: 'hello' } })
     fireEvent.keyDown(box, { key: 'Enter' })
@@ -69,6 +74,7 @@ describe('Agent page', () => {
 
   test('Stop cancels the running run', async () => {
     render(<Agent />)
+    await ready()
     const box = screen.getByPlaceholderText(/Message the agent/)
     fireEvent.change(box, { target: { value: 'long task' } })
     fireEvent.keyDown(box, { key: 'Enter' })
@@ -79,5 +85,26 @@ describe('Agent page', () => {
     await waitFor(() => expect(calls.some(c => c.url === '/api/agent/runs/r1/cancel' && c.opts.method === 'POST')).toBe(true))
     act(() => FakeEventSource.last.emit('cancelled', { reason: 'user' }))
     expect(screen.getByText(/⏹ cancelled/)).toBeInTheDocument()
+  })
+
+  test('chat list comes from the server (incl. LINE) and remove hides it there', async () => {
+    serverThreads = [
+      { id: 'wold', title: 'older chat', channel: 'web' },
+      { id: 'line', title: 'LINE', channel: 'line' },
+    ]
+    render(<Agent />)
+    await ready()
+    const select = screen.getByRole('combobox', { name: 'Chats' })
+    expect(select.value).toBe('wold')
+    expect(screen.getByText('💬 LINE')).toBeInTheDocument()
+    await waitFor(() => expect(calls.some(c => c.url === '/api/agent/threads/wold')).toBe(true))
+
+    fireEvent.change(select, { target: { value: 'line' } })
+    await waitFor(() => expect(calls.some(c => c.url === '/api/agent/threads/line')).toBe(true))
+
+    fireEvent.click(screen.getByTitle('Remove from list'))
+    await waitFor(() => expect(calls.some(c => c.url === '/api/agent/threads/line' && c.opts.method === 'DELETE')).toBe(true))
+    await waitFor(() => expect(select.value).toBe('wold'))
+    expect(localStorage.getItem('agentThreads')).toBeNull()
   })
 })

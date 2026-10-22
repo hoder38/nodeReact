@@ -415,6 +415,21 @@ describe('calStair', () => {
             expect(web.mid).toBeLessThan(101);
         }
     });
+
+    test('σ bands span at least one stair when one bin holds most of the volume', () => {
+        // 50% and 84% cut points both land in the dense bin, so nd[4] - nd[3] === 0.
+        const dense = Array.from({ length: 40 }, () => ({ h: 10.3, l: 9.2, v: 1000 }));
+        const below = Array.from({ length: 40 }, () => ({ h: 8.9, l: 8.0, v: 300 }));
+        const above = Array.from({ length: 10 }, () => ({ h: 13.0, l: 11.0, v: 10 }));
+        const testLoga = logArray(40, 1, 25);
+        const web = calStair([...dense, ...below, ...above], testLoga, 1);
+        expect(web).toBeTruthy();
+        expect(web.up).toBe(0);
+        const boundaries = web.arr.filter(v => v < 0).map(Math.abs);
+        expect(boundaries).toHaveLength(7);
+        expect(new Set(boundaries).size).toBe(7);
+        expect(boundaries[0]).toBeGreaterThan(web.mid);
+    });
 });
 
 // ===========================================================================
@@ -3247,11 +3262,13 @@ describe('stockStatus stack depth half-history recalculation', () => {
         await stockStatus(false);
         // Redis should have been called to fetch interval data
         expect(mockRedis).toHaveBeenCalledWith('hgetall', 'interval: usseAAPL');
-        // newMid should be cleared after recalculation
+        // Web is rebuilt from interval data and the stack is back under the limit
         const updateCalls = mockMongo.mock.calls.filter(c => c[0] === 'update');
         expect(updateCalls.length).toBeGreaterThan(0);
         const lastUpdate = updateCalls[updateCalls.length - 1];
-        expect(lastUpdate[3].$set.newMid).toEqual([]);
+        expect(lastUpdate[3].$set.mid).not.toBe(600);
+        expect(lastUpdate[3].$set.web[0]).not.toBe(-1000);
+        expect(lastUpdate[3].$set.newMid.length).toBeLessThan(5);
     });
 });
 

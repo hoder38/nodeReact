@@ -57,6 +57,9 @@ export function useAgentThread(threadId) {
         setMessages([])
         setRun(null)
         setError(null)
+        if (!threadId) {
+            return undefined
+        }
         // Prepend history so messages sent before it arrives are kept.
         agentApi(`/threads/${threadId}`).then(t => alive && setMessages(m => [...t.messages, ...m])).catch(err => alive && setError(err.message))
         return () => {

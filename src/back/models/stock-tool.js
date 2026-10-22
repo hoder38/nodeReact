@@ -4397,8 +4397,9 @@ export const calStair = (raw_arr, loga, min, stair_start = 0, fee = TRADE_FEE, l
         };
         // Use the innermost σ band width uniformly for all three layers so the web
         // extends outward with equal step density regardless of the actual outer-σ data.
-        const upUnit = nd[4] - nd[3];
-        const downUnit = nd[3] - nd[2];
+        // Each σ band spans at least one stair so a volume-dense bin cannot collapse a whole side.
+        const upUnit = Math.max(nd[4] - nd[3], stair);
+        const downUnit = Math.max(nd[3] - nd[2], stair);
         const upLayers = [
             buildSteps(upUnit), // mid → 1σ
             buildSteps(upUnit), // 1σ → 2σ
