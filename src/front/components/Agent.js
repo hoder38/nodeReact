@@ -43,7 +43,7 @@ export default function Agent() {
     const [threadId, setThreadId] = useState(() => localStorage.getItem(CURRENT_KEY) || null)
     const [text, setText] = useState('')
     const [killswitch, setKillswitch] = useState(null)
-    const { messages, run, error, send, cancel } = useAgentThread(threadId)
+    const { messages, run, error, pending, send, resume, skip, cancel } = useAgentThread(threadId)
     const bottomRef = useRef(null)
     const busy = Boolean(run && RUNNING.includes(run.status))
 
@@ -171,14 +171,28 @@ export default function Agent() {
                 </span>
             </div>
             <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', border: '1px solid #ddd', borderRadius: '4px', padding: '8px' }}>
-                {messages.length === 0 ? <div className="text-muted">Prefix with /local, /cloud or /code to pick a route. /status, /stop cloud|all, /resume control the harness.</div> : null}
+                {messages.length === 0 ? <div className="text-muted">Prefix with /local, /cloud or /code to pick a route. /status, /stop cloud|all, /resume control the harness. /skip skips a clarifying question.</div> : null}
                 {messages.map((m, i) => <Message key={m.id || i} msg={m} />)}
+                {pending && !busy ? (
+                    <div style={{ alignSelf: 'flex-start', margin: '4px 0' }} aria-label="Clarifying question">
+                        {pending.options.map((o, i) => (
+                            <button key={o} className="btn btn-default btn-sm" style={{ margin: '0 6px 4px 0' }} onClick={() => resume(String(i + 1))}>
+                                {o}
+                            </button>
+                        ))}
+                        <button className="btn btn-link btn-sm" style={{ marginBottom: '4px' }} onClick={skip} title="Answer with a stated assumption">
+                            Skip
+                        </button>
+                    </div>
+                ) : null}
                 <div ref={bottomRef}></div>
             </div>
             <div className="small text-muted" style={{ minHeight: '18px', margin: '4px 0' }}>
                 {decision ? `${decision.route} → ${decision.model} (${decision.queue})${decision.private ? ' · private' : ''}` : ''}
                 {run ? ` · ${run.status}` : ''}
                 {run && run.result && run.result.cost_usd ? ` · $${run.result.cost_usd.toFixed(4)}` : ''}
+                {run && run.result && run.result.grounding && run.result.grounding.citations && run.result.grounding.citations.length
+                    ? ` · ${run.result.grounding.citations.length} source${run.result.grounding.citations.length > 1 ? 's' : ''}` : ''}
                 {error ? <span className="text-danger"> · {error}</span> : null}
             </div>
             <div style={{ display: 'flex' }}>
@@ -186,13 +200,16 @@ export default function Agent() {
                     className="form-control"
                     rows="2"
                     value={text}
-                    placeholder="Message the agent (Enter to send, Shift+Enter for newline)"
+                    placeholder={pending ? 'Answer the question above, or pick an option (Enter to send)' : 'Message the agent (Enter to send, Shift+Enter for newline)'}
                     onChange={e => setText(e.target.value)}
                     onKeyDown={onKeyDown}
                 />
                 {busy
                     ? <button className="btn btn-warning" style={{ marginLeft: '6px' }} onClick={cancel}>Stop</button>
                     : <button className="btn btn-primary" style={{ marginLeft: '6px' }} onClick={submit} disabled={!text.trim()}>Send</button>}
+                {pending && !busy
+                    ? <button className="btn btn-default" style={{ marginLeft: '6px' }} onClick={cancel} title="Drop the question">Cancel</button>
+                    : null}
             </div>
         </div>
     )

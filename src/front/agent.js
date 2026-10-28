@@ -43,6 +43,8 @@ export function useAgentThread(threadId) {
     const [messages, setMessages] = useState([])
     const [run, setRun] = useState(null)
     const [error, setError] = useState(null)
+    // An open clarifying question from the grounded graph: { run_id, round, question, options }.
+    const [pending, setPending] = useState(null)
     const esRef = useRef(null)
 
     const closeStream = () => {
@@ -57,31 +59,26 @@ export function useAgentThread(threadId) {
         setMessages([])
         setRun(null)
         setError(null)
+        setPending(null)
         if (!threadId) {
             return undefined
         }
         // Prepend history so messages sent before it arrives are kept.
-        agentApi(`/threads/${threadId}`).then(t => alive && setMessages(m => [...t.messages, ...m])).catch(err => alive && setError(err.message))
+        agentApi(`/threads/${threadId}`).then(t => {
+            if (!alive) {
+                return
+            }
+            setMessages(m => [...t.messages, ...m])
+            setPending(t.pending || null)
+        }).catch(err => alive && setError(err.message))
         return () => {
             alive = false
             closeStream()
         }
     }, [threadId])
 
-    const send = useCallback(async text => {
-        setError(null)
-        setMessages(m => [...m, { role: 'user', content: text }, { role: 'assistant', content: '' }])
-        let res
-        try {
-            res = await agentApi(`/threads/${threadId}/runs`, {
-                method: 'POST',
-                body: JSON.stringify({ text, client_msg_id: `${threadId}-${Date.now()}` }),
-            })
-        } catch (err) {
-            setMessages(m => m.slice(0, -1))
-            setError(err.message)
-            return
-        }
+    // Stream a run's events into the last (assistant) message.
+    const follow = useCallback(async res => {
         if (res.command_reply) {
             setMessages(m => [...m.slice(0, -1), { role: 'assistant', content: res.command_reply }])
             return
@@ -98,9 +95,19 @@ export function useAgentThread(threadId) {
             setRun(r => (r && r.status !== 'running' ? { ...r, status: 'running' } : r))
             updateLast(last => ({ ...last, content: last.content + parse(e.data) }))
         })
+        // The answer is being rewritten (e.g. a citation fix): drop what was streamed so far.
+        es.addEventListener('reset', () => updateLast(last => ({ ...last, content: '' })))
         es.addEventListener('tool', e => {
             const d = parse(e.data)
             updateLast(last => ({ ...last, tools: [...(last.tools || []), d.name] }))
+        })
+        es.addEventListener('interrupt', e => {
+            const d = parse(e.data)
+            const options = d.options || []
+            updateLast(last => ({ ...last, content: d.question + options.map((o, i) => `\n${i + 1}. ${o}`).join('') }))
+            setPending({ run_id: d.run_id || res.run_id, round: d.round, question: d.question, options })
+            setRun(r => ({ ...r, status: 'awaiting_input', result: d }))
+            closeStream()
         })
         const finish = status => e => {
             const d = e && e.data ? parse(e.data) : {}
@@ -120,13 +127,54 @@ export function useAgentThread(threadId) {
         es.addEventListener('cancelled', finish('cancelled'))
         // A server-sent `error` event carries data; a bare transport error does not (EventSource retries itself).
         es.addEventListener('error', e => (e.data ? finish('error')(e) : null))
-    }, [threadId])
+    }, [])
+
+    const post = useCallback(async (shown, path, body) => {
+        setError(null)
+        setMessages(m => [...m, { role: 'user', content: shown }, { role: 'assistant', content: '' }])
+        let res
+        try {
+            res = await agentApi(path, { method: 'POST', body: JSON.stringify(body) })
+        } catch (err) {
+            setMessages(m => m.slice(0, -1))
+            setError(err.message)
+            return
+        }
+        await follow(res)
+    }, [follow])
+
+    // Answer the open clarifying question: an option number, free text, or '' to skip (answer with an assumption).
+    const resume = useCallback(async value => {
+        const p = pending
+        if (!p) {
+            return
+        }
+        const v = String(value == null ? '' : value).trim()
+        const n = /^\d+$/.test(v) ? Number(v) : 0
+        const shown = !v || v === '/skip' ? '/skip' : (n >= 1 && n <= p.options.length ? p.options[n - 1] : v)
+        setPending(null)
+        await post(shown, `/runs/${p.run_id}/resume`, { value: v === '/skip' ? '' : v })
+    }, [pending, post])
+
+    const skip = useCallback(() => resume(''), [resume])
+
+    const send = useCallback(async text => {
+        if (pending) {
+            return resume(text)
+        }
+        return post(text, `/threads/${threadId}/runs`, { text, client_msg_id: `${threadId}-${Date.now()}` })
+    }, [threadId, pending, resume, post])
 
     const cancel = useCallback(() => {
-        if (run && run.id) {
-            agentApi(`/runs/${run.id}/cancel`, { method: 'POST' }).catch(err => setError(err.message))
+        const id = pending ? pending.run_id : run && run.id
+        if (id) {
+            agentApi(`/runs/${id}/cancel`, { method: 'POST' }).catch(err => setError(err.message))
         }
-    }, [run])
+        if (pending) {
+            setPending(null)
+            setRun(r => (r ? { ...r, status: 'cancelled' } : r))
+        }
+    }, [run, pending])
 
-    return { messages, run, error, send, cancel }
+    return { messages, run, error, pending, send, resume, skip, cancel }
 }
