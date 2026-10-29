@@ -1,7 +1,7 @@
 import React from 'react'
 import { NavLink, Route, Redirect, Switch } from 'react-router-dom'
 import { history } from '../configureStore.js'
-import { ROOT_PAGE, LOGIN_PAGE, USER_PAGE, STORAGE_PAGE, PASSWORD_PAGE, LEFT, RIGHT, UPLOAD, BITFINEX_PAGE, STOCK_PAGE, AGENT_PAGE } from '../constants.js'
+import { ROOT_PAGE, LOGIN_PAGE, USER_PAGE, STORAGE_PAGE, PASSWORD_PAGE, LEFT, RIGHT, UPLOAD, BITFINEX_PAGE, STOCK_PAGE, AGENT_PAGE, MEMORY_PAGE } from '../constants.js'
 import { collapseToggle } from '../actions/index.js'
 import { api, doLogout, isValidString } from '../utility.js'
 import Navlist from './Navlist.js'
@@ -20,6 +20,7 @@ import ReStock from '../containers/ReStock.js'
 import ReBitfinex from '../containers/ReBitfinex.js'
 import ReUserlist from '../containers/ReUserlist.js'
 import Agent from './Agent.js'
+import Memory from './Memory.js'
 
 class App extends React.Component {
     constructor(props) {
@@ -204,6 +205,7 @@ class App extends React.Component {
                         <Route path={USER_PAGE} component={ReUserlist} />
                         <Route path={BITFINEX_PAGE} component={ReBitfinex} />
                         <Route path={AGENT_PAGE} component={Agent} />
+                        <Route path={MEMORY_PAGE} component={Memory} />
                         <Redirect to={ROOT_PAGE} />
                     </Switch>
                 </section>

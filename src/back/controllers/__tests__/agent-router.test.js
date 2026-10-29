@@ -162,7 +162,7 @@ describe('agent-router', () => {
 
   test('/getuser nav includes Agent only for the owner', async () => {
     const owner = await request(buildApp()).get('/api/getuser').set('x-test-user', JSON.stringify(OWNER));
-    expect(owner.body.nav.map(n => n.hash)).toEqual(['/Stock', '/Agent']);
+    expect(owner.body.nav.map(n => n.hash)).toEqual(['/Stock', '/Agent', '/Memory']);
     const other = await request(buildApp()).get('/api/getuser').set('x-test-user', JSON.stringify(OTHER_ADMIN));
     expect(other.body.nav.map(n => n.hash)).toEqual(['/Stock']);
   });
