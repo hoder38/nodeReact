@@ -9,6 +9,8 @@ export const BITFINEX_PAGE = '/Bitfinex'
 export const QRCODE_PAGE = '/qrcode'
 export const AGENT_PAGE = '/Agent'
 export const MEMORY_PAGE = '/Memory'
+export const TODOS_PAGE = '/Todos'
+export const INBOX_PAGE = '/Inbox'
 
 //item type
 export const STORAGE = 'storage'

@@ -34,6 +34,16 @@ router.route('/getuser').get(function(req, res, next) {
                 hash: "/Memory",
                 css: "glyphicon glyphicon-book",
                 key: 9
+            }, {
+                title: "Todos",
+                hash: "/Todos",
+                css: "glyphicon glyphicon-check",
+                key: 10
+            }, {
+                title: "Inbox",
+                hash: "/Inbox",
+                css: "glyphicon glyphicon-inbox",
+                key: 11
             }] : [])] : [],
             main_url: `https://${EXTENT_FILE_IP(ENV_TYPE)}:${EXTENT_FILE_PORT(ENV_TYPE)}/f`,
         });
