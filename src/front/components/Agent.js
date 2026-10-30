@@ -150,8 +150,9 @@ export default function Agent() {
         <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 60px)', padding: '10px' }}>
             <div className="form-inline" style={{ marginBottom: '8px' }}>
                 <select className="form-control input-sm" aria-label="Chats" value={threadId || ''} onChange={e => setThreadId(e.target.value)}>
-                    {shown.map(t => <option key={t.id} value={t.id}>{t.channel === 'line' ? `💬 ${t.title}` : t.title}</option>)}
+                    {shown.map(t => <option key={t.id} value={t.id}>{`${t.private ? '🔒 ' : ''}${t.channel === 'line' ? '💬 ' : ''}${t.title}`}</option>)}
                 </select>
+                {(threads.find(t => t.id === threadId) || {}).private ? <span className="label label-warning" style={{ marginLeft: '6px' }} title="This chat contains private content, so only the local model is used. Start a new chat to unlock.">🔒 Private · local only</span> : null}
                 &nbsp;
                 <button className="btn btn-default btn-sm" onClick={newThread} title="New chat">
                     <i className="glyphicon glyphicon-plus"></i>
